@@ -1,0 +1,6 @@
+*.gem
+*.o
+*.so
+*~
+*.log
+Makefile

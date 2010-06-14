@@ -1,0 +1,16 @@
+CHANGELOG
+LICENSE
+README
+Rakefile
+ext/extconf.rb
+ext/zkc-3.3.1.tar.gz
+ext/zookeeper_c.c
+ext/zookeeper_lib.c
+ext/zookeeper_lib.h
+lib/zookeeper.rb
+lib/zookeeper/acls.rb
+lib/zookeeper/callbacks.rb
+lib/zookeeper/constants.rb
+lib/zookeeper/exceptions.rb
+lib/zookeeper/stat.rb
+Manifest
