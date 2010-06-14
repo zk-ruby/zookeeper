@@ -242,7 +242,7 @@ static VALUE method_get(VALUE self, VALUE reqid, VALUE path, VALUE async, VALUE 
 
   /* ugh */
   char * data = malloc(MAX_ZNODE_SIZE);
-  int data_len = sizeof(data);
+  int data_len = MAX_ZNODE_SIZE;
   struct Stat stat;
 
   int rc;
