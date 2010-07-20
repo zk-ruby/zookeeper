@@ -435,6 +435,7 @@ struct Id zkrb_ruby_to_id(VALUE rubyid) {
   if (scheme != Qnil) {
     id.scheme = malloc(RSTRING(scheme)->len + 1);
     strncpy(id.scheme, RSTRING(scheme)->ptr, RSTRING(scheme)->len);
+    id.scheme[RSTRING(scheme)->len] = '\0';
   } else {
     id.scheme = NULL;
   }
@@ -442,6 +443,7 @@ struct Id zkrb_ruby_to_id(VALUE rubyid) {
   if (ident != Qnil) {
     id.id     = malloc(RSTRING(ident)->len + 1);
     strncpy(id.id, RSTRING(ident)->ptr, RSTRING(ident)->len);
+    id.id[RSTRING(ident)->len] = '\0';
   } else {
     id.id = NULL;
   }
