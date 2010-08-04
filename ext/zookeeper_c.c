@@ -38,14 +38,24 @@ typedef enum {
 #define IS_ASYNC(zkrbcall) ((zkrbcall)==ASYNC || (zkrbcall)==ASYNC_WATCH)
 
 static void free_zkrb_instance_data(struct zkrb_instance_data* ptr) {
-#warning [wickman] TODO: free queue
 #warning [wickman] TODO: fire off warning if queue is not empty
   if (ptr->zh && zoo_state(ptr->zh) == ZOO_CONNECTED_STATE) {
     zookeeper_close(ptr->zh);
   }
+  if (ptr->queue) zkrb_queue_free(ptr->queue);
+  ptr->queue = NULL;
 }
 
-static VALUE method_initialize(VALUE self, VALUE hostPort) {
+static void print_zkrb_instance_data(struct zkrb_instance_data* ptr) {
+  fprintf(stderr, "zkrb_instance_data (%x) {\n", ptr);
+  fprintf(stderr, "   zh = %x\n",           ptr->zh);
+  fprintf(stderr, "     { state = %d }\n",  zoo_state(ptr->zh));
+  fprintf(stderr, "   id = %llx\n",         ptr->myid.client_id);
+  fprintf(stderr, "    q = %x\n",           ptr->queue);
+  fprintf(stderr, "}\n");
+}
+
+static VALUE method_init(VALUE self, VALUE hostPort) {
   Check_Type(hostPort, T_STRING);
 
   VALUE data;
@@ -96,11 +106,11 @@ static VALUE method_initialize(VALUE self, VALUE hostPort) {
   Data_Get_Struct(rb_iv_get(self, "@data"), struct zkrb_instance_data, zk); \
   zkrb_calling_context* cb_ctx =                                        \
     (async != Qfalse && async != Qnil) ?                                \
-       zkrb_calling_context_alloc(NUM2LL(reqid), zk->queue) :       \
+       zkrb_calling_context_alloc(NUM2LL(reqid), zk->queue) :           \
        NULL;                                                            \
   zkrb_calling_context* w_ctx =                                         \
     (watch != Qfalse && watch != Qnil) ?                                \
-       zkrb_calling_context_alloc(NUM2LL(reqid), zk->queue) :       \
+       zkrb_calling_context_alloc(NUM2LL(reqid), zk->queue) :           \
        NULL;                                                            \
   int a  = (async != Qfalse && async != Qnil);                          \
   int w  = (watch != Qfalse && watch != Qnil);                          \
@@ -234,7 +244,6 @@ static VALUE method_delete(VALUE self, VALUE reqid, VALUE path, VALUE version, V
   return INT2FIX(rc);
 }
 
-
 #define MAX_ZNODE_SIZE 1048576
 
 static VALUE method_get(VALUE self, VALUE reqid, VALUE path, VALUE async, VALUE watch) {
@@ -246,6 +255,7 @@ static VALUE method_get(VALUE self, VALUE reqid, VALUE path, VALUE async, VALUE 
   struct Stat stat;
 
   int rc;
+  
   switch (call_type) {
     case SYNC:
       rc = zoo_get(zk->zh, RSTRING(path)->ptr, 0, data, &data_len, &stat);
@@ -271,6 +281,7 @@ static VALUE method_get(VALUE self, VALUE reqid, VALUE path, VALUE async, VALUE 
     rb_ary_push(output, zkrb_stat_to_rarray(&stat));
   }
   free(data);
+
   return output;
 }
 
@@ -363,6 +374,7 @@ static VALUE method_get_acl(VALUE self, VALUE reqid, VALUE path, VALUE async) {
 
 static VALUE method_get_next_event(VALUE self) {
   FETCH_DATA_PTR(self, zk);
+  if (zk->queue == NULL) return Qnil;
   
   zkrb_event_t *event = zkrb_dequeue(zk->queue);
   if (event == NULL) return Qnil;
@@ -374,6 +386,7 @@ static VALUE method_get_next_event(VALUE self) {
 
 static VALUE method_has_events(VALUE self) {
   FETCH_DATA_PTR(self, zk);
+  if (zk->queue == NULL) return Qfalse;
   return zkrb_peek(zk->queue) != NULL ? Qtrue : Qfalse;
 }
 
@@ -427,7 +440,7 @@ static void zkrb_define_methods(void) {
 #define DEFINE_CLASS_METHOD(method, args) { \
     rb_define_singleton_method(Zookeeper, #method, method_ ## method, args); }
 
-  DEFINE_METHOD(initialize, 1);
+  DEFINE_METHOD(init, 1);
   DEFINE_METHOD(get_children, 4);
   DEFINE_METHOD(exists, 4);
   DEFINE_METHOD(create, 6);

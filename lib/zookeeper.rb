@@ -23,28 +23,33 @@ class Zookeeper < CZookeeper
   ZOO_LOG_LEVEL_INFO   = 3
   ZOO_LOG_LEVEL_DEBUG  = 4
   
-  def initialize(host, timeout = 10)
-    @watcher_reqs = { ZKRB_GLOBAL_CB_REQ => { :watcher => get_default_global_watcher } }
-    @completion_reqs = {}
-    @req_mutex = Mutex.new
-    @current_req_id = 1
-    super(host)
-    
+  def reopen(timeout = 10)
+    init(@host)
     if timeout > 0
       time_to_stop = Time.now + timeout
       until state == Zookeeper::ZOO_CONNECTED_STATE
         break if Time.now > time_to_stop
         sleep 0.1
       end
-
-      return nil if state != Zookeeper::ZOO_CONNECTED_STATE
     end
+    # flushes all outstanding watcher reqs.
+    @watcher_reqs = { ZKRB_GLOBAL_CB_REQ => { :watcher => get_default_global_watcher } }
+    state
+  end
 
+  def initialize(host, timeout = 10)
+    @watcher_reqs = {}
+    @completion_reqs = {}
+    @req_mutex = Mutex.new
+    @current_req_id = 1
+    @host = host
+    return nil if reopen(timeout) != Zookeeper::ZOO_CONNECTED_STATE
     setup_dispatch_thread!
   end
-  
-public  
+
+public
   def get(options = {})
+    assert_open
     assert_supported_keys(options, [:path, :watcher, :watcher_context, :callback, :callback_context])
     assert_required_keys(options, [:path])
     
@@ -56,6 +61,7 @@ public
   end
   
   def set(options = {})
+    assert_open
     assert_supported_keys(options, [:path, :data, :version, :callback, :callback_context])
     assert_required_keys(options, [:path])
     options[:version] ||= -1
@@ -68,6 +74,7 @@ public
   end
   
   def get_children(options = {})
+    assert_open
     assert_supported_keys(options, [:path, :callback, :callback_context, :watcher, :watcher_context])
     assert_required_keys(options, [:path])
 
@@ -79,6 +86,7 @@ public
   end
 
   def stat(options = {})
+    assert_open
     assert_supported_keys(options, [:path, :callback, :callback_context, :watcher, :watcher_context])
     assert_required_keys(options, [:path])
 
@@ -90,6 +98,7 @@ public
   end
   
   def create(options = {})
+    assert_open
     assert_supported_keys(options, [:path, :data, :acl, :ephemeral, :sequence, :callback, :callback_context])
     assert_required_keys(options, [:path])
     
@@ -107,6 +116,7 @@ public
   end
   
   def delete(options = {})
+    assert_open
     assert_supported_keys(options, [:path, :version, :callback, :callback_context])
     assert_required_keys(options, [:path])
     options[:version] ||= -1
@@ -118,6 +128,7 @@ public
   end
 
   def set_acl(options = {})
+    assert_open
     assert_supported_keys(options, [:path, :acl, :version, :callback, :callback_context])
     assert_required_keys(options, [:path, :acl])
     options[:version] ||= -1
@@ -129,6 +140,7 @@ public
   end
   
   def get_acl(options = {})
+    assert_open
     assert_supported_keys(options, [:path, :callback, :callback_context])
     assert_required_keys(options, [:path])
     
@@ -215,6 +227,15 @@ private
     Proc.new { |args|
       puts "Ruby ZK Global CB called type=#{event_by_value(args[:type])} state=#{state_by_value(args[:state])}"
     }
+  end
+
+  # if either of these happen, the user will need to renegotiate a connection via reopen
+  def assert_open
+    if state == ZOO_EXPIRED_SESSION_STATE
+      raise ZookeeperException::SessionExpired
+    elsif state != Zookeeper::ZOO_CONNECTED_STATE
+      raise ZookeeperException::ConnectionClosed
+    end
   end
 
   def assert_supported_keys(args, supported)

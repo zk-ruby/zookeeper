@@ -87,9 +87,9 @@ typedef struct {
 } zkrb_queue_t;
 
 zkrb_queue_t * zkrb_queue_alloc(void);
+void           zkrb_queue_free(zkrb_queue_t *queue);
 zkrb_event_t * zkrb_event_alloc(void);
 void           zkrb_event_free(zkrb_event_t *ptr);
-
 
 /* push/pop is a misnomer, this is a queue */
 void                 zkrb_enqueue(zkrb_queue_t *queue, zkrb_event_t *elt);

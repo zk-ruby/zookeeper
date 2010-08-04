@@ -55,6 +55,15 @@ zkrb_queue_t *zkrb_queue_alloc(void) {
   return rq;
 }
 
+void zkrb_queue_free(zkrb_queue_t *queue) {
+  if (queue == NULL) return;
+  zkrb_event_t *elt = NULL;
+  while ((elt = zkrb_dequeue(queue)) != NULL) {
+    zkrb_event_free(elt);
+  }
+  free(queue);
+}
+
 zkrb_event_t *zkrb_event_alloc(void) {
   zkrb_event_t *rv  = (zkrb_event_t *) malloc(sizeof(zkrb_event_t));
   return rv;
@@ -122,11 +131,11 @@ void zkrb_event_free(zkrb_event_t *event) {
    allocated on the proper thread stack */
 VALUE zkrb_event_to_ruby(zkrb_event_t *event) {
   VALUE hash = rb_hash_new();
-  
+
   rb_hash_aset(hash, GET_SYM("req_id"), LL2NUM(event->req_id));
   if (event->type != ZKRB_WATCHER)
     rb_hash_aset(hash, GET_SYM("rc"), INT2FIX(event->rc));
-  
+
   switch (event->type) {
     case ZKRB_DATA: {
       struct zkrb_data_completion *data_ctx = event->completion.data_completion;
