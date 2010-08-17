@@ -1,7 +1,9 @@
 CHANGELOG
 LICENSE
+Manifest
 README
 Rakefile
+examples/cloud_config.rb
 ext/extconf.rb
 ext/zkc-3.3.1.tar.gz
 ext/zookeeper_c.c
@@ -13,4 +15,9 @@ lib/zookeeper/callbacks.rb
 lib/zookeeper/constants.rb
 lib/zookeeper/exceptions.rb
 lib/zookeeper/stat.rb
-Manifest
+test/test_basic.rb
+test/test_callback1.rb
+test/test_close.rb
+test/test_esoteric.rb
+test/test_watcher1.rb
+test/test_watcher2.rb
