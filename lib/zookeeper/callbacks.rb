@@ -12,7 +12,7 @@ module ZookeeperCallbacks
     end
     
     def call(*args)
-      puts "call passed #{args.inspect}"
+      # puts "call passed #{args.inspect}"
       @proc.call(*args)
     end
     

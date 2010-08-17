@@ -178,7 +178,7 @@ private
     if callback.respond_to?(:call)
       callback.call(hash)
     else
-      puts "dispatch_next_callback found non-callback => #{callback.inspect}"
+      # puts "dispatch_next_callback found non-callback => #{callback.inspect}"
     end
   end
   
@@ -223,9 +223,11 @@ public
   end
 
 private
+  # TODO: Make all global puts configurable
   def get_default_global_watcher
     Proc.new { |args|
-      puts "Ruby ZK Global CB called type=#{event_by_value(args[:type])} state=#{state_by_value(args[:state])}"
+      # puts "Ruby ZK Global CB called type=#{event_by_value(args[:type])} state=#{state_by_value(args[:state])}"
+      true
     }
   end
 
