@@ -1,6 +1,6 @@
 module ZookeeperStat
   class Stat
-    attr_reader :version, :exists
+    attr_reader :version, :exists, :czxid, :mzxid, :ctime, :mtime, :cverzion, :aversion, :ephemeralOwner, :dataLength, :numChildren, :pzxid
     def initialize(val)
       @exists = !!val
       @czxid, @mzxid, @ctime, @mtime, @version, @cversion, @aversion,
