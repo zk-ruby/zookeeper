@@ -75,7 +75,7 @@ static VALUE method_init(VALUE self, VALUE hostPort) {
 
   zk_local_ctx->zh = 
       zookeeper_init(
-          RSTRING(hostPort)->ptr,
+          RSTRING_PTR(hostPort),
           zkrb_state_callback,
           10000,
           &zk_local_ctx->myid,
@@ -127,19 +127,19 @@ static VALUE method_get_children(VALUE self, VALUE reqid, VALUE path, VALUE asyn
   int rc;
   switch (call_type) {
     case SYNC:
-      rc = zoo_get_children2(zk->zh, RSTRING(path)->ptr, 0, &strings, &stat);
+      rc = zoo_get_children2(zk->zh, RSTRING_PTR(path), 0, &strings, &stat);
       break;
 
     case SYNC_WATCH:
-      rc = zoo_wget_children2(zk->zh, RSTRING(path)->ptr, zkrb_state_callback, watch_ctx, &strings, &stat);
+      rc = zoo_wget_children2(zk->zh, RSTRING_PTR(path), zkrb_state_callback, watch_ctx, &strings, &stat);
       break;
       
     case ASYNC:
-      rc = zoo_aget_children2(zk->zh, RSTRING(path)->ptr, 0, zkrb_strings_stat_callback, data_ctx);
+      rc = zoo_aget_children2(zk->zh, RSTRING_PTR(path), 0, zkrb_strings_stat_callback, data_ctx);
       break;
       
     case ASYNC_WATCH:
-      rc = zoo_awget_children2(zk->zh, RSTRING(path)->ptr, zkrb_state_callback, watch_ctx, zkrb_strings_stat_callback, data_ctx);
+      rc = zoo_awget_children2(zk->zh, RSTRING_PTR(path), zkrb_state_callback, watch_ctx, zkrb_strings_stat_callback, data_ctx);
       break;
   }
 
@@ -160,19 +160,19 @@ static VALUE method_exists(VALUE self, VALUE reqid, VALUE path, VALUE async, VAL
   int rc;
   switch (call_type) {
     case SYNC:
-      rc = zoo_exists(zk->zh, RSTRING(path)->ptr, 0, &stat);
+      rc = zoo_exists(zk->zh, RSTRING_PTR(path), 0, &stat);
       break;
 
     case SYNC_WATCH:
-      rc = zoo_wexists(zk->zh, RSTRING(path)->ptr, zkrb_state_callback, watch_ctx, &stat);
+      rc = zoo_wexists(zk->zh, RSTRING_PTR(path), zkrb_state_callback, watch_ctx, &stat);
       break;
       
     case ASYNC:
-      rc = zoo_aexists(zk->zh, RSTRING(path)->ptr, 0, zkrb_stat_callback, data_ctx);
+      rc = zoo_aexists(zk->zh, RSTRING_PTR(path), 0, zkrb_stat_callback, data_ctx);
       break;
       
     case ASYNC_WATCH:
-      rc = zoo_awexists(zk->zh, RSTRING(path)->ptr, zkrb_state_callback, watch_ctx, zkrb_stat_callback, data_ctx);
+      rc = zoo_awexists(zk->zh, RSTRING_PTR(path), zkrb_state_callback, watch_ctx, zkrb_stat_callback, data_ctx);
       break;
   }
 
@@ -191,8 +191,8 @@ static VALUE method_create(VALUE self, VALUE reqid, VALUE path, VALUE data, VALU
   struct Stat stat;
   if (data != Qnil) Check_Type(data, T_STRING);
   Check_Type(flags, T_FIXNUM);
-  const char *data_ptr = (data == Qnil) ? NULL : RSTRING(data)->ptr;
-  size_t      data_len = (data == Qnil) ? -1   : RSTRING(data)->len;
+  const char *data_ptr = (data == Qnil) ? NULL : RSTRING_PTR(data);
+  size_t      data_len = (data == Qnil) ? -1   : RSTRING_LEN(data);
   
   struct ACL_vector *aclptr = NULL;
   if (acls != Qnil) { aclptr = zkrb_ruby_to_aclvector(acls); }
@@ -201,11 +201,11 @@ static VALUE method_create(VALUE self, VALUE reqid, VALUE path, VALUE data, VALU
   int rc;
   switch (call_type) {
     case SYNC:
-      rc = zoo_create(zk->zh, RSTRING(path)->ptr, data_ptr, data_len, aclptr, FIX2INT(flags), realpath, sizeof(realpath));
+      rc = zoo_create(zk->zh, RSTRING_PTR(path), data_ptr, data_len, aclptr, FIX2INT(flags), realpath, sizeof(realpath));
       if (aclptr != NULL) deallocate_ACL_vector(aclptr);
       break;
     case ASYNC:
-      rc = zoo_acreate(zk->zh, RSTRING(path)->ptr, data_ptr, data_len, aclptr, FIX2INT(flags), zkrb_string_callback, data_ctx);
+      rc = zoo_acreate(zk->zh, RSTRING_PTR(path), data_ptr, data_len, aclptr, FIX2INT(flags), zkrb_string_callback, data_ctx);
       if (aclptr != NULL) deallocate_ACL_vector(aclptr);
       break;
     default:
@@ -230,10 +230,10 @@ static VALUE method_delete(VALUE self, VALUE reqid, VALUE path, VALUE version, V
   int rc = 0;
   switch (call_type) {
     case SYNC:
-      rc = zoo_delete(zk->zh, RSTRING(path)->ptr, FIX2INT(version));
+      rc = zoo_delete(zk->zh, RSTRING_PTR(path), FIX2INT(version));
       break;
     case ASYNC:
-      rc = zoo_adelete(zk->zh, RSTRING(path)->ptr, FIX2INT(version), zkrb_void_callback, data_ctx);
+      rc = zoo_adelete(zk->zh, RSTRING_PTR(path), FIX2INT(version), zkrb_void_callback, data_ctx);
       break;
     default:
       /* TODO(wickman) raise proper argument error */
@@ -258,19 +258,19 @@ static VALUE method_get(VALUE self, VALUE reqid, VALUE path, VALUE async, VALUE 
   
   switch (call_type) {
     case SYNC:
-      rc = zoo_get(zk->zh, RSTRING(path)->ptr, 0, data, &data_len, &stat);
+      rc = zoo_get(zk->zh, RSTRING_PTR(path), 0, data, &data_len, &stat);
       break;
 
     case SYNC_WATCH:
-      rc = zoo_wget(zk->zh, RSTRING(path)->ptr, zkrb_state_callback, watch_ctx, data, &data_len, &stat);
+      rc = zoo_wget(zk->zh, RSTRING_PTR(path), zkrb_state_callback, watch_ctx, data, &data_len, &stat);
       break;
       
     case ASYNC:
-      rc = zoo_aget(zk->zh, RSTRING(path)->ptr, 0, zkrb_data_callback, data_ctx);
+      rc = zoo_aget(zk->zh, RSTRING_PTR(path), 0, zkrb_data_callback, data_ctx);
       break;
       
     case ASYNC_WATCH:
-      rc = zoo_awget(zk->zh, RSTRING(path)->ptr, zkrb_state_callback, watch_ctx, zkrb_data_callback, data_ctx);
+      rc = zoo_awget(zk->zh, RSTRING_PTR(path), zkrb_state_callback, watch_ctx, zkrb_data_callback, data_ctx);
       break;
   }
 
@@ -291,16 +291,16 @@ static VALUE method_set(VALUE self, VALUE reqid, VALUE path, VALUE data, VALUE a
   
   struct Stat stat;
   if (data != Qnil) Check_Type(data, T_STRING);
-  const char *data_ptr = (data == Qnil) ? NULL : RSTRING(data)->ptr;
-  size_t      data_len = (data == Qnil) ? -1   : RSTRING(data)->len;
+  const char *data_ptr = (data == Qnil) ? NULL : RSTRING_PTR(data);
+  size_t      data_len = (data == Qnil) ? -1   : RSTRING_LEN(data);
 
   int rc;
   switch (call_type) {
     case SYNC:
-      rc = zoo_set2(zk->zh, RSTRING(path)->ptr, data_ptr, data_len, FIX2INT(version), &stat);
+      rc = zoo_set2(zk->zh, RSTRING_PTR(path), data_ptr, data_len, FIX2INT(version), &stat);
       break;
     case ASYNC:
-      rc = zoo_aset(zk->zh, RSTRING(path)->ptr, data_ptr, data_len, FIX2INT(version),
+      rc = zoo_aset(zk->zh, RSTRING_PTR(path), data_ptr, data_len, FIX2INT(version),
                             zkrb_stat_callback, data_ctx);
       break;
     default:
@@ -325,11 +325,11 @@ static VALUE method_set_acl(VALUE self, VALUE reqid, VALUE path, VALUE acls, VAL
   int rc;
   switch (call_type) {
     case SYNC:
-      rc = zoo_set_acl(zk->zh, RSTRING(path)->ptr, FIX2INT(version), aclptr);
+      rc = zoo_set_acl(zk->zh, RSTRING_PTR(path), FIX2INT(version), aclptr);
       deallocate_ACL_vector(aclptr);
       break;
     case ASYNC:
-      rc = zoo_aset_acl(zk->zh, RSTRING(path)->ptr, FIX2INT(version), aclptr, zkrb_void_callback, data_ctx);
+      rc = zoo_aset_acl(zk->zh, RSTRING_PTR(path), FIX2INT(version), aclptr, zkrb_void_callback, data_ctx);
       deallocate_ACL_vector(aclptr);
       break;
     default:
@@ -351,10 +351,10 @@ static VALUE method_get_acl(VALUE self, VALUE reqid, VALUE path, VALUE async) {
   int rc;
   switch (call_type) {
     case SYNC:
-      rc = zoo_get_acl(zk->zh, RSTRING(path)->ptr, &acls, &stat);
+      rc = zoo_get_acl(zk->zh, RSTRING_PTR(path), &acls, &stat);
       break;
     case ASYNC:
-      rc = zoo_aget_acl(zk->zh, RSTRING(path)->ptr, zkrb_acl_callback, data_ctx);
+      rc = zoo_aget_acl(zk->zh, RSTRING_PTR(path), zkrb_acl_callback, data_ctx);
       break;
     default:
       /* TODO(wickman) raise proper argument error */

@@ -411,7 +411,7 @@ struct ACL_vector * zkrb_ruby_to_aclvector(VALUE acl_ary) {
   Check_Type(acl_ary, T_ARRAY);
 
   struct ACL_vector *v = malloc(sizeof(struct ACL_vector));
-  allocate_ACL_vector(v, RARRAY(acl_ary)->len);
+  allocate_ACL_vector(v, RARRAY_LEN(acl_ary));
 
   int k;
   for (k = 0; k < v->count; ++k) {
@@ -442,17 +442,17 @@ struct Id zkrb_ruby_to_id(VALUE rubyid) {
   VALUE ident  = rb_iv_get(rubyid, "@id");
   
   if (scheme != Qnil) {
-    id.scheme = malloc(RSTRING(scheme)->len + 1);
-    strncpy(id.scheme, RSTRING(scheme)->ptr, RSTRING(scheme)->len);
-    id.scheme[RSTRING(scheme)->len] = '\0';
+    id.scheme = malloc(RSTRING_LEN(scheme) + 1);
+    strncpy(id.scheme, RSTRING_PTR(scheme), RSTRING_LEN(scheme));
+    id.scheme[RSTRING_LEN(scheme)] = '\0';
   } else {
     id.scheme = NULL;
   }
 
   if (ident != Qnil) {
-    id.id     = malloc(RSTRING(ident)->len + 1);
-    strncpy(id.id, RSTRING(ident)->ptr, RSTRING(ident)->len);
-    id.id[RSTRING(ident)->len] = '\0';
+    id.id     = malloc(RSTRING_LEN(ident) + 1);
+    strncpy(id.id, RSTRING_PTR(ident), RSTRING_LEN(ident));
+    id.id[RSTRING_LEN(ident)] = '\0';
   } else {
     id.id = NULL;
   }

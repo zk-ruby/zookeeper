@@ -11,6 +11,16 @@
 #define ZK_FALSE 0
 #define ZKRB_GLOBAL_REQ -1
 
+#ifndef RSTRING_LEN
+# define RSTRING_LEN(x) RSTRING(x)->len
+#endif
+#ifndef RSTRING_PTR
+# define RSTRING_PTR(x) RSTRING(x)->ptr
+#endif
+#ifndef RARRAY_LEN
+# define RARRAY_LEN(x) RARRAY(x)->len
+#endif
+
 extern int ZKRBDebugging;
 
 struct zkrb_data_completion {
