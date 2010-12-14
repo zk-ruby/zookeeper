@@ -4,7 +4,7 @@ README
 Rakefile
 examples/cloud_config.rb
 ext/extconf.rb
-ext/zkc-3.3.1.tar.gz
+ext/zkc-3.3.2.tar.gz
 ext/zookeeper_c.c
 ext/zookeeper_lib.c
 ext/zookeeper_lib.h
