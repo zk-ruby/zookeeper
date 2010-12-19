@@ -57,9 +57,25 @@ static void print_zkrb_instance_data(struct zkrb_instance_data* ptr) {
 
 static VALUE method_init(int argc, VALUE* argv, VALUE self) {
   VALUE hostPort;
-  rb_scan_args(argc, argv, "10", &hostPort);
+  VALUE options;
+  rb_scan_args(argc, argv, "11", &hostPort, &options);
+
+  if (NIL_P(options)) {
+    options = rb_hash_new();
+  } else {
+    Check_Type(options, T_HASH);
+  }
 
   Check_Type(hostPort, T_STRING);
+
+  // Look up :zkc_log_level
+  VALUE log_level = rb_hash_aref(options, ID2SYM(rb_intern("zkc_log_level")));
+  if (NIL_P(log_level)) {
+    zoo_set_debug_level(0); // no log messages
+  } else {
+    Check_Type(log_level, T_FIXNUM);
+    zoo_set_debug_level(log_level);
+  }
 
   VALUE data;
   struct zkrb_instance_data *zk_local_ctx = NULL;
@@ -69,10 +85,9 @@ static VALUE method_init(int argc, VALUE* argv, VALUE self) {
            free_zkrb_instance_data,
            zk_local_ctx);
   zk_local_ctx->queue = zkrb_queue_alloc();
-  
-  zoo_set_debug_level(ZOO_LOG_LEVEL_INFO);
+
   zoo_deterministic_conn_order(0);
-  
+
   zkrb_calling_context *ctx =
     zkrb_calling_context_alloc(ZKRB_GLOBAL_REQ, zk_local_ctx->queue);
 
