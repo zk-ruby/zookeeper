@@ -55,7 +55,10 @@ static void print_zkrb_instance_data(struct zkrb_instance_data* ptr) {
   fprintf(stderr, "}\n");
 }
 
-static VALUE method_init(VALUE self, VALUE hostPort) {
+static VALUE method_init(int argc, VALUE* argv, VALUE self) {
+  VALUE hostPort;
+  rb_scan_args(argc, argv, "10", &hostPort);
+
   Check_Type(hostPort, T_STRING);
 
   VALUE data;
@@ -440,7 +443,7 @@ static void zkrb_define_methods(void) {
 #define DEFINE_CLASS_METHOD(method, args) { \
     rb_define_singleton_method(Zookeeper, #method, method_ ## method, args); }
 
-  DEFINE_METHOD(init, 1);
+  DEFINE_METHOD(init, -1);
   DEFINE_METHOD(get_children, 4);
   DEFINE_METHOD(exists, 4);
   DEFINE_METHOD(create, 6);
