@@ -403,9 +403,13 @@ static VALUE method_get_next_event(VALUE self) {
 }
 
 static VALUE method_has_events(VALUE self) {
+  VALUE rb_event = NULL;
   FETCH_DATA_PTR(self, zk);
   if (zk->queue == NULL) return Qfalse;
-  return zkrb_peek(zk->queue) != NULL ? Qtrue : Qfalse;
+  pthread_mutex_lock(&zkrb_q_mutex);
+  rb_event = zkrb_peek(zk->queue) != NULL ? Qtrue : Qfalse;
+  pthread_mutex_unlock(&zkrb_q_mutex);
+  return rb_event;
 }
 
 static VALUE method_client_id(VALUE self) {
@@ -487,7 +491,7 @@ static void zkrb_define_methods(void) {
 }
 void Init_zookeeper_c() {
   ZKRBDebugging = 0;
-
+  pthread_mutex_init(&zkrb_q_mutex, NULL);
   /* initialize Zookeeper class */
   Zookeeper = rb_define_class("CZookeeper", rb_cObject);
   zkrb_define_methods();

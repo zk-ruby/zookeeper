@@ -22,6 +22,7 @@
 #endif
 
 extern int ZKRBDebugging;
+extern pthread_mutex_t zkrb_q_mutex;
 
 struct zkrb_data_completion {
   char *data;
