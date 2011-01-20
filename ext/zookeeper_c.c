@@ -405,6 +405,8 @@ static VALUE method_has_events(VALUE self) {
   VALUE rb_event = NULL;
   FETCH_DATA_PTR(self, zk);
 
+  // This is the only place we should use the q_mutex outside of the queue
+  // implementation. See the comment on zkrb_peek.
   pthread_mutex_lock(&zkrb_q_mutex);
   rb_event = zkrb_peek(zk->queue) != NULL ? Qtrue : Qfalse;
   pthread_mutex_unlock(&zkrb_q_mutex);
