@@ -25,6 +25,9 @@ pthread_mutex_t zkrb_q_mutex;
 #warning [wickman] TODO enqueue, peek, dequeue => pthread_mutex_lock
 void zkrb_enqueue(zkrb_queue_t *q, zkrb_event_t *elt) {
   pthread_mutex_lock(&zkrb_q_mutex);
+  if (q == NULL || q->tail == NULL) {
+    return;
+  }
   q->tail->event = elt;
   q->tail->next = (struct zkrb_event_ll_t *) malloc(sizeof(struct zkrb_event_ll_t));
   q->tail = q->tail->next;
