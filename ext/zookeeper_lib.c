@@ -33,13 +33,14 @@ void zkrb_enqueue(zkrb_queue_t *q, zkrb_event_t *elt) {
   pthread_mutex_unlock(&zkrb_q_mutex);
 }
 
-// memcpy is hard. Let's go shopping. We have to lock the mutex around each
-// usage of zkrb_peek. Unfortunate, but easier than duplicating the massive
-// case statement to copy the union inside of an event.
 zkrb_event_t * zkrb_peek(zkrb_queue_t *q) {
-  if (q != NULL && q->head != NULL && q->head->event != NULL)
-    return q->head->event;
-  return NULL;
+  pthread_mutex_lock(&zkrb_q_mutex);
+  zkrb_event_t *event = NULL;
+  if (q != NULL && q->head != NULL && q->head->event != NULL) {
+    event = q->head->event;
+  }
+  pthread_mutex_unlock(&zkrb_q_mutex);
+  return event;
 }
 
 zkrb_event_t* zkrb_dequeue(zkrb_queue_t *q) {
