@@ -33,7 +33,7 @@ Dir.chdir(HERE) do
     raise "'#{cmd}' failed" unless system(cmd)
 
     Dir.chdir(BUNDLE_PATH) do        
-      puts(cmd = "env CFLAGS='-fPIC #{$CFLAGS}' LDFLAGS='-fPIC #{$LDFLAGS}' ./configure --prefix=#{HERE} --without-cppunit --disable-dependency-tracking #{$EXTRA_CONF} 2>&1")
+      puts(cmd = "env CC=gcc CXX=g++ CFLAGS='-fPIC #{$CFLAGS}' LDFLAGS='-fPIC #{$LDFLAGS}' ./configure --prefix=#{HERE} --without-cppunit --disable-dependency-tracking #{$EXTRA_CONF} 2>&1")
       raise "'#{cmd}' failed" unless system(cmd)
       puts(cmd = "make CXXFLAGS='#{$CXXFLAGS}' || true 2>&1")
       raise "'#{cmd}' failed" unless system(cmd)

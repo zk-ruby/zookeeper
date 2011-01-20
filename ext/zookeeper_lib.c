@@ -36,14 +36,14 @@ void zkrb_enqueue(zkrb_queue_t *q, zkrb_event_t *elt) {
 // memcpy is hard, let's go shopping. lock the mutex around each usage of
 // zkrb_peek.
 zkrb_event_t * zkrb_peek(zkrb_queue_t *q) {
-  if (q->head != NULL && q->head->event != NULL)
+  if (q != NULL && q->head != NULL && q->head->event != NULL)
     return q->head->event;
   return NULL;
 }
 
 zkrb_event_t* zkrb_dequeue(zkrb_queue_t *q) {
   pthread_mutex_lock(&zkrb_q_mutex);
-  if (q->head == NULL || q->head->event == NULL) {
+  if (q == NULL || q->head == NULL || q->head->event == NULL) {
     pthread_mutex_unlock(&zkrb_q_mutex);
     return NULL;
   } else {
