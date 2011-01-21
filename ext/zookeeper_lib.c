@@ -14,12 +14,13 @@ wickman@twitter.com
 #include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <pthread.h>
 
 #define GET_SYM(str) ID2SYM(rb_intern(str))
 
 int ZKRBDebugging;
 
-pthread_mutex_t zkrb_q_mutex;
+pthread_mutex_t zkrb_q_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 /* push/pop is a misnomer, this is a queue */
 #warning [wickman] TODO enqueue, peek, dequeue => pthread_mutex_lock

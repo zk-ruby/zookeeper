@@ -488,7 +488,6 @@ static void zkrb_define_methods(void) {
 }
 void Init_zookeeper_c() {
   ZKRBDebugging = 0;
-  pthread_mutex_init(&zkrb_q_mutex, NULL);
   /* initialize Zookeeper class */
   Zookeeper = rb_define_class("CZookeeper", rb_cObject);
   zkrb_define_methods();
