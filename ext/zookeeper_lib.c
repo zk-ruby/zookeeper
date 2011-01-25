@@ -245,8 +245,7 @@ void zkrb_state_callback(
   struct zkrb_watcher_completion *wc = malloc(sizeof(struct zkrb_watcher_completion));
   wc->type  = type;
   wc->state = state;
-  wc->path  = malloc(strlen(path) + 1);
-  strcpy(wc->path, path);
+  wc->path  = strdup(path);
 
   ZKH_SETUP_EVENT(queue, event);
   event->type = ZKRB_WATCHER;
@@ -307,7 +306,8 @@ void zkrb_string_callback(
 
   struct zkrb_string_completion *sc = malloc(sizeof(struct zkrb_string_completion));
   sc->value = NULL;
-  if (string != NULL) { sc->value = malloc(strlen(string) + 1); strcpy(sc->value, string); }
+  if (string)
+    sc->value = strdup(string);
 
   ZKH_SETUP_EVENT(queue, event);
   event->rc = rc;
@@ -516,10 +516,8 @@ struct ACL_vector * zkrb_clone_acl_vector(struct ACL_vector * src) {
   int k;
   for (k = 0; k < src->count; ++k) {
     struct ACL * elt = &src->data[k];
-    dst->data[k].id.scheme = malloc(strlen(elt->id.scheme)+1);
-    dst->data[k].id.id     = malloc(strlen(elt->id.id)+1);
-    strcpy(dst->data[k].id.scheme, elt->id.scheme);
-    strcpy(dst->data[k].id.id, elt->id.id);
+    dst->data[k].id.scheme = strdup(elt->id.scheme);
+    dst->data[k].id.id     = strdup(elt->id.id);
     dst->data[k].perms = elt->perms;
   }
   return dst;
@@ -531,8 +529,7 @@ struct String_vector * zkrb_clone_string_vector(struct String_vector * src) {
   allocate_String_vector(dst, src->count);
   int k;
   for (k = 0; k < src->count; ++k) {
-    dst->data[k] = malloc(strlen(src->data[k]) + 1);
-    strcpy(dst->data[k], src->data[k]);
+    dst->data[k] = strdup(src->data[k]);
   }
   return dst;
 }
