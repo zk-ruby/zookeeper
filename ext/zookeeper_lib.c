@@ -526,7 +526,7 @@ struct ACL_vector * zkrb_clone_acl_vector(struct ACL_vector * src) {
 }
 
 #warning [wickman] TODO test zkrb_clone_string_vector
-struct String_vector * zkrb_clone_string_vector(struct String_vector * src) {
+struct String_vector * zkrb_clone_string_vector(const struct String_vector * src) {
   struct String_vector * dst = malloc(sizeof(struct String_vector));
   allocate_String_vector(dst, src->count);
   int k;

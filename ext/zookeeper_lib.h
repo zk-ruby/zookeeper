@@ -154,7 +154,7 @@ VALUE zkrb_stat_to_rhash(const struct Stat* stat);
 
 struct ACL_vector *    zkrb_ruby_to_aclvector(VALUE acl_ary);
 struct ACL_vector *    zkrb_clone_acl_vector(struct ACL_vector * src);
-struct String_vector * zkrb_clone_string_vector(struct String_vector * src);
+struct String_vector * zkrb_clone_string_vector(const struct String_vector * src);
 struct ACL             zkrb_ruby_to_acl(VALUE rubyacl);
 struct Id              zkrb_ruby_to_id(VALUE rubyid);
 
