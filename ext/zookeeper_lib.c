@@ -352,7 +352,7 @@ void zkrb_strings_stat_callback(
   ZKH_SETUP_EVENT(queue, event);
   event->rc = rc;
   event->type = ZKRB_STRINGS_STAT;
-  event->completion.strings_completion = sc;
+  event->completion.strings_stat_completion = sc;
   
   zkrb_enqueue(queue, event);
 }
