@@ -37,13 +37,26 @@ typedef enum {
 #define IS_SYNC(zkrbcall) ((zkrbcall)==SYNC || (zkrbcall)==SYNC_WATCH)
 #define IS_ASYNC(zkrbcall) ((zkrbcall)==ASYNC || (zkrbcall)==ASYNC_WATCH)
 
-static void free_zkrb_instance_data(struct zkrb_instance_data* ptr) {
+static int destroy_zkrb_instance(struct zkrb_instance_data* ptr) {
+  int rv = ZOK;
+
+  if (ptr->zh) {
+    const void *ctx = zoo_get_context(ptr->zh);
+    /* Note that after zookeeper_close() returns, ZK handle is invalid */
+    rv = zookeeper_close(ptr->zh);
+    free((void *) ctx);
+  }
+
 #warning [wickman] TODO: fire off warning if queue is not empty
-  if (ptr->zh) zookeeper_close(ptr->zh);
   if (ptr->queue) zkrb_queue_free(ptr->queue);
 
   ptr->zh = NULL;
   ptr->queue = NULL;
+  return rv;
+}
+
+static void free_zkrb_instance_data(struct zkrb_instance_data* ptr) {
+  destroy_zkrb_instance(ptr);
 }
 
 static void print_zkrb_instance_data(struct zkrb_instance_data* ptr) {
@@ -59,7 +72,7 @@ static VALUE method_init(VALUE self, VALUE hostPort) {
   Check_Type(hostPort, T_STRING);
 
   VALUE data;
-  struct zkrb_instance_data *zk_local_ctx = NULL;
+  struct zkrb_instance_data *zk_local_ctx;
   data = Data_Make_Struct(Zookeeper,
            struct zkrb_instance_data,
            0,
@@ -92,9 +105,11 @@ static VALUE method_init(VALUE self, VALUE hostPort) {
   return Qnil;
 }
 
-#define FETCH_DATA_PTR(x, y) \
-  struct zkrb_instance_data * y; \
-  Data_Get_Struct(rb_iv_get(x, "@data"), struct zkrb_instance_data, y)
+#define FETCH_DATA_PTR(x, y)                                            \
+  struct zkrb_instance_data * y;                                        \
+  Data_Get_Struct(rb_iv_get(x, "@data"), struct zkrb_instance_data, y); \
+  if ((y)->zh == NULL)                                                  \
+    rb_raise(rb_eRuntimeError, "zookeeper handle is closed")
 
 #define STANDARD_PREAMBLE(self, zk, reqid, path, async, watch, cb_ctx, w_ctx, call_type) \
   if (TYPE(reqid) != T_FIXNUM && TYPE(reqid) != T_BIGNUM) {             \
@@ -104,6 +119,8 @@ static VALUE method_init(VALUE self, VALUE hostPort) {
   Check_Type(path, T_STRING);                                           \
   struct zkrb_instance_data * zk;                                       \
   Data_Get_Struct(rb_iv_get(self, "@data"), struct zkrb_instance_data, zk); \
+  if (!zk->zh)                                                          \
+    rb_raise(rb_eRuntimeError, "zookeeper handle is closed");           \
   zkrb_calling_context* cb_ctx =                                        \
     (async != Qfalse && async != Qnil) ?                                \
        zkrb_calling_context_alloc(NUM2LL(reqid), zk->queue) :           \
@@ -398,9 +415,9 @@ static VALUE method_client_id(VALUE self) {
 
 static VALUE method_close(VALUE self) {
   FETCH_DATA_PTR(self, zk);
+
   /* Note that after zookeeper_close() returns, ZK handle is invalid */
-  int rc = zookeeper_close(zk->zh);
-  zk->zh = NULL;
+  int rc = destroy_zkrb_instance(zk);
   return INT2FIX(rc);
 }
 
