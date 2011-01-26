@@ -214,9 +214,9 @@ zkrb_calling_context *zkrb_calling_context_alloc(int64_t req_id, zkrb_queue_t *q
 }
 
 void zkrb_print_calling_context(zkrb_calling_context *ctx) {
-  fprintf(stderr, "calling context (%#x){\n", ctx);
+  fprintf(stderr, "calling context (%p){\n", ctx);
   fprintf(stderr, "\treq_id = %lld\n", ctx->req_id);
-  fprintf(stderr, "\tqueue  = 0x%#x\n", ctx->queue);
+  fprintf(stderr, "\tqueue  = %p\n", ctx->queue);
   fprintf(stderr, "}\n");
 }
 
@@ -237,7 +237,7 @@ void zkrb_state_callback(
   /* logging */
   if (ZKRBDebugging) {
     fprintf(stderr, "ZOOKEEPER_C_STATE WATCHER "
-                    "type = %d, state = %d, path = 0x%#x, value = %s\n",
+                    "type = %d, state = %d, path = %p, value = %s\n",
       type, state, (void *) path, path ? path : "NULL");
   }
 
@@ -322,7 +322,7 @@ void zkrb_strings_callback(
     int rc, const struct String_vector *strings, const void *calling_ctx) {
   if (ZKRBDebugging) {
     fprintf(stderr, "ZOOKEEPER_C_STRINGS WATCHER "
-                    "rc = %d (%s), calling_ctx = 0x%#x\n", rc, zerror(rc), calling_ctx);
+                    "rc = %d (%s), calling_ctx = %p\n", rc, zerror(rc), calling_ctx);
   }
 
   /* copy string vector */
@@ -341,7 +341,7 @@ void zkrb_strings_stat_callback(
     int rc, const struct String_vector *strings, const struct Stat *stat, const void *calling_ctx) {
   if (ZKRBDebugging) {
     fprintf(stderr, "ZOOKEEPER_C_STRINGS_STAT WATCHER "
-                    "rc = %d (%s), calling_ctx = 0x%#x\n", rc, zerror(rc), calling_ctx);
+                    "rc = %d (%s), calling_ctx = %p\n", rc, zerror(rc), calling_ctx);
   }
 
   struct zkrb_strings_stat_completion *sc = malloc(sizeof(struct zkrb_strings_stat_completion));
