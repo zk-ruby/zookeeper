@@ -39,10 +39,10 @@ typedef enum {
 
 static void free_zkrb_instance_data(struct zkrb_instance_data* ptr) {
 #warning [wickman] TODO: fire off warning if queue is not empty
-  if (ptr->zh && zoo_state(ptr->zh) == ZOO_CONNECTED_STATE) {
-    zookeeper_close(ptr->zh);
-  }
+  if (ptr->zh) zookeeper_close(ptr->zh);
   if (ptr->queue) zkrb_queue_free(ptr->queue);
+
+  ptr->zh = NULL;
   ptr->queue = NULL;
 }
 
@@ -398,7 +398,9 @@ static VALUE method_client_id(VALUE self) {
 
 static VALUE method_close(VALUE self) {
   FETCH_DATA_PTR(self, zk);
+  /* Note that after zookeeper_close() returns, ZK handle is invalid */
   int rc = zookeeper_close(zk->zh);
+  zk->zh = NULL;
   return INT2FIX(rc);
 }
 
