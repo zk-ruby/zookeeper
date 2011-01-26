@@ -266,7 +266,8 @@ void zkrb_data_callback(
 
   /* copy data completion */
   struct zkrb_data_completion *dc = malloc(sizeof(struct zkrb_data_completion));
-  dc->data = dc->stat = NULL;
+  dc->data = NULL;
+  dc->stat = NULL;
   if (value != NULL) { dc->data  = malloc(value_len); memcpy(dc->data, value, value_len); }
   if (stat != NULL) { dc->stat  = malloc(sizeof(struct Stat)); memcpy(dc->stat, stat, sizeof(struct Stat)); }
 
@@ -379,7 +380,8 @@ void zkrb_acl_callback(
   }
 
   struct zkrb_acl_completion *ac = malloc(sizeof(struct zkrb_acl_completion));
-  ac->acl = ac->stat = NULL;
+  ac->acl = NULL;
+  ac->stat = NULL;
   if (acls != NULL) { ac->acl  = zkrb_clone_acl_vector(acls); }
   if (stat != NULL) { ac->stat = malloc(sizeof(struct Stat)); memcpy(ac->stat, stat, sizeof(struct Stat)); }
 
