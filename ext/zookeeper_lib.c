@@ -272,10 +272,20 @@ void zkrb_state_callback(
   wc->path  = malloc(strlen(path) + 1);
   strcpy(wc->path, path);
 
-  ZKH_SETUP_EVENT(queue, event);
+  // This is unfortunate copy-pasta from ZKH_SETUP_EVENT with one change: we
+  // check type instead of the req_id to see if we need to free the ctx.
+  zkrb_calling_context *ctx = (zkrb_calling_context *) calling_ctx;
+  zkrb_event_t *event = zkrb_event_alloc();
+  event->req_id = ctx->req_id;
+  zkrb_queue_t *queue = ctx->queue;
+  if (type != ZOO_SESSION_EVENT) {
+    free(ctx);
+    ctx = NULL;
+  }
+
   event->type = ZKRB_WATCHER;
   event->completion.watcher_completion = wc;
-  
+
   zkrb_enqueue(queue, event);
 }
 
