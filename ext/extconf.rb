@@ -15,6 +15,7 @@ if ENV['DEBUG']
   puts "Setting debug flags."
   $CFLAGS << " -O0 -ggdb -DHAVE_DEBUG"
   $EXTRA_CONF = " --enable-debug"
+  $CFLAGS.gsub!(/ -O[^0] /, ' ')
 end
 
 $includes = " -I#{HERE}/include"
