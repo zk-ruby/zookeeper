@@ -1,8 +1,5 @@
 require 'rubygems'
-
-HERE = File.expand_path(File.dirname(__FILE__))
-
-require "#{HERE}/../lib/zookeeper"
+require 'zookeeper'
 
 z = Zookeeper.new("localhost:2181")
 

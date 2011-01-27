@@ -37,13 +37,26 @@ typedef enum {
 #define IS_SYNC(zkrbcall) ((zkrbcall)==SYNC || (zkrbcall)==SYNC_WATCH)
 #define IS_ASYNC(zkrbcall) ((zkrbcall)==ASYNC || (zkrbcall)==ASYNC_WATCH)
 
-static void free_zkrb_instance_data(struct zkrb_instance_data* ptr) {
-#warning [wickman] TODO: fire off warning if queue is not empty
-  if (ptr->zh && zoo_state(ptr->zh) == ZOO_CONNECTED_STATE) {
-    zookeeper_close(ptr->zh);
+static int destroy_zkrb_instance(struct zkrb_instance_data* ptr) {
+  int rv = ZOK;
+
+  if (ptr->zh) {
+    const void *ctx = zoo_get_context(ptr->zh);
+    /* Note that after zookeeper_close() returns, ZK handle is invalid */
+    rv = zookeeper_close(ptr->zh);
+    free((void *) ctx);
   }
+
+#warning [wickman] TODO: fire off warning if queue is not empty
   if (ptr->queue) zkrb_queue_free(ptr->queue);
+
+  ptr->zh = NULL;
   ptr->queue = NULL;
+  return rv;
+}
+
+static void free_zkrb_instance_data(struct zkrb_instance_data* ptr) {
+  destroy_zkrb_instance(ptr);
 }
 
 static void print_zkrb_instance_data(struct zkrb_instance_data* ptr) {
@@ -78,7 +91,7 @@ static VALUE method_init(int argc, VALUE* argv, VALUE self) {
   }
 
   VALUE data;
-  struct zkrb_instance_data *zk_local_ctx = NULL;
+  struct zkrb_instance_data *zk_local_ctx;
   data = Data_Make_Struct(Zookeeper,
            struct zkrb_instance_data,
            0,
@@ -110,9 +123,11 @@ static VALUE method_init(int argc, VALUE* argv, VALUE self) {
   return Qnil;
 }
 
-#define FETCH_DATA_PTR(x, y) \
-  struct zkrb_instance_data * y; \
-  Data_Get_Struct(rb_iv_get(x, "@data"), struct zkrb_instance_data, y)
+#define FETCH_DATA_PTR(x, y)                                            \
+  struct zkrb_instance_data * y;                                        \
+  Data_Get_Struct(rb_iv_get(x, "@data"), struct zkrb_instance_data, y); \
+  if ((y)->zh == NULL)                                                  \
+    rb_raise(rb_eRuntimeError, "zookeeper handle is closed")
 
 #define STANDARD_PREAMBLE(self, zk, reqid, path, async, watch, cb_ctx, w_ctx, call_type) \
   if (TYPE(reqid) != T_FIXNUM && TYPE(reqid) != T_BIGNUM) {             \
@@ -122,6 +137,8 @@ static VALUE method_init(int argc, VALUE* argv, VALUE self) {
   Check_Type(path, T_STRING);                                           \
   struct zkrb_instance_data * zk;                                       \
   Data_Get_Struct(rb_iv_get(self, "@data"), struct zkrb_instance_data, zk); \
+  if (!zk->zh)                                                          \
+    rb_raise(rb_eRuntimeError, "zookeeper handle is closed");           \
   zkrb_calling_context* cb_ctx =                                        \
     (async != Qfalse && async != Qnil) ?                                \
        zkrb_calling_context_alloc(NUM2LL(reqid), zk->queue) :           \
@@ -295,7 +312,10 @@ static VALUE method_get(VALUE self, VALUE reqid, VALUE path, VALUE async, VALUE 
   VALUE output = rb_ary_new();
   rb_ary_push(output, INT2FIX(rc));
   if (IS_SYNC(call_type) && rc == ZOK) {
-    rb_ary_push(output, rb_str_new(data, data_len));
+    if (data_len == -1)
+      rb_ary_push(output, Qnil);        /* No data associated with path */
+    else
+      rb_ary_push(output, rb_str_new(data, data_len));
     rb_ary_push(output, zkrb_stat_to_rarray(&stat));
   }
   free(data);
@@ -416,7 +436,9 @@ static VALUE method_client_id(VALUE self) {
 
 static VALUE method_close(VALUE self) {
   FETCH_DATA_PTR(self, zk);
-  int rc = zookeeper_close(zk->zh);
+
+  /* Note that after zookeeper_close() returns, ZK handle is invalid */
+  int rc = destroy_zkrb_instance(zk);
   return INT2FIX(rc);
 }
 

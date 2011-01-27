@@ -214,9 +214,9 @@ zkrb_calling_context *zkrb_calling_context_alloc(int64_t req_id, zkrb_queue_t *q
 }
 
 void zkrb_print_calling_context(zkrb_calling_context *ctx) {
-  fprintf(stderr, "calling context (%#x){\n", ctx);
+  fprintf(stderr, "calling context (%p){\n", ctx);
   fprintf(stderr, "\treq_id = %lld\n", ctx->req_id);
-  fprintf(stderr, "\tqueue  = 0x%#x\n", ctx->queue);
+  fprintf(stderr, "\tqueue  = %p\n", ctx->queue);
   fprintf(stderr, "}\n");
 }
 
@@ -237,7 +237,7 @@ void zkrb_state_callback(
   /* logging */
   if (ZKRBDebugging) {
     fprintf(stderr, "ZOOKEEPER_C_STATE WATCHER "
-                    "type = %d, state = %d, path = 0x%#x, value = %s\n",
+                    "type = %d, state = %d, path = %p, value = %s\n",
       type, state, (void *) path, path ? path : "NULL");
   }
 
@@ -245,8 +245,7 @@ void zkrb_state_callback(
   struct zkrb_watcher_completion *wc = malloc(sizeof(struct zkrb_watcher_completion));
   wc->type  = type;
   wc->state = state;
-  wc->path  = malloc(strlen(path) + 1);
-  strcpy(wc->path, path);
+  wc->path  = strdup(path);
 
   ZKH_SETUP_EVENT(queue, event);
   event->type = ZKRB_WATCHER;
@@ -267,7 +266,8 @@ void zkrb_data_callback(
 
   /* copy data completion */
   struct zkrb_data_completion *dc = malloc(sizeof(struct zkrb_data_completion));
-  dc->data = dc->stat = NULL;
+  dc->data = NULL;
+  dc->stat = NULL;
   if (value != NULL) { dc->data  = malloc(value_len); memcpy(dc->data, value, value_len); }
   if (stat != NULL) { dc->stat  = malloc(sizeof(struct Stat)); memcpy(dc->stat, stat, sizeof(struct Stat)); }
 
@@ -307,7 +307,8 @@ void zkrb_string_callback(
 
   struct zkrb_string_completion *sc = malloc(sizeof(struct zkrb_string_completion));
   sc->value = NULL;
-  if (string != NULL) { sc->value = malloc(strlen(string) + 1); strcpy(sc->value, string); }
+  if (string)
+    sc->value = strdup(string);
 
   ZKH_SETUP_EVENT(queue, event);
   event->rc = rc;
@@ -321,7 +322,7 @@ void zkrb_strings_callback(
     int rc, const struct String_vector *strings, const void *calling_ctx) {
   if (ZKRBDebugging) {
     fprintf(stderr, "ZOOKEEPER_C_STRINGS WATCHER "
-                    "rc = %d (%s), calling_ctx = 0x%#x\n", rc, zerror(rc), calling_ctx);
+                    "rc = %d (%s), calling_ctx = %p\n", rc, zerror(rc), calling_ctx);
   }
 
   /* copy string vector */
@@ -340,7 +341,7 @@ void zkrb_strings_stat_callback(
     int rc, const struct String_vector *strings, const struct Stat *stat, const void *calling_ctx) {
   if (ZKRBDebugging) {
     fprintf(stderr, "ZOOKEEPER_C_STRINGS_STAT WATCHER "
-                    "rc = %d (%s), calling_ctx = 0x%#x\n", rc, zerror(rc), calling_ctx);
+                    "rc = %d (%s), calling_ctx = %p\n", rc, zerror(rc), calling_ctx);
   }
 
   struct zkrb_strings_stat_completion *sc = malloc(sizeof(struct zkrb_strings_stat_completion));
@@ -351,7 +352,7 @@ void zkrb_strings_stat_callback(
   ZKH_SETUP_EVENT(queue, event);
   event->rc = rc;
   event->type = ZKRB_STRINGS_STAT;
-  event->completion.strings_completion = sc;
+  event->completion.strings_stat_completion = sc;
   
   zkrb_enqueue(queue, event);
 }
@@ -379,7 +380,8 @@ void zkrb_acl_callback(
   }
 
   struct zkrb_acl_completion *ac = malloc(sizeof(struct zkrb_acl_completion));
-  ac->acl = ac->stat = NULL;
+  ac->acl = NULL;
+  ac->stat = NULL;
   if (acls != NULL) { ac->acl  = zkrb_clone_acl_vector(acls); }
   if (stat != NULL) { ac->stat = malloc(sizeof(struct Stat)); memcpy(ac->stat, stat, sizeof(struct Stat)); }
 
@@ -516,23 +518,20 @@ struct ACL_vector * zkrb_clone_acl_vector(struct ACL_vector * src) {
   int k;
   for (k = 0; k < src->count; ++k) {
     struct ACL * elt = &src->data[k];
-    dst->data[k].id.scheme = malloc(strlen(elt->id.scheme)+1);
-    dst->data[k].id.id     = malloc(strlen(elt->id.id)+1);
-    strcpy(dst->data[k].id.scheme, elt->id.scheme);
-    strcpy(dst->data[k].id.id, elt->id.id);
+    dst->data[k].id.scheme = strdup(elt->id.scheme);
+    dst->data[k].id.id     = strdup(elt->id.id);
     dst->data[k].perms = elt->perms;
   }
   return dst;
 }
 
 #warning [wickman] TODO test zkrb_clone_string_vector
-struct String_vector * zkrb_clone_string_vector(struct String_vector * src) {
+struct String_vector * zkrb_clone_string_vector(const struct String_vector * src) {
   struct String_vector * dst = malloc(sizeof(struct String_vector));
   allocate_String_vector(dst, src->count);
   int k;
   for (k = 0; k < src->count; ++k) {
-    dst->data[k] = malloc(strlen(src->data[k]) + 1);
-    strcpy(dst->data[k], src->data[k]);
+    dst->data[k] = strdup(src->data[k]);
   }
   return dst;
 }
