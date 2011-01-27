@@ -294,7 +294,10 @@ static VALUE method_get(VALUE self, VALUE reqid, VALUE path, VALUE async, VALUE 
   VALUE output = rb_ary_new();
   rb_ary_push(output, INT2FIX(rc));
   if (IS_SYNC(call_type) && rc == ZOK) {
-    rb_ary_push(output, rb_str_new(data, data_len));
+    if (data_len == -1)
+      rb_ary_push(output, Qnil);        /* No data associated with path */
+    else
+      rb_ary_push(output, rb_str_new(data, data_len));
     rb_ary_push(output, zkrb_stat_to_rarray(&stat));
   }
   free(data);
