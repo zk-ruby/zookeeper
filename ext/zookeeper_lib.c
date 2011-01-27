@@ -244,9 +244,7 @@ void zkrb_print_calling_context(zkrb_calling_context *ctx) {
   to completions that the ruby side dispatches via callbacks.
 
   The calling_ctx can be thought of as the outer shell that we discard in
-  this macro after pulling out the gooey delicious center. However, we do not
-  want to discard the shell if it's the global, reusable "state" context
-  created with zkrb_state_callback.
+  this macro after pulling out the gooey delicious center.
 */
 
 #define ZKH_SETUP_EVENT(qptr, eptr) \
