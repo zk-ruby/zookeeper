@@ -452,7 +452,7 @@ struct Id zkrb_ruby_to_id(VALUE rubyid) {
   }
 
   if (ident != Qnil) {
-    id.id     = malloc(RSTRING_LEN(ident) + 1);
+    id.id = malloc(RSTRING_LEN(ident) + 1);
     strncpy(id.id, RSTRING_PTR(ident), RSTRING_LEN(ident));
     id.id[RSTRING_LEN(ident)] = '\0';
   } else {
@@ -463,8 +463,8 @@ struct Id zkrb_ruby_to_id(VALUE rubyid) {
 }
 
 VALUE zkrb_acl_vector_to_ruby(struct ACL_vector *acl_vector) {
-  int i = 0;
-  VALUE ary = rb_ary_new();
+  int i;
+  VALUE ary = rb_ary_new2(acl_vector->count);
   for(i = 0; i < acl_vector->count; i++) {
     rb_ary_push(ary, zkrb_acl_to_ruby(acl_vector->data+i));
   }
@@ -472,8 +472,8 @@ VALUE zkrb_acl_vector_to_ruby(struct ACL_vector *acl_vector) {
 }
 
 VALUE zkrb_string_vector_to_ruby(struct String_vector *string_vector) {
-  int i = 0;
-  VALUE ary = rb_ary_new();
+  int i;
+  VALUE ary = rb_ary_new2(string_vector->count);
   for(i = 0; i < string_vector->count; i++) {
     rb_ary_push(ary, rb_str_new2(string_vector->data[i]));
   }
