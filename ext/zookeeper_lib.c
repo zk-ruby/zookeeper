@@ -61,6 +61,7 @@ void zkrb_queue_free(zkrb_queue_t *queue) {
   while ((elt = zkrb_dequeue(queue)) != NULL) {
     zkrb_event_free(elt);
   }
+  free(queue->head);
   free(queue);
 }
 
