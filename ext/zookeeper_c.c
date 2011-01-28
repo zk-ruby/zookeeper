@@ -400,12 +400,12 @@ static VALUE method_get_acl(VALUE self, VALUE reqid, VALUE path, VALUE async) {
       break;
   }
 
-  // do we need to deallocate the strings in the acl vector????
   VALUE output = rb_ary_new();
   rb_ary_push(output, INT2FIX(rc));
   if (IS_SYNC(call_type) && rc == ZOK) {
     rb_ary_push(output, zkrb_acl_vector_to_ruby(&acls));
     rb_ary_push(output, zkrb_stat_to_rarray(&stat));
+    deallocate_ACL_vector(&acls);
   }
   return output;
 }
