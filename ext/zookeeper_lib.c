@@ -115,6 +115,7 @@ void zkrb_event_free(zkrb_event_t *event) {
     case ZKRB_WATCHER: {
       struct zkrb_watcher_completion *watcher_ctx = event->completion.watcher_completion;
       free(watcher_ctx->path);
+      free(watcher_ctx);
       break;
     }
     case ZKRB_VOID: {
