@@ -237,16 +237,19 @@ static VALUE method_create(VALUE self, VALUE reqid, VALUE path, VALUE data, VALU
   switch (call_type) {
     case SYNC:
       rc = zoo_create(zk->zh, RSTRING_PTR(path), data_ptr, data_len, aclptr, FIX2INT(flags), realpath, sizeof(realpath));
-      if (aclptr != NULL) deallocate_ACL_vector(aclptr);
       break;
     case ASYNC:
       rc = zoo_acreate(zk->zh, RSTRING_PTR(path), data_ptr, data_len, aclptr, FIX2INT(flags), zkrb_string_callback, data_ctx);
-      if (aclptr != NULL) deallocate_ACL_vector(aclptr);
       break;
     default:
       /* TODO(wickman) raise proper argument error */
       return Qnil;
       break;
+  }
+
+  if (aclptr) {
+    deallocate_ACL_vector(aclptr);
+    free(aclptr);
   }
 
   VALUE output = rb_ary_new();
@@ -364,17 +367,18 @@ static VALUE method_set_acl(VALUE self, VALUE reqid, VALUE path, VALUE acls, VAL
   switch (call_type) {
     case SYNC:
       rc = zoo_set_acl(zk->zh, RSTRING_PTR(path), FIX2INT(version), aclptr);
-      deallocate_ACL_vector(aclptr);
       break;
     case ASYNC:
       rc = zoo_aset_acl(zk->zh, RSTRING_PTR(path), FIX2INT(version), aclptr, zkrb_void_callback, data_ctx);
-      deallocate_ACL_vector(aclptr);
       break;
     default:
       /* TODO(wickman) raise proper argument error */
       return Qnil;
       break;
   }
+
+  deallocate_ACL_vector(aclptr);
+  free(aclptr);
 
   return INT2FIX(rc);
 }
