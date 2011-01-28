@@ -60,11 +60,11 @@ static void free_zkrb_instance_data(struct zkrb_instance_data* ptr) {
 }
 
 static void print_zkrb_instance_data(struct zkrb_instance_data* ptr) {
-  fprintf(stderr, "zkrb_instance_data (%x) {\n", ptr);
-  fprintf(stderr, "   zh = %x\n",           ptr->zh);
+  fprintf(stderr, "zkrb_instance_data (%p) {\n", ptr);
+  fprintf(stderr, "   zh = %p\n",           ptr->zh);
   fprintf(stderr, "     { state = %d }\n",  zoo_state(ptr->zh));
   fprintf(stderr, "   id = %llx\n",         ptr->myid.client_id);
-  fprintf(stderr, "    q = %x\n",           ptr->queue);
+  fprintf(stderr, "    q = %p\n",           ptr->queue);
   fprintf(stderr, "}\n");
 }
 
