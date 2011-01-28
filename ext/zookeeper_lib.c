@@ -229,10 +229,10 @@ void zkrb_print_calling_context(zkrb_calling_context *ctx) {
 
 #define ZKH_SETUP_EVENT(qptr, eptr) \
   zkrb_calling_context *ctx = (zkrb_calling_context *) calling_ctx; \
-  zkrb_event_t *eptr = zkrb_event_alloc();                      \
+  zkrb_event_t *eptr = zkrb_event_alloc();                          \
   eptr->req_id = ctx->req_id;                                       \
-  if (eptr->req_id != ZKRB_GLOBAL_REQ) free(ctx);                   \
-  zkrb_queue_t *qptr = ctx->queue;
+  zkrb_queue_t *qptr = ctx->queue;                                  \
+  if (eptr->req_id != ZKRB_GLOBAL_REQ) free(ctx)
 
 void zkrb_state_callback(
     zhandle_t *zh, int type, int state, const char *path, void *calling_ctx) {
