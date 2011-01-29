@@ -23,10 +23,10 @@ int ZKRBDebugging;
 pthread_mutex_t zkrb_q_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 /* push/pop is a misnomer, this is a queue */
-#warning [wickman] TODO enqueue, peek, dequeue => pthread_mutex_lock
 void zkrb_enqueue(zkrb_queue_t *q, zkrb_event_t *elt) {
   pthread_mutex_lock(&zkrb_q_mutex);
   if (q == NULL || q->tail == NULL) {
+    pthread_mutex_unlock(&zkrb_q_mutex);
     return;
   }
   q->tail->event = elt;
@@ -47,17 +47,20 @@ zkrb_event_t * zkrb_peek(zkrb_queue_t *q) {
   return event;
 }
 
-zkrb_event_t* zkrb_dequeue(zkrb_queue_t *q) {
-  pthread_mutex_lock(&zkrb_q_mutex);
+zkrb_event_t* zkrb_dequeue(zkrb_queue_t *q, int need_lock) {
+  if (need_lock)
+    pthread_mutex_lock(&zkrb_q_mutex);
   if (q == NULL || q->head == NULL || q->head->event == NULL) {
-    pthread_mutex_unlock(&zkrb_q_mutex);
+    if (need_lock)
+      pthread_mutex_unlock(&zkrb_q_mutex);
     return NULL;
   } else {
     struct zkrb_event_ll_t *old_root = q->head;
     q->head = q->head->next;
     zkrb_event_t *rv = old_root->event;
     free(old_root);
-    pthread_mutex_unlock(&zkrb_q_mutex);
+    if (need_lock)
+      pthread_mutex_unlock(&zkrb_q_mutex);
     return rv;
   }
 }
@@ -76,7 +79,7 @@ void zkrb_queue_free(zkrb_queue_t *queue) {
   pthread_mutex_lock(&zkrb_q_mutex);
   if (queue == NULL) return;
   zkrb_event_t *elt = NULL;
-  while ((elt = zkrb_dequeue(queue)) != NULL) {
+  while ((elt = zkrb_dequeue(queue, 0)) != NULL) {
     zkrb_event_free(elt);
   }
   free(queue->head);
@@ -85,7 +88,7 @@ void zkrb_queue_free(zkrb_queue_t *queue) {
 }
 
 zkrb_event_t *zkrb_event_alloc(void) {
-  zkrb_event_t *rv  = (zkrb_event_t *) malloc(sizeof(zkrb_event_t));
+  zkrb_event_t *rv = (zkrb_event_t *) malloc(sizeof(zkrb_event_t));
   return rv;
 }
 

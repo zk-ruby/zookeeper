@@ -417,7 +417,7 @@ static VALUE method_get_acl(VALUE self, VALUE reqid, VALUE path, VALUE async) {
 static VALUE method_get_next_event(VALUE self) {
   FETCH_DATA_PTR(self, zk);
 
-  zkrb_event_t *event = zkrb_dequeue(zk->queue);
+  zkrb_event_t *event = zkrb_dequeue(zk->queue, 1);
   if (event == NULL) return Qnil;
 
   VALUE hash = zkrb_event_to_ruby(event);
@@ -426,7 +426,7 @@ static VALUE method_get_next_event(VALUE self) {
 }
 
 static VALUE method_has_events(VALUE self) {
-  VALUE rb_event = NULL;
+  VALUE rb_event;
   FETCH_DATA_PTR(self, zk);
 
   rb_event = zkrb_peek(zk->queue) != NULL ? Qtrue : Qfalse;
