@@ -14,48 +14,66 @@ wickman@twitter.com
 #include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <pthread.h>
 
 #define GET_SYM(str) ID2SYM(rb_intern(str))
 
 int ZKRBDebugging;
 
+pthread_mutex_t zkrb_q_mutex = PTHREAD_MUTEX_INITIALIZER;
+
 /* push/pop is a misnomer, this is a queue */
 #warning [wickman] TODO enqueue, peek, dequeue => pthread_mutex_lock
 void zkrb_enqueue(zkrb_queue_t *q, zkrb_event_t *elt) {
+  pthread_mutex_lock(&zkrb_q_mutex);
+  if (q == NULL || q->tail == NULL) {
+    return;
+  }
   q->tail->event = elt;
   q->tail->next = (struct zkrb_event_ll_t *) malloc(sizeof(struct zkrb_event_ll_t));
   q->tail = q->tail->next;
   q->tail->event = NULL;
   q->tail->next = NULL;
+  pthread_mutex_unlock(&zkrb_q_mutex);
 }
 
 zkrb_event_t * zkrb_peek(zkrb_queue_t *q) {
-  if (q->head != NULL && q->head->event != NULL)
-    return q->head->event;
-  return NULL;
+  pthread_mutex_lock(&zkrb_q_mutex);
+  zkrb_event_t *event = NULL;
+  if (q != NULL && q->head != NULL && q->head->event != NULL) {
+    event = q->head->event;
+  }
+  pthread_mutex_unlock(&zkrb_q_mutex);
+  return event;
 }
 
 zkrb_event_t* zkrb_dequeue(zkrb_queue_t *q) {
-  if (q->head == NULL || q->head->event == NULL) {
+  pthread_mutex_lock(&zkrb_q_mutex);
+  if (q == NULL || q->head == NULL || q->head->event == NULL) {
+    pthread_mutex_unlock(&zkrb_q_mutex);
     return NULL;
   } else {
     struct zkrb_event_ll_t *old_root = q->head;
     q->head = q->head->next;
     zkrb_event_t *rv = old_root->event;
     free(old_root);
+    pthread_mutex_unlock(&zkrb_q_mutex);
     return rv;
   }
 }
 
 zkrb_queue_t *zkrb_queue_alloc(void) {
+  pthread_mutex_lock(&zkrb_q_mutex);
   zkrb_queue_t *rq = malloc(sizeof(zkrb_queue_t));
   rq->head = malloc(sizeof(struct zkrb_event_ll_t));
   rq->head->event = NULL; rq->head->next = NULL;
   rq->tail = rq->head;
+  pthread_mutex_unlock(&zkrb_q_mutex);
   return rq;
 }
 
 void zkrb_queue_free(zkrb_queue_t *queue) {
+  pthread_mutex_lock(&zkrb_q_mutex);
   if (queue == NULL) return;
   zkrb_event_t *elt = NULL;
   while ((elt = zkrb_dequeue(queue)) != NULL) {
@@ -63,6 +81,7 @@ void zkrb_queue_free(zkrb_queue_t *queue) {
   }
   free(queue->head);
   free(queue);
+  pthread_mutex_unlock(&zkrb_q_mutex);
 }
 
 zkrb_event_t *zkrb_event_alloc(void) {
@@ -231,6 +250,9 @@ void zkrb_print_calling_context(zkrb_calling_context *ctx) {
 /*
   process completions that get queued to the watcher queue, translate events
   to completions that the ruby side dispatches via callbacks.
+
+  The calling_ctx can be thought of as the outer shell that we discard in
+  this macro after pulling out the gooey delicious center.
 */
 
 #define ZKH_SETUP_EVENT(qptr, eptr) \
@@ -255,10 +277,20 @@ void zkrb_state_callback(
   wc->state = state;
   wc->path  = strdup(path);
 
-  ZKH_SETUP_EVENT(queue, event);
+  // This is unfortunate copy-pasta from ZKH_SETUP_EVENT with one change: we
+  // check type instead of the req_id to see if we need to free the ctx.
+  zkrb_calling_context *ctx = (zkrb_calling_context *) calling_ctx;
+  zkrb_event_t *event = zkrb_event_alloc();
+  event->req_id = ctx->req_id;
+  zkrb_queue_t *queue = ctx->queue;
+  if (type != ZOO_SESSION_EVENT) {
+    free(ctx);
+    ctx = NULL;
+  }
+
   event->type = ZKRB_WATCHER;
   event->completion.watcher_completion = wc;
-  
+
   zkrb_enqueue(queue, event);
 }
 

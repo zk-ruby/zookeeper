@@ -416,8 +416,7 @@ static VALUE method_get_acl(VALUE self, VALUE reqid, VALUE path, VALUE async) {
 
 static VALUE method_get_next_event(VALUE self) {
   FETCH_DATA_PTR(self, zk);
-  if (zk->queue == NULL) return Qnil;
-  
+
   zkrb_event_t *event = zkrb_dequeue(zk->queue);
   if (event == NULL) return Qnil;
 
@@ -427,9 +426,11 @@ static VALUE method_get_next_event(VALUE self) {
 }
 
 static VALUE method_has_events(VALUE self) {
+  VALUE rb_event = NULL;
   FETCH_DATA_PTR(self, zk);
-  if (zk->queue == NULL) return Qfalse;
-  return zkrb_peek(zk->queue) != NULL ? Qtrue : Qfalse;
+
+  rb_event = zkrb_peek(zk->queue) != NULL ? Qtrue : Qfalse;
+  return rb_event;
 }
 
 static VALUE method_client_id(VALUE self) {
@@ -513,7 +514,6 @@ static void zkrb_define_methods(void) {
 }
 void Init_zookeeper_c() {
   ZKRBDebugging = 0;
-
   /* initialize Zookeeper class */
   Zookeeper = rb_define_class("CZookeeper", rb_cObject);
   zkrb_define_methods();
