@@ -95,6 +95,7 @@ struct zkrb_event_ll_t {
 typedef struct {
   struct zkrb_event_ll_t *head;
   struct zkrb_event_ll_t *tail;
+  volatile int            dead;
 } zkrb_queue_t;
 
 zkrb_queue_t * zkrb_queue_alloc(void);

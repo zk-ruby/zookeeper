@@ -26,7 +26,7 @@ pthread_mutex_t zkrb_q_mutex = PTHREAD_MUTEX_INITIALIZER;
 #warning [wickman] TODO enqueue, peek, dequeue => pthread_mutex_lock
 void zkrb_enqueue(zkrb_queue_t *q, zkrb_event_t *elt) {
   pthread_mutex_lock(&zkrb_q_mutex);
-  if (q == NULL || q->tail == NULL) {
+  if (q == NULL || q->tail == NULL || q->dead) {
     return;
   }
   q->tail->event = elt;
@@ -68,17 +68,23 @@ zkrb_queue_t *zkrb_queue_alloc(void) {
   rq->head = malloc(sizeof(struct zkrb_event_ll_t));
   rq->head->event = NULL; rq->head->next = NULL;
   rq->tail = rq->head;
+  rq->dead = 0;
   pthread_mutex_unlock(&zkrb_q_mutex);
   return rq;
 }
 
 void zkrb_queue_free(zkrb_queue_t *queue) {
   pthread_mutex_lock(&zkrb_q_mutex);
-  if (queue == NULL) return;
+  if (queue == NULL || queue->dead) return;
+  queue->dead = 1;
+  pthread_mutex_unlock(&zkrb_q_mutex);
   zkrb_event_t *elt = NULL;
+
   while ((elt = zkrb_dequeue(queue)) != NULL) {
     zkrb_event_free(elt);
   }
+
+  pthread_mutex_lock(&zkrb_q_mutex);
   free(queue);
   pthread_mutex_unlock(&zkrb_q_mutex);
 }
