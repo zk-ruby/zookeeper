@@ -60,11 +60,11 @@ static void free_zkrb_instance_data(struct zkrb_instance_data* ptr) {
 }
 
 static void print_zkrb_instance_data(struct zkrb_instance_data* ptr) {
-  fprintf(stderr, "zkrb_instance_data (%x) {\n", ptr);
-  fprintf(stderr, "   zh = %x\n",           ptr->zh);
+  fprintf(stderr, "zkrb_instance_data (%p) {\n", ptr);
+  fprintf(stderr, "   zh = %p\n",           ptr->zh);
   fprintf(stderr, "     { state = %d }\n",  zoo_state(ptr->zh));
   fprintf(stderr, "   id = %llx\n",         ptr->myid.client_id);
-  fprintf(stderr, "    q = %x\n",           ptr->queue);
+  fprintf(stderr, "    q = %p\n",           ptr->queue);
   fprintf(stderr, "}\n");
 }
 
@@ -237,16 +237,19 @@ static VALUE method_create(VALUE self, VALUE reqid, VALUE path, VALUE data, VALU
   switch (call_type) {
     case SYNC:
       rc = zoo_create(zk->zh, RSTRING_PTR(path), data_ptr, data_len, aclptr, FIX2INT(flags), realpath, sizeof(realpath));
-      if (aclptr != NULL) deallocate_ACL_vector(aclptr);
       break;
     case ASYNC:
       rc = zoo_acreate(zk->zh, RSTRING_PTR(path), data_ptr, data_len, aclptr, FIX2INT(flags), zkrb_string_callback, data_ctx);
-      if (aclptr != NULL) deallocate_ACL_vector(aclptr);
       break;
     default:
       /* TODO(wickman) raise proper argument error */
       return Qnil;
       break;
+  }
+
+  if (aclptr) {
+    deallocate_ACL_vector(aclptr);
+    free(aclptr);
   }
 
   VALUE output = rb_ary_new();
@@ -364,17 +367,18 @@ static VALUE method_set_acl(VALUE self, VALUE reqid, VALUE path, VALUE acls, VAL
   switch (call_type) {
     case SYNC:
       rc = zoo_set_acl(zk->zh, RSTRING_PTR(path), FIX2INT(version), aclptr);
-      deallocate_ACL_vector(aclptr);
       break;
     case ASYNC:
       rc = zoo_aset_acl(zk->zh, RSTRING_PTR(path), FIX2INT(version), aclptr, zkrb_void_callback, data_ctx);
-      deallocate_ACL_vector(aclptr);
       break;
     default:
       /* TODO(wickman) raise proper argument error */
       return Qnil;
       break;
   }
+
+  deallocate_ACL_vector(aclptr);
+  free(aclptr);
 
   return INT2FIX(rc);
 }
@@ -400,12 +404,12 @@ static VALUE method_get_acl(VALUE self, VALUE reqid, VALUE path, VALUE async) {
       break;
   }
 
-  // do we need to deallocate the strings in the acl vector????
   VALUE output = rb_ary_new();
   rb_ary_push(output, INT2FIX(rc));
   if (IS_SYNC(call_type) && rc == ZOK) {
     rb_ary_push(output, zkrb_acl_vector_to_ruby(&acls));
     rb_ary_push(output, zkrb_stat_to_rarray(&stat));
+    deallocate_ACL_vector(&acls);
   }
   return output;
 }
@@ -422,7 +426,7 @@ static VALUE method_get_next_event(VALUE self) {
 }
 
 static VALUE method_has_events(VALUE self) {
-  VALUE rb_event = NULL;
+  VALUE rb_event;
   FETCH_DATA_PTR(self, zk);
 
   rb_event = zkrb_peek(zk->queue) != NULL ? Qtrue : Qfalse;

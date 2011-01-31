@@ -23,7 +23,6 @@ int ZKRBDebugging;
 pthread_mutex_t zkrb_q_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 /* push/pop is a misnomer, this is a queue */
-#warning [wickman] TODO enqueue, peek, dequeue => pthread_mutex_lock
 void zkrb_enqueue(zkrb_queue_t *q, zkrb_event_t *elt) {
   pthread_mutex_lock(&zkrb_q_mutex);
   if (q == NULL || q->tail == NULL || q->dead) {
@@ -90,12 +89,13 @@ void zkrb_queue_free(zkrb_queue_t *queue) {
   }
 
   pthread_mutex_lock(&zkrb_q_mutex);
+  free(queue->head);
   free(queue);
   pthread_mutex_unlock(&zkrb_q_mutex);
 }
 
 zkrb_event_t *zkrb_event_alloc(void) {
-  zkrb_event_t *rv  = (zkrb_event_t *) malloc(sizeof(zkrb_event_t));
+  zkrb_event_t *rv = (zkrb_event_t *) malloc(sizeof(zkrb_event_t));
   return rv;
 }
 
@@ -105,16 +105,19 @@ void zkrb_event_free(zkrb_event_t *event) {
       struct zkrb_data_completion *data_ctx = event->completion.data_completion;
       free(data_ctx->data);
       free(data_ctx->stat);
+      free(data_ctx);
       break;
     }
     case ZKRB_STAT: {
       struct zkrb_stat_completion *stat_ctx = event->completion.stat_completion;
       free(stat_ctx->stat);
+      free(stat_ctx);
       break;
     }
     case ZKRB_STRING: {
       struct zkrb_string_completion *string_ctx = event->completion.string_completion;
       free(string_ctx->value);
+      free(string_ctx);
       break;
     }
     case ZKRB_STRINGS: {
@@ -122,6 +125,7 @@ void zkrb_event_free(zkrb_event_t *event) {
       int k;
       for (k = 0; k < strings_ctx->values->count; ++k) free(strings_ctx->values->data[k]);
       free(strings_ctx->values);
+      free(strings_ctx);
       break;
     }
     case ZKRB_STRINGS_STAT: {
@@ -130,6 +134,7 @@ void zkrb_event_free(zkrb_event_t *event) {
       for (k = 0; k < strings_stat_ctx->values->count; ++k) free(strings_stat_ctx->values->data[k]);
       free(strings_stat_ctx->values);
       free(strings_stat_ctx->stat);
+      free(strings_stat_ctx);
       break;
     }
     case ZKRB_ACL: {
@@ -139,11 +144,13 @@ void zkrb_event_free(zkrb_event_t *event) {
         free(acl_ctx->acl);
       }
       free(acl_ctx->stat);
+      free(acl_ctx);
       break;
     }
     case ZKRB_WATCHER: {
       struct zkrb_watcher_completion *watcher_ctx = event->completion.watcher_completion;
       free(watcher_ctx->path);
+      free(watcher_ctx);
       break;
     }
     case ZKRB_VOID: {
@@ -260,10 +267,10 @@ void zkrb_print_calling_context(zkrb_calling_context *ctx) {
 
 #define ZKH_SETUP_EVENT(qptr, eptr) \
   zkrb_calling_context *ctx = (zkrb_calling_context *) calling_ctx; \
-  zkrb_event_t *eptr = zkrb_event_alloc();                      \
+  zkrb_event_t *eptr = zkrb_event_alloc();                          \
   eptr->req_id = ctx->req_id;                                       \
   zkrb_queue_t *qptr = ctx->queue;                                  \
-  if (eptr->req_id != ZKRB_GLOBAL_REQ) free(ctx);
+  if (eptr->req_id != ZKRB_GLOBAL_REQ) free(ctx)
 
 void zkrb_state_callback(
     zhandle_t *zh, int type, int state, const char *path, void *calling_ctx) {
@@ -495,7 +502,7 @@ struct Id zkrb_ruby_to_id(VALUE rubyid) {
   }
 
   if (ident != Qnil) {
-    id.id     = malloc(RSTRING_LEN(ident) + 1);
+    id.id = malloc(RSTRING_LEN(ident) + 1);
     strncpy(id.id, RSTRING_PTR(ident), RSTRING_LEN(ident));
     id.id[RSTRING_LEN(ident)] = '\0';
   } else {
@@ -506,8 +513,8 @@ struct Id zkrb_ruby_to_id(VALUE rubyid) {
 }
 
 VALUE zkrb_acl_vector_to_ruby(struct ACL_vector *acl_vector) {
-  int i = 0;
-  VALUE ary = rb_ary_new();
+  int i;
+  VALUE ary = rb_ary_new2(acl_vector->count);
   for(i = 0; i < acl_vector->count; i++) {
     rb_ary_push(ary, zkrb_acl_to_ruby(acl_vector->data+i));
   }
@@ -515,8 +522,8 @@ VALUE zkrb_acl_vector_to_ruby(struct ACL_vector *acl_vector) {
 }
 
 VALUE zkrb_string_vector_to_ruby(struct String_vector *string_vector) {
-  int i = 0;
-  VALUE ary = rb_ary_new();
+  int i;
+  VALUE ary = rb_ary_new2(string_vector->count);
   for(i = 0; i < string_vector->count; i++) {
     rb_ary_push(ary, rb_str_new2(string_vector->data[i]));
   }
