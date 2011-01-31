@@ -77,7 +77,11 @@ zkrb_queue_t *zkrb_queue_alloc(void) {
 
 void zkrb_queue_free(zkrb_queue_t *queue) {
   pthread_mutex_lock(&zkrb_q_mutex);
-  if (queue == NULL) return;
+  if (queue == NULL) {
+    pthread_mutex_unlock(&zkrb_q_mutex);
+    return;
+  }
+
   zkrb_event_t *elt = NULL;
   while ((elt = zkrb_dequeue(queue, 0)) != NULL) {
     zkrb_event_free(elt);
