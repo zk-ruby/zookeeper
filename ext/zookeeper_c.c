@@ -223,7 +223,6 @@ static VALUE method_create(VALUE self, VALUE reqid, VALUE path, VALUE data, VALU
   VALUE watch = Qfalse;
   STANDARD_PREAMBLE(self, zk, reqid, path, async, watch, data_ctx, watch_ctx, call_type);
   
-  struct Stat stat;
   if (data != Qnil) Check_Type(data, T_STRING);
   Check_Type(flags, T_FIXNUM);
   const char *data_ptr = (data == Qnil) ? NULL : RSTRING_PTR(data);
