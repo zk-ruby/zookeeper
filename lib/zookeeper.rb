@@ -156,14 +156,12 @@ private
     @dispatcher = Thread.new {
       while true do
         dispatch_next_callback
-        sleep 0.1
       end
     }
   end
 
   def dispatch_next_callback
     hash = get_next_event
-    return nil unless hash
 
     is_completion = hash.has_key?(:rc)
     

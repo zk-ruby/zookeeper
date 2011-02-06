@@ -16,6 +16,7 @@
 #include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <unistd.h>
 
 #include "zookeeper_lib.h"
 
@@ -414,14 +415,39 @@ static VALUE method_get_acl(VALUE self, VALUE reqid, VALUE path, VALUE async) {
 }
 
 static VALUE method_get_next_event(VALUE self) {
+  char buf[64];
   FETCH_DATA_PTR(self, zk);
 
-  zkrb_event_t *event = zkrb_dequeue(zk->queue, 1);
-  if (event == NULL) return Qnil;
+  for (;;) {
+    zkrb_event_t *event = zkrb_dequeue(zk->queue, 1);
 
-  VALUE hash = zkrb_event_to_ruby(event);
-  zkrb_event_free(event);
-  return hash;
+    /*
+     * If no events found, wait for an event by using rb_thread_select() on the
+     * queue's pipe. Note that the ZK handle might be closed while we're
+     * waiting; if this happens, the rb_thread_select() will fail, and we can't
+     * safely touch the "zk" instance handle.
+     */
+    if (event == NULL) {
+      int fd = zk->queue->pipe_read;
+      fd_set rset;
+
+      FD_ZERO(&rset);
+      FD_SET(fd, &rset);
+
+      int res = rb_thread_select(fd + 1, &rset, NULL, NULL, NULL);
+      if (res == -1)
+        rb_raise(rb_eRuntimeError, "select failed: %d", errno);
+
+      if (read(fd, buf, 128) == -1)
+        rb_raise(rb_eRuntimeError, "read failed: %d", errno);
+
+      continue;
+    }
+
+    VALUE hash = zkrb_event_to_ruby(event);
+    zkrb_event_free(event);
+    return hash;
+  }
 }
 
 static VALUE method_has_events(VALUE self) {
