@@ -434,11 +434,10 @@ static VALUE method_get_next_event(VALUE self) {
       FD_ZERO(&rset);
       FD_SET(fd, &rset);
 
-      int res = rb_thread_select(fd + 1, &rset, NULL, NULL, NULL);
-      if (res == -1)
+      if (rb_thread_select(fd + 1, &rset, NULL, NULL, NULL) == -1)
         rb_raise(rb_eRuntimeError, "select failed: %d", errno);
 
-      if (read(fd, buf, 128) == -1)
+      if (read(fd, buf, sizeof(buf)) == -1)
         rb_raise(rb_eRuntimeError, "read failed: %d", errno);
 
       continue;
