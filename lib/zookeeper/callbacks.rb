@@ -48,7 +48,7 @@ module ZookeeperCallbacks
     attr_reader :return_code, :path
 
     def initialize_context(hash)
-      @return_code, @path, @context = hash[:rc], hash[:path], hash[:context]
+      @return_code, @path, @context = hash[:rc], hash[:string], hash[:context]
     end
   end
 
@@ -57,7 +57,7 @@ module ZookeeperCallbacks
     attr_reader :return_code, :children, :stat
 
     def initialize_context(hash)
-      @return_code, @children, @stat, @context = hash[:rc], hash[:children], hash[:stat], hash[:context]
+      @return_code, @children, @stat, @context = hash[:rc], hash[:strings], hash[:stat], hash[:context]
     end
   end
 

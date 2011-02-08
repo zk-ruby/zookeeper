@@ -715,6 +715,114 @@ describe Zookeeper do
           st[:stat].ephemeral_owner.should_not be_zero
         end
       end
+
+      describe :acl do
+        it %[should work] do
+          pending "need to write acl tests"
+        end
+      end
+    end
+  end
+
+  describe :delete do
+    describe :sync do
+      describe 'without version' do
+        it_should_behave_like "all success return values"
+
+        before do
+          @rv = @zk.delete(:path => @path)
+        end
+
+        it %[should have deleted the node] do
+          st = @zk.stat(:path => @path)
+          st[:rc].should == Zookeeper::ZNONODE
+        end
+      end
+
+      describe 'with current version' do
+        it_should_behave_like "all success return values"
+
+        before do
+          @stat = @zk.stat(:path => @path)[:stat]
+          @rv   = @zk.delete(:path => @path, :version => @stat.version)
+        end
+
+        it %[should have deleted the node] do
+          st = @zk.stat(:path => @path)
+          st[:rc].should == Zookeeper::ZNONODE
+        end
+      end
+
+      describe 'with old version' do
+        before do
+          3.times { |n| @stat = @zk.set(:path => @path, :data => n.to_s)[:stat] }
+
+          @rv = @zk.delete(:path => @path, :version => 0)
+        end
+
+        it %[should have a return code of ZBADVERSION] do
+          @rv[:rc].should == Zookeeper::ZBADVERSION
+        end
+      end
+    end # sync
+
+    describe :async do
+      before do
+        @cb = ZookeeperCallbacks::VoidCallback.new
+      end
+
+      describe 'without version' do
+        it_should_behave_like "all success return values"
+
+        before do
+          @rv = @zk.delete(:path => @path, :callback => @cb, :callback_context => @path)
+          wait_until { @cb.completed? }
+          @cb.should be_completed
+        end
+
+        it %[should have a success return_code] do
+          @cb.return_code.should == Zookeeper::ZOK
+        end
+
+        it %[should have deleted the node] do
+          st = @zk.stat(:path => @path)
+          st[:rc].should == Zookeeper::ZNONODE
+        end
+      end
+
+      describe 'with current version' do
+        it_should_behave_like "all success return values"
+
+        before do
+          @stat = @zk.stat(:path => @path)[:stat]
+          @rv   = @zk.delete(:path => @path, :version => @stat.version, :callback => @cb, :callback_context => @path)
+          wait_until { @cb.completed? }
+          @cb.should be_completed
+        end
+
+        it %[should have a success return_code] do
+          @cb.return_code.should == Zookeeper::ZOK
+        end
+
+        it %[should have deleted the node] do
+          st = @zk.stat(:path => @path)
+          st[:rc].should == Zookeeper::ZNONODE
+        end
+      end
+
+      describe 'with old version' do
+        before do
+          3.times { |n| @stat = @zk.set(:path => @path, :data => n.to_s)[:stat] }
+
+          @rv = @zk.delete(:path => @path, :version => 0, :callback => @cb, :callback_context => @path)
+          wait_until { @cb.completed? }
+          @cb.should be_completed
+        end
+
+        it %[should have a return code of ZBADVERSION] do
+          @cb.return_code.should == Zookeeper::ZBADVERSION
+        end
+      end
     end
   end
 end
