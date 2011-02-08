@@ -1,5 +1,6 @@
 CHANGELOG
 LICENSE
+Manifest
 README
 Rakefile
 examples/cloud_config.rb
@@ -20,4 +21,3 @@ test/test_close.rb
 test/test_esoteric.rb
 test/test_watcher1.rb
 test/test_watcher2.rb
-Manifest
