@@ -7,7 +7,7 @@ require 'zookeeper/callbacks'
 require 'zookeeper/exceptions'
 require 'zookeeper/stat'
 require 'zookeeper/acls'
-
+require 'logger'
 
 if defined?(::JRUBY_VERSION)
   $LOAD_PATH.unshift(File.expand_path('../java', File.dirname(__FILE__))).uniq!
@@ -158,5 +158,6 @@ class Zookeeper < ZookeeperBase
   def assert_open
     super
   end
+
 end
 

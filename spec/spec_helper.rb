@@ -9,6 +9,10 @@ gem 'flexmock', '~> 0.8.11'
 require 'flexmock'
 require 'zookeeper'
 
+Zookeeper.logger = Logger.new(File.expand_path('../../test.log', __FILE__)).tap do |log|
+  log.level = Logger::DEBUG
+end
+
 RSpec.configure do |config|
   config.mock_with :flexmock
 
@@ -20,6 +24,7 @@ RSpec.configure do |config|
     @zk.close
   end
 end
+
 
 # method to wait until block passed returns true or timeout (default is 10 seconds) is reached 
 def wait_until(timeout=10, &block)

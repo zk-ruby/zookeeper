@@ -60,7 +60,7 @@ describe Zookeeper do
         # test the watcher by changing node data
         @zk.set(:path => @path, :data => 'blah')[:rc].should be_zero
 
-        wait_until { @watcher.completed? }
+        wait_until(1.0) { @watcher.completed? }
 
         @watcher.path.should == @path
         @watcher.context.should == @path
@@ -76,7 +76,7 @@ describe Zookeeper do
         @cb = Zookeeper::DataCallback.new
 
         @rv = @zk.get(:path => @path, :callback => @cb, :callback_context => @path)
-        wait_until { @cb.completed? }
+        wait_until(1.0) { @cb.completed? }
         @cb.should be_completed
       end
 
@@ -102,7 +102,7 @@ describe Zookeeper do
         @watcher = Zookeeper::WatcherCallback.new
 
         @rv = @zk.get(:path => @path, :callback => @cb, :callback_context => @path, :watcher => @watcher, :watcher_context => @path)
-        wait_until { @cb.completed? }
+        wait_until(1.0) { @cb.completed? }
         @cb.should be_completed
       end
 

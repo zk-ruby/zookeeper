@@ -1,4 +1,21 @@
 module ZookeeperCommon
+  # sigh, i guess define this here?
+  ZKRB_GLOBAL_CB_REQ   = -1
+
+  def self.included(mod)
+    mod.extend(ZookeeperCommon::ClassMethods)
+  end
+
+  module ClassMethods
+    def logger
+      @logger ||= Logger.new('/dev/null') # UNIX: YOU MUST USE IT!
+    end
+
+    def logger=(logger)
+      @logger = logger
+    end
+  end
+
 protected
   def setup_call(opts)
     req_id = nil
@@ -35,11 +52,12 @@ protected
   def dispatch_next_callback
     hash = get_next_event
     return nil unless hash
+    logger.debug {  "dispatch_next_callback got event: #{hash.inspect}" }
 
     is_completion = hash.has_key?(:rc)
     
-    hash[:stat] = Stat.new(hash[:stat]) if hash.has_key?(:stat)
-    hash[:acl] = hash[:acl].map { |acl| ACL.new(acl) } if hash[:acl]
+    hash[:stat] = ZookeeperStat::Stat.new(hash[:stat]) if hash.has_key?(:stat)
+    hash[:acl] = hash[:acl].map { |acl| ZookeeperACLs::ACL.new(acl) } if hash[:acl]
     
     callback_context = is_completion ? get_completion(hash[:req_id]) : get_watcher(hash[:req_id])
     callback = is_completion ? callback_context[:callback] : callback_context[:watcher]
@@ -66,6 +84,11 @@ protected
       raise ZookeeperException::BadArguments,
             "Required arguments are: #{required.inspect}, but only the arguments #{args.keys.inspect} were supplied."
     end
+  end
+
+  # supplied by parent class impl.
+  def logger
+    self.class.logger
   end
 end
 
