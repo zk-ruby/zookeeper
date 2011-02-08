@@ -12,7 +12,6 @@ require 'zookeeper_jar'
 # subclassed by the top-level Zookeeper class
 class ZookeeperBase
   include ZookeeperCommon
-  include ZookeeperCallbacks
   include ZookeeperConstants
   include ZookeeperExceptions
   include ZookeeperACLs
@@ -34,6 +33,50 @@ class ZookeeperBase
   JZKD::Stat.class_eval do
     include JavaStatExt
   end
+
+  # used for internal dispatching
+  module JavaCB #:nodoc:
+    class Callback
+      attr_reader :req_id
+
+      def initialize(req_id)
+        @req_id = req_id
+      end
+    end
+
+    class DataCallback < Callback
+      include JZK::AsyncCallback::DataCallback
+
+      def processResult(rc, path, queue, data, stat)
+        queue.push({
+          :rc     => rc,
+          :req_id => req_id,
+          :path   => path,
+          :data   => String.from_java_bytes(data),
+          :stat   => stat.to_hash,
+        })
+      end
+    end
+
+    class StringCallback < Callback
+      include JZKD::AsyncCallback::StringCallback
+
+      def processResult(rc, path, queue, str)
+        queue.push(:rc => rc, :req_id => req_id, :path => path, :string => str)
+      end
+    end
+
+    class StatCallback < Callback
+      def processResult(rc, path, queue, stat)
+        queue.push(:rc => rc, :req_id => req_id, :stat => stat.to_hash)
+      end
+    end
+
+    #
+    # XXX: Continue with AsyncCallback::Children2Callback :XXX:
+    #
+  end
+
 
   def reopen(timeout=10)
     @jzk = JZK::ZooKeeper.new(@host, DEFAULT_SESSION_TIMEOUT, JavaSilentWatcher.new)
@@ -74,20 +117,18 @@ class ZookeeperBase
     state == JZK::States::ASSOCIATING
   end
 
-  # 4 excpected call types: SYNC SYNC_WATCH ASYNC ASYNC_WATCH
-
 
   def get(req_id, path, callback, watcher)
-    case call_type(callback, watcher)
-    when :sync_watch
+    watch_cb = watcher ? create_watcher(req_id, path) : false
+
+    if callback
+      @jzk.getData(path, watch_cb, JavaCB::DataCallback.new(req_id), @event_queue)
+      [Code::Ok, nil, nil]
+    else # sync
       stat = JZKD::Stat.new
-      data = String.from_java_bytes(@jzk.getData(path, watcher, stat))
+      data = String.from_java_bytes(@jzk.getData(path, watch_cb, stat))
 
       [Code::Ok, data, stat.to_hash]
-    when :async_watch
-      @jzk.getData(path, watcher, callback, )
-    when :sync
-    when :async
     end
   end
 
@@ -104,17 +145,24 @@ class ZookeeperBase
         watcher ? :sync_watch : :sync
       end
     end
-
-private
-  def setup_dispatch_thread!
-    @dispatcher = Thread.new do
-      Thread.current[:running] = true
-
-      while Thread.current[:running]
-        dispatch_next_callback 
+   
+    def create_watcher(req_id, path)
+      lambda do |event|
+        h = { :req_id => req_id, :type => event.type.int_value, :state => event.state.int_value, :path => path }
+        @event_queue.push(h)
       end
     end
-  end
+
+  private
+    def setup_dispatch_thread!
+      @dispatcher = Thread.new do
+        Thread.current[:running] = true
+
+        while Thread.current[:running]
+          dispatch_next_callback 
+        end
+      end
+    end
 
 end
 
