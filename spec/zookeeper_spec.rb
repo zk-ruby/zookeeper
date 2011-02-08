@@ -404,7 +404,317 @@ describe Zookeeper do
         @watcher.context.should == @path
         @watcher.type.should == Zookeeper::ZOO_CHILD_EVENT
       end
+    end
+  end
 
+  describe :stat do
+    describe :sync do
+      it_should_behave_like "all success return values"
+
+      before do
+        @rv = @zk.stat(:path => @path)
+      end
+
+      it %[should have a stat object] do
+        @rv[:stat].should be_kind_of(Zookeeper::Stat)
+      end
+    end
+
+    describe :sync_watch do
+      it_should_behave_like "all success return values"
+
+      before do
+        @watcher = Zookeeper::WatcherCallback.new
+
+        @rv = @zk.stat(:path => @path, :watcher => @watcher, :watcher_context => @path)
+      end
+
+      it %[should have a stat object] do
+        @rv[:stat].should be_kind_of(Zookeeper::Stat)
+      end
+
+      it %[should set a watcher for data changes on the node] do
+        @watcher.should_not be_completed
+
+        @zk.set(:path => @path, :data => 'skunk')[:rc].should == Zookeeper::ZOK
+
+        wait_until { @watcher.completed? }
+        @watcher.should be_completed
+
+        @watcher.path.should == @path
+        @watcher.context.should == @path
+        @watcher.type.should == Zookeeper::ZOO_CHANGED_EVENT
+      end
+    end
+
+    describe :async do
+      it_should_behave_like "all success return values"
+
+      before do
+        @cb = ZookeeperCallbacks::StatCallback.new
+        @rv = @zk.stat(:path => @path, :callback => @cb, :callback_context => @path)
+
+        wait_until { @cb.completed? }
+        @cb.should be_completed
+      end
+
+      it %[should succeed] do
+        @cb.return_code.should == Zookeeper::ZOK
+      end
+
+      it %[should have a stat object] do
+        @cb.stat.should be_kind_of(Zookeeper::Stat)
+      end
+    end
+
+    describe :async_watch do
+      it_should_behave_like "all success return values"
+
+      before do
+        @addtl_child = 'child3'
+
+        @watcher = Zookeeper::WatcherCallback.new
+
+        @cb = ZookeeperCallbacks::StatCallback.new
+        @rv = @zk.stat(:path => @path, :callback => @cb, :callback_context => @path, :watcher => @watcher, :watcher_context => @path)
+
+        wait_until { @cb.completed? }
+        @cb.should be_completed
+      end
+
+      after do
+        @zk.delete(:path => "#{@path}/#{@addtl_child}")
+      end
+
+      it %[should succeed] do
+        @cb.return_code.should == Zookeeper::ZOK
+      end
+
+      it %[should have a stat object] do
+        @cb.stat.should be_kind_of(Zookeeper::Stat)
+      end
+
+      it %[should set a watcher for data changes on the node] do
+        @watcher.should_not be_completed
+
+        @zk.set(:path => @path, :data => 'skunk')[:rc].should == Zookeeper::ZOK
+
+        wait_until { @watcher.completed? }
+        @watcher.should be_completed
+
+        @watcher.path.should == @path
+        @watcher.context.should == @path
+        @watcher.type.should == Zookeeper::ZOO_CHANGED_EVENT
+      end
+    end
+  end   # stat
+
+  describe :create do
+    before do
+      # remove the path set up by the global 'before' block
+      @zk.delete(:path => @path)
+    end
+
+    describe :sync do
+      describe :default_flags do
+        it_should_behave_like "all success return values"
+
+        before do
+          @rv = @zk.create(:path => @path)
+        end
+
+        it %[should return the path that was set] do
+          @rv[:path].should == @path
+        end
+
+        it %[should have created a permanent node] do
+          st = @zk.stat(:path => @path)
+          st[:rc].should == Zookeeper::ZOK
+
+          st[:stat].ephemeral_owner.should == 0
+        end
+      end
+
+      describe :ephemeral do
+        it_should_behave_like "all success return values"
+
+        before do
+          @rv = @zk.create(:path => @path, :ephemeral => true)
+        end
+
+        it %[should return the path that was set] do
+          @rv[:path].should == @path
+        end
+
+        it %[should have created a ephemeral node] do
+          st = @zk.stat(:path => @path)
+          st[:rc].should == Zookeeper::ZOK
+
+          st[:stat].ephemeral_owner.should_not be_zero
+        end
+      end
+
+      describe :sequence do
+        it_should_behave_like "all success return values"
+
+        before do
+          @orig_path  = @path
+          @rv         = @zk.create(:path => @path, :sequence => true)
+          @path       = @rv[:path]    # make sure this gets cleaned up
+        end
+
+        it %[should return the path that was set] do
+          @rv[:path].should_not == @orig_path
+        end
+
+        it %[should have created a permanent node] do
+          st = @zk.stat(:path => @path)
+          st[:rc].should == Zookeeper::ZOK
+
+          st[:stat].ephemeral_owner.should be_zero
+        end
+      end
+
+      describe :ephemeral_sequence do
+        it_should_behave_like "all success return values"
+
+        before do
+          @orig_path  = @path
+          @rv         = @zk.create(:path => @path, :sequence => true, :ephemeral => true)
+          @path       = @rv[:path]    # make sure this gets cleaned up
+        end
+
+        it %[should return the path that was set] do
+          @rv[:path].should_not == @orig_path
+        end
+
+        it %[should have created an ephemeral node] do
+          st = @zk.stat(:path => @path)
+          st[:rc].should == Zookeeper::ZOK
+
+          st[:stat].ephemeral_owner.should_not be_zero
+        end
+      end
+
+      describe :acl do
+        it %[should work] do
+          pending "need to write acl tests"
+        end
+      end
+    end
+
+    describe :async do
+      before do
+        @cb = ZookeeperCallbacks::StringCallback.new
+      end
+
+      describe :default_flags do
+        it_should_behave_like "all success return values"
+
+        before do
+          @rv = @zk.create(:path => @path, :callback => @cb, :callback_context => @path)
+          wait_until(2) { @cb.completed? }
+          @cb.should be_completed
+        end
+
+        it %[should have a path] do
+          @cb.path.should_not be_nil
+        end
+
+        it %[should return the path that was set] do
+          @cb.path.should == @path
+        end
+
+        it %[should have created a permanent node] do
+          st = @zk.stat(:path => @path)
+          st[:rc].should == Zookeeper::ZOK
+
+          st[:stat].ephemeral_owner.should == 0
+        end
+      end
+
+      describe :ephemeral do
+        it_should_behave_like "all success return values"
+
+        before do
+          @rv = @zk.create(:path => @path, :ephemeral => true, :callback => @cb, :callback_context => @path)
+          wait_until(2) { @cb.completed? }
+          @cb.should be_completed
+        end
+
+        it %[should have a path] do
+          @cb.path.should_not be_nil
+        end
+
+        it %[should return the path that was set] do
+          @cb.path.should == @path
+        end
+
+        it %[should have created a ephemeral node] do
+          st = @zk.stat(:path => @path)
+          st[:rc].should == Zookeeper::ZOK
+
+          st[:stat].ephemeral_owner.should_not be_zero
+        end
+      end
+
+      describe :sequence do
+        it_should_behave_like "all success return values"
+
+        before do
+          @orig_path  = @path
+          @rv         = @zk.create(:path => @path, :sequence => true, :callback => @cb, :callback_context => @path)
+
+          wait_until(2) { @cb.completed? }
+          @cb.should be_completed
+
+          @path = @cb.path
+        end
+
+        it %[should have a path] do
+          @cb.path.should_not be_nil
+        end
+
+        it %[should return the path that was set] do
+          @cb.path.should_not == @orig_path
+        end
+
+        it %[should have created a permanent node] do
+          st = @zk.stat(:path => @path)
+          st[:rc].should == Zookeeper::ZOK
+
+          st[:stat].ephemeral_owner.should be_zero
+        end
+      end
+
+      describe :ephemeral_sequence do
+        it_should_behave_like "all success return values"
+
+        before do
+          @orig_path  = @path
+          @rv         = @zk.create(:path => @path, :sequence => true, :ephemeral => true, :callback => @cb, :callback_context => @path)
+          @path       = @rv[:path]    # make sure this gets cleaned up
+
+          wait_until(2) { @cb.completed? }
+          @cb.should be_completed
+          @path = @cb.path
+        end
+
+        it %[should have a path] do
+          @cb.path.should_not be_nil
+        end
+
+        it %[should return the path that was set] do
+          @path.should_not == @orig_path
+        end
+
+        it %[should have created an ephemeral node] do
+          st = @zk.stat(:path => @path)
+          st[:rc].should == Zookeeper::ZOK
+
+          st[:stat].ephemeral_owner.should_not be_zero
+        end
+      end
     end
   end
 end
