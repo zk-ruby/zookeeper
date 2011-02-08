@@ -824,5 +824,19 @@ describe Zookeeper do
         end
       end
     end
+  end # delete
+
+  describe :set_acl do
+    it %[should have someone write tests] do
+      pending "hah! passing the buck!"
+    end
   end
+
+  describe :get_acl do
+    it %[should have someone write tests] do
+      pending "hah! passing the buck!"
+    end
+  end
+
+
 end
