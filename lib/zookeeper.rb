@@ -3,6 +3,7 @@
 require 'thread'
 require 'zookeeper/common'
 require 'zookeeper/constants'
+require 'zookeeper/callbacks'
 require 'zookeeper/exceptions'
 require 'zookeeper/stat'
 require 'zookeeper/acls'
@@ -15,7 +16,6 @@ else
   require 'zookeeper_c'
 end
 
-require 'zookeeper_callbacks'
 require 'zookeeper_base'
 
 class Zookeeper < ZookeeperBase
