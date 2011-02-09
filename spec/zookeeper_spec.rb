@@ -735,7 +735,7 @@ describe Zookeeper do
 
         it %[should have deleted the node] do
           st = @zk.stat(:path => @path)
-          st[:rc].should == Zookeeper::ZNONODE
+          st[:rc].should == Zookeeper::ZOK
         end
       end
 
@@ -749,7 +749,7 @@ describe Zookeeper do
 
         it %[should have deleted the node] do
           st = @zk.stat(:path => @path)
-          st[:rc].should == Zookeeper::ZNONODE
+          st[:rc].should == Zookeeper::ZOK
         end
       end
 
@@ -786,7 +786,7 @@ describe Zookeeper do
 
         it %[should have deleted the node] do
           st = @zk.stat(:path => @path)
-          st[:rc].should == Zookeeper::ZNONODE
+          st[:rc].should == Zookeeper::ZOK
         end
       end
 
@@ -806,7 +806,7 @@ describe Zookeeper do
 
         it %[should have deleted the node] do
           st = @zk.stat(:path => @path)
-          st[:rc].should == Zookeeper::ZNONODE
+          st[:rc].should == Zookeeper::ZOK
         end
       end
 

@@ -86,7 +86,8 @@ class ZookeeperBase
       include JZK::AsyncCallback::StatCallback
 
       def processResult(rc, path, queue, stat)
-        queue.push(:rc => rc, :req_id => req_id, :stat => stat.to_hash, :path => path)
+        Zookeeper.logger.debug { "StatCallback#processResult rc: #{rc.inspect}, path: #{path.inspect}, queue: #{queue.inspect}, stat: #{stat.inspect}" }
+        queue.push(:rc => rc, :req_id => req_id, :stat => (stat and stat.to_hash), :path => path)
       end
     end
 
@@ -213,7 +214,7 @@ class ZookeeperBase
       data ||= ''
 
       if callback
-        @jzk.create(path, data.to_java_bytes, acl, mode, callback, @event_queue)
+        @jzk.create(path, data.to_java_bytes, acl, mode, JavaCB::StringCallback.new(req_id), @event_queue)
         [Code::Ok, nil]
       else
         new_path = @jzk.create(path, data.to_java_bytes, acl, mode)
@@ -257,7 +258,7 @@ class ZookeeperBase
         [Code::Ok, nil, nil]
       else
         stat = @jzk.exists(path, watch_cb)
-        [Code::Ok, stat.to_hash]
+        [Code::Ok, (stat and stat.to_hash)]
       end
     end
   end
@@ -299,7 +300,7 @@ class ZookeeperBase
     def handle_keeper_exception
       yield
     rescue JZK::KeeperException => e
-      [e.cause.code.intValue, nil, nil]
+      e.cause.code.intValue
     end
 
     def call_type(callback, watcher)
