@@ -11,7 +11,8 @@ module ZookeeperACLs
     attr_reader :perms, :id
     def initialize(hash)
       @perms = hash[:perms]
-      @id = hash[:id]
+      v = hash[:id]
+      @id = v.kind_of?(Hash) ? Id.new(v) : v
     end
   end
   

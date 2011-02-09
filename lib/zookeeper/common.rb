@@ -62,7 +62,7 @@ protected
     callback_context = is_completion ? get_completion(hash[:req_id]) : get_watcher(hash[:req_id])
     callback = is_completion ? callback_context[:callback] : callback_context[:watcher]
     hash[:context] = callback_context[:context]
-    
+
     # TODO: Eventually enforce derivation from Zookeeper::Callback
     if callback.respond_to?(:call)
       callback.call(hash)

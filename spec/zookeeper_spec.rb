@@ -826,16 +826,62 @@ describe Zookeeper do
     end
   end # delete
 
-  describe :set_acl do
-    it %[should have someone write tests] do
-      pending "hah! passing the buck!"
+  describe :get_acl do
+    describe :sync do
+      it_should_behave_like "all success return values"
+
+      before do
+        @rv = @zk.get_acl(:path => @path)
+      end
+
+      it %[should return a stat for the path] do
+        @rv[:stat].should be_kind_of(ZookeeperStat::Stat)
+      end
+
+      it %[should return the acls] do
+        acls = @rv[:acl]
+        acls.should be_kind_of(Array)
+        h = acls.first
+
+        h.should be_kind_of(Hash)
+
+        h[:perms].should == Zookeeper::ZOO_PERM_ALL
+        h[:id][:scheme].should == 'world'
+        h[:id][:id].should == 'anyone'
+      end
+    end
+
+    describe :async do
+      it_should_behave_like "all success return values"
+
+      before do
+        @cb = Zookeeper::ACLCallback.new
+        @rv = @zk.get_acl(:path => @path, :callback => @cb, :callback_context => @path)
+
+        wait_until(2) { @cb.completed? }
+        @cb.should be_completed
+      end
+
+      it %[should return a stat for the path] do
+        @cb.stat.should be_kind_of(ZookeeperStat::Stat)
+      end
+
+      it %[should return the acls] do
+        acls = @cb.acl
+        acls.should be_kind_of(Array)
+
+        acl = acls.first
+        acl.should be_kind_of(ZookeeperACLs::ACL)
+
+        acl.perms.should == Zookeeper::ZOO_PERM_ALL
+
+        acl.id.scheme.should == 'world'
+        acl.id.id.should == 'anyone'
+      end
     end
   end
 
-  describe :get_acl do
-    it %[should have someone write tests] do
-      pending "hah! passing the buck!"
-    end
+  describe :set_acl do
   end
 
 

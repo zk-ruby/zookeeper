@@ -58,6 +58,11 @@ class ZookeeperBase
       def initialize(req_id)
         @req_id = req_id
       end
+
+    protected
+      def logger
+        Zookeeper.logger
+      end
     end
 
     class DataCallback < Callback
@@ -86,7 +91,7 @@ class ZookeeperBase
       include JZK::AsyncCallback::StatCallback
 
       def processResult(rc, path, queue, stat)
-        Zookeeper.logger.debug { "StatCallback#processResult rc: #{rc.inspect}, path: #{path.inspect}, queue: #{queue.inspect}, stat: #{stat.inspect}" }
+        logger.debug { "StatCallback#processResult rc: #{rc.inspect}, path: #{path.inspect}, queue: #{queue.inspect}, stat: #{stat.inspect}" }
         queue.push(:rc => rc, :req_id => req_id, :stat => (stat and stat.to_hash), :path => path)
       end
     end
@@ -103,7 +108,9 @@ class ZookeeperBase
       include JZK::AsyncCallback::ACLCallback
       
       def processResult(rc, path, queue, acl, stat)
-        queue.push(:rc => rc, :req_id => req_id, :path => path, :acl => acl.to_hash, :stat => stat.to_hash)
+        logger.debug { "ACLCallback#processResult #{rc.inspect} #{path.inspect} #{queue.inspect} #{acl.inspect} #{stat.inspect}" }
+        a = Array(acl).map { |a| a.to_hash }
+        queue.push(:rc => rc, :req_id => req_id, :path => path, :acl => a, :stat => stat.to_hash)
       end
     end
 
@@ -263,16 +270,18 @@ class ZookeeperBase
     end
   end
 
-  def get_acl(req_id, path, acl, callback)
+  def get_acl(req_id, path, callback)
     handle_keeper_exception do
       stat = JZKD::Stat.new
 
       if callback
+        logger.debug { "calling getACL, path: #{path.inspect}, stat: #{stat.inspect}" } 
         @jzk.getACL(path, stat, JavaCB::ACLCallback.new(req_id), @event_queue)
         [Code::Ok, nil, nil]
       else
         acls = @jzk.getACL(path, stat).map { |a| a.to_hash }
-        [Code::Ok, acls, stat.to_hash]
+        
+        [Code::Ok, Array(acls).map{|m| m.to_hash}, stat.to_hash]
       end
     end
   end
@@ -337,10 +346,14 @@ class ZookeeperBase
     def setup_dispatch_thread!
       logger.debug {  "starting dispatch thread" }
       @dispatcher = Thread.new do
-        Thread.current[:running] = true
+        begin
+          Thread.current[:running] = true
 
-        while Thread.current[:running]
-          dispatch_next_callback or sleep(0.05)
+          while Thread.current[:running]
+            dispatch_next_callback or sleep(0.05)
+          end
+        rescue Exception => e
+          $stderr.puts ["#{e.class}: #{e.message}", e.backtrace.map { |n| "\t#{n}" }.join("\n")].join("\n")
         end
       end
     end
