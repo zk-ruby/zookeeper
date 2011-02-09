@@ -1,8 +1,8 @@
 require File.expand_path('../spec_helper', __FILE__) 
 
 shared_examples_for "all success return values" do
-  it %[should have a return code of 0] do
-    @rv[:rc].should be_zero
+  it %[should have a return code of Zookeeper::ZOK] do
+    @rv[:rc].should == Zookeeper::ZOK
   end
 
   it %[should have a req_id integer] do
@@ -882,7 +882,17 @@ describe Zookeeper do
   end
 
   describe :set_acl do
+    before do
+      @new_acl = Zookeeper::ZOO_CREATOR_ALL_ACL
+    end
+
+    describe :sync do
+      it_should_behave_like "all success return values"
+
+      before do
+        @rv = @zk.set_acl(:path => @path, :acl => [@new_acl])
+      end
+      
+    end
   end
-
-
 end
