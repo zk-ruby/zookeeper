@@ -139,14 +139,6 @@ class Zookeeper < ZookeeperBase
   end
 
 private
-  def setup_dispatch_thread!
-    @dispatcher = Thread.new {
-      while true do
-        dispatch_next_callback
-      end
-    }
-  end
-
   def dispatch_next_callback
     hash = get_next_event
 

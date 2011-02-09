@@ -66,7 +66,6 @@ protected
     @dispatcher = Thread.new {
       while true do
         dispatch_next_callback
-        sleep 0.1
       end
     }
   end
@@ -74,7 +73,7 @@ protected
   # TODO: Make all global puts configurable
   def get_default_global_watcher
     Proc.new { |args|
-      $stderr.puts "Ruby ZK Global CB called type=#{event_by_value(args[:type])} state=#{state_by_value(args[:state])}"
+#       $stderr.puts "Ruby ZK Global CB called type=#{event_by_value(args[:type])} state=#{state_by_value(args[:state])}"
       true
     }
   end
