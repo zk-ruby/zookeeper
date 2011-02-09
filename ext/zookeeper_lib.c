@@ -15,6 +15,7 @@ wickman@twitter.com
 #include <stdio.h>
 #include <stdlib.h>
 #include <pthread.h>
+#include <unistd.h>
 
 #define GET_SYM(str) ID2SYM(rb_intern(str))
 
@@ -34,7 +35,10 @@ void zkrb_enqueue(zkrb_queue_t *q, zkrb_event_t *elt) {
   q->tail = q->tail->next;
   q->tail->event = NULL;
   q->tail->next = NULL;
+  ssize_t ret = write(q->pipe_write, "0", 1);   /* Wake up Ruby listener */
   pthread_mutex_unlock(&zkrb_q_mutex);
+  if (ret == -1)
+    rb_raise(rb_eRuntimeError, "write to pipe failed: %d", errno);
 }
 
 zkrb_event_t * zkrb_peek(zkrb_queue_t *q) {
@@ -66,12 +70,19 @@ zkrb_event_t* zkrb_dequeue(zkrb_queue_t *q, int need_lock) {
 }
 
 zkrb_queue_t *zkrb_queue_alloc(void) {
+  int pfd[2];
+  if (pipe(pfd) == -1)
+    rb_raise(rb_eRuntimeError, "create of pipe failed: %d", errno);
+
   pthread_mutex_lock(&zkrb_q_mutex);
   zkrb_queue_t *rq = malloc(sizeof(zkrb_queue_t));
   rq->head = malloc(sizeof(struct zkrb_event_ll_t));
   rq->head->event = NULL; rq->head->next = NULL;
   rq->tail = rq->head;
+  rq->pipe_read = pfd[0];
+  rq->pipe_write = pfd[1];
   pthread_mutex_unlock(&zkrb_q_mutex);
+
   return rq;
 }
 
@@ -82,11 +93,13 @@ void zkrb_queue_free(zkrb_queue_t *queue) {
     return;
   }
 
-  zkrb_event_t *elt = NULL;
+  zkrb_event_t *elt;
   while ((elt = zkrb_dequeue(queue, 0)) != NULL) {
     zkrb_event_free(elt);
   }
   free(queue->head);
+  close(queue->pipe_read);
+  close(queue->pipe_write);
   free(queue);
   pthread_mutex_unlock(&zkrb_q_mutex);
 }

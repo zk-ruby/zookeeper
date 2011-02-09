@@ -294,6 +294,10 @@ class ZookeeperBase
     raise ZookeeperException::ConnectionClosed unless connected?
   end
 
+  KILL_TOKEN = :__kill_token__
+
+  class DispatchShutdownException < StandardError; end
+
   def close
     @req_mutex.synchronize do
       if @jzk
@@ -303,9 +307,11 @@ class ZookeeperBase
 
       if @dispatcher 
         @dispatcher[:running] = false
-        @dispatcher.join
+        @event_queue.push(KILL_TOKEN)    # ignored by dispatch_next_callback
       end
     end
+
+    @dispatcher.join
   end
 
   protected
@@ -331,9 +337,9 @@ class ZookeeperBase
     end
 
     def get_next_event
-      @event_queue.pop(true)
-    rescue ThreadError
-      nil
+      @event_queue.pop.tap do |event|
+        raise DispatchShutdownException if event == KILL_TOKEN
+      end
     end
     
     # method to wait until block passed returns true or timeout (default is 10 seconds) is reached 
@@ -349,14 +355,17 @@ class ZookeeperBase
     def setup_dispatch_thread!
       logger.debug {  "starting dispatch thread" }
       @dispatcher = Thread.new do
-        begin
-          Thread.current[:running] = true
+        Thread.current[:running] = true
 
-          while Thread.current[:running]
-            dispatch_next_callback or sleep(0.05)
+        while Thread.current[:running]
+          begin
+            dispatch_next_callback 
+          rescue DispatchShutdownException
+            logger.info { "dispatch thread exiting, got shutdown exception" }
+            break
+          rescue Exception => e
+            $stderr.puts ["#{e.class}: #{e.message}", e.backtrace.map { |n| "\t#{n}" }.join("\n")].join("\n")
           end
-        rescue Exception => e
-          $stderr.puts ["#{e.class}: #{e.message}", e.backtrace.map { |n| "\t#{n}" }.join("\n")].join("\n")
         end
       end
     end

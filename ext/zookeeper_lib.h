@@ -95,6 +95,8 @@ struct zkrb_event_ll_t {
 typedef struct {
   struct zkrb_event_ll_t *head;
   struct zkrb_event_ll_t *tail;
+  int                     pipe_read;
+  int                     pipe_write;
 } zkrb_queue_t;
 
 zkrb_queue_t * zkrb_queue_alloc(void);
