@@ -51,7 +51,7 @@ protected
 
   def dispatch_next_callback
     hash = get_next_event
-    return nil unless hash
+    
     logger.debug {  "dispatch_next_callback got event: #{hash.inspect}" }
 
     is_completion = hash.has_key?(:rc)

@@ -19,7 +19,7 @@ if ENV['DEBUG']
 end
 
 $includes = " -I#{HERE}/include"
-$libraries = " -L#{HERE}/lib"
+$libraries = " -L#{HERE}/lib -L#{RbConfig::CONFIG['libdir']}"
 $CFLAGS = "#{$includes} #{$libraries} #{$CFLAGS}"
 $LDFLAGS = "#{$libraries} #{$LDFLAGS}"
 $LIBPATH = ["#{HERE}/lib"]
