@@ -41,6 +41,7 @@ class ZookeeperBase
 
   JZKD::ACL.class_eval do
     def self.from_ruby_acl(acl)
+      raise TypeError, "acl must be a ZookeeperACLs::ACL not #{acl.inspect}" unless acl.kind_of?(ZookeeperACLs::ACL)
       id = org.apache.zookeeper.data.Id.new(acl.id.scheme.to_s, acl.id.id.to_s)
       new(acl.perms.to_i, id)
     end
@@ -244,7 +245,9 @@ class ZookeeperBase
 
   def set_acl(req_id, path, acl, callback, version)
     handle_keeper_exception do
-      acl = Array(acl).map{ |a| JZKD::ACL.from_ruby_acl(a) }
+      logger.debug { "set_acl: acl #{acl.inspect}" }
+      acl = Array(acl).flatten.map { |a| JZKD::ACL.from_ruby_acl(a) }
+      logger.debug { "set_acl: converted #{acl.inspect}" }
 
       if callback
         @jzk.setACL(path, acl, version, JavaCB::ACLCallback.new(req_id), @event_queue)
