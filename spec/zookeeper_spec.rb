@@ -407,6 +407,8 @@ describe Zookeeper do
     end
   end
 
+  # NOTE: the jruby version of stat on non-existent node will have a
+  # return_code of 0, but the C version will have a return_code of -101
   describe :stat do
     describe :sync do
       it_should_behave_like "all success return values"
@@ -730,12 +732,12 @@ describe Zookeeper do
         it_should_behave_like "all success return values"
 
         before do
+          @zk.create(:path => @path)
           @rv = @zk.delete(:path => @path)
         end
 
         it %[should have deleted the node] do
-          st = @zk.stat(:path => @path)
-          st[:rc].should == Zookeeper::ZOK
+          @zk.stat(:path => @path)[:stat].exists.should be_false
         end
       end
 
@@ -743,13 +745,16 @@ describe Zookeeper do
         it_should_behave_like "all success return values"
 
         before do
+          @zk.create(:path => @path)
+
           @stat = @zk.stat(:path => @path)[:stat]
-          @rv   = @zk.delete(:path => @path, :version => @stat.version)
+          @stat.exists.should be_true
+
+          @rv = @zk.delete(:path => @path, :version => @stat.version)
         end
 
         it %[should have deleted the node] do
-          st = @zk.stat(:path => @path)
-          st[:rc].should == Zookeeper::ZOK
+          @zk.stat(:path => @path)[:stat].exists.should be_false
         end
       end
 
@@ -785,8 +790,7 @@ describe Zookeeper do
         end
 
         it %[should have deleted the node] do
-          st = @zk.stat(:path => @path)
-          st[:rc].should == Zookeeper::ZOK
+          @zk.stat(:path => @path)[:stat].exists.should be_false
         end
       end
 
@@ -805,8 +809,7 @@ describe Zookeeper do
         end
 
         it %[should have deleted the node] do
-          st = @zk.stat(:path => @path)
-          st[:rc].should == Zookeeper::ZOK
+          @zk.stat(:path => @path)[:stat].exists.should be_false
         end
       end
 
