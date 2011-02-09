@@ -5,3 +5,4 @@
 *.log
 Makefile
 pkg
+zookeeper.gemspec
