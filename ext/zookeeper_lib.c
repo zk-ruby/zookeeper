@@ -187,7 +187,7 @@ VALUE zkrb_event_to_ruby(zkrb_event_t *event) {
     case ZKRB_DATA: {
       struct zkrb_data_completion *data_ctx = event->completion.data_completion;
       if (ZKRBDebugging) zkrb_print_stat(data_ctx->stat);
-      rb_hash_aset(hash, GET_SYM("data"), data_ctx->data ? rb_str_new2(data_ctx->data) : Qnil);
+      rb_hash_aset(hash, GET_SYM("data"), data_ctx->data ? rb_str_new(data_ctx->data, data_ctx->data_len) : Qnil);
       rb_hash_aset(hash, GET_SYM("stat"), data_ctx->stat ? zkrb_stat_to_rarray(data_ctx->stat) : Qnil);
       break;
     }
@@ -328,7 +328,14 @@ void zkrb_data_callback(
   struct zkrb_data_completion *dc = malloc(sizeof(struct zkrb_data_completion));
   dc->data = NULL;
   dc->stat = NULL;
-  if (value != NULL) { dc->data  = malloc(value_len); memcpy(dc->data, value, value_len); }
+  dc->data_len = 0;
+
+  if (value != NULL) {
+    dc->data = malloc(value_len);
+    dc->data_len = value_len;
+    memcpy(dc->data, value, value_len);
+  }
+
   if (stat != NULL) { dc->stat  = malloc(sizeof(struct Stat)); memcpy(dc->stat, stat, sizeof(struct Stat)); }
 
   ZKH_SETUP_EVENT(queue, event);
