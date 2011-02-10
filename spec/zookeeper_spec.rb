@@ -130,6 +130,12 @@ describe Zookeeper do
         @watcher.context.should == @path
       end
     end
+
+    describe 'bad arguments' do
+      it %[should barf with a BadArguments error] do
+        lambda { @zk.get(:bad_arg => 'what!?') }.should raise_error(ZookeeperExceptions::ZookeeperException::BadArguments)
+      end
+    end
   end   # get
 
   describe :set do
