@@ -1,3 +1,5 @@
+require 'zookeeper/exceptions'
+
 module ZookeeperCommon
   include ZookeeperExceptions
 
