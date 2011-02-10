@@ -91,6 +91,7 @@ static VALUE method_init(int argc, VALUE* argv, VALUE self) {
     zoo_set_debug_level(log_level);
   }
 
+
   VALUE data;
   struct zkrb_instance_data *zk_local_ctx;
   data = Data_Make_Struct(Zookeeper,
@@ -120,6 +121,7 @@ static VALUE method_init(int argc, VALUE* argv, VALUE self) {
   }
 
   rb_iv_set(self, "@data", data);
+  rb_iv_set(self, "@_running", Qtrue);
 
   return Qnil;
 }
@@ -414,11 +416,21 @@ static VALUE method_get_acl(VALUE self, VALUE reqid, VALUE path, VALUE async) {
   return output;
 }
 
+static int is_running(VALUE self) {
+  VALUE rval = rb_iv_get(self, "@_running");
+  return RTEST(rval);
+}
+
 static VALUE method_get_next_event(VALUE self) {
   char buf[64];
   FETCH_DATA_PTR(self, zk);
 
   for (;;) {
+    if (!is_running(self)) {
+/*      fprintf(stderr, "method_get_next_event: running is false, returning nil\n");*/
+      return Qnil;  // this case for shutdown
+    }
+
     zkrb_event_t *event = zkrb_dequeue(zk->queue, 1);
 
     /*
@@ -462,6 +474,18 @@ static VALUE method_client_id(VALUE self) {
   const clientid_t *id = zoo_client_id(zk->zh);
   return UINT2NUM(id->client_id);
 }
+
+// wake up the event loop, used when shutting down
+static VALUE method_wake_event_loop_bang(VALUE self) {
+  FETCH_DATA_PTR(self, zk); 
+
+  ssize_t ret = write(zk->queue->pipe_write, "0", 1);   /* Wake up Ruby listener */
+
+  if (ret == -1)
+    rb_raise(rb_eRuntimeError, "write to pipe failed: %d", errno);
+
+  return Qnil;
+};
 
 static VALUE method_close(VALUE self) {
   FETCH_DATA_PTR(self, zk);
@@ -535,7 +559,10 @@ static void zkrb_define_methods(void) {
   // Make these class methods?  
   DEFINE_METHOD(set_debug_level, 1);
   DEFINE_METHOD(zerror, 1);
+
+  rb_define_method(Zookeeper, "wake_event_loop!", method_wake_event_loop_bang, 0);
 }
+
 void Init_zookeeper_c() {
   ZKRBDebugging = 0;
   /* initialize Zookeeper class */
