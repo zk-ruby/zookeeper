@@ -1,4 +1,6 @@
 module ZookeeperCommon
+  include ZookeeperExceptions
+
   # sigh, i guess define this here?
   ZKRB_GLOBAL_CB_REQ   = -1
 
