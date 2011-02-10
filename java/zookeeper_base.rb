@@ -124,7 +124,6 @@ class ZookeeperBase
     end
   end
 
-
   def reopen(timeout=10)
     silent_watcher = lambda { |*a| }
 
