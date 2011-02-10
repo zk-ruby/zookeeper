@@ -26,6 +26,7 @@ extern pthread_mutex_t zkrb_q_mutex;
 
 struct zkrb_data_completion {
   char *data;
+  int data_len;
   struct Stat *stat;
 };
 

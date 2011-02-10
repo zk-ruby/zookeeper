@@ -13,11 +13,15 @@ Zookeeper.logger = Logger.new(File.expand_path('../../test.log', __FILE__)).tap 
   log.level = Logger::DEBUG
 end
 
+
 RSpec.configure do |config|
   config.mock_with :flexmock
 
   config.before(:all) do
     @zk = Zookeeper.new('localhost:2181')
+
+    # uncomment for driver debugging output
+    #@zk.set_debug_level(Zookeeper::ZOO_LOG_LEVEL_DEBUG) unless defined?(::JRUBY_VERSION)
   end
 
   config.after(:all) do
