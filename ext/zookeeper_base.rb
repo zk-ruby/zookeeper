@@ -64,12 +64,8 @@ class ZookeeperBase < CZookeeper
   def close
     @_running = false;
     wake_event_loop!
-
-    begin
-      @dispatcher.join
-    rescue Exception => e
-      $stderr.puts "Error in dispatch thread, #{e.class}: #{e.message}\n" << e.backtrace.map{|n| "\t#{n}"}.join("\n")
-    end
+    
+    @dispatcher.join
 
     super
   end
@@ -79,11 +75,16 @@ protected
     false|@_running
   end
 
-  # XXX: for some reason this doesn't work from ZookeeperCommon
   def setup_dispatch_thread!
-    @dispatcher = Thread.new {
-      dispatch_next_callback while running?
-    }
+    @dispatcher = Thread.new do
+      while running?
+        begin                     # calling user code, so protect ourselves
+          dispatch_next_callback 
+        rescue Exception => e
+          $stderr.puts "Error in dispatch thread, #{e.class}: #{e.message}\n" << e.backtrace.map{|n| "\t#{n}"}.join("\n")
+        end
+      end
+    end
   end
 
   # TODO: Make all global puts configurable
