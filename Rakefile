@@ -9,3 +9,11 @@ Echoe.new("zookeeper") do |p|
   p.clean_pattern += ["ext/lib", "ext/include", "ext/c", "ext/bin", "ext/conftest.dSYM"]
   p.rdoc_pattern = /README|TODO|LICENSE|CHANGELOG|BENCH|COMPAT|zookeeper_c.c|zookeeper.rb/
 end
+
+namespace :mb do
+  task :build_gems do
+    sh "gem build slyphon-zookeeper.gemspec"
+    ENV['JAVA_GEM'] = '1'
+    sh "gem build slyphon-zookeeper.gemspec"
+  end
+end
