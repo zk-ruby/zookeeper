@@ -1,6 +1,6 @@
 module ZookeeperStat
   class Stat
-    attr_reader :version, :exists, :czxid, :mzxid, :ctime, :mtime, :cverzion, :aversion, :ephemeralOwner, :dataLength, :numChildren, :pzxid
+    attr_reader :version, :exists, :czxid, :mzxid, :ctime, :mtime, :cversion, :aversion, :ephemeralOwner, :dataLength, :numChildren, :pzxid
 
     alias :ephemeral_owner :ephemeralOwner
     alias :num_children :numChildren
