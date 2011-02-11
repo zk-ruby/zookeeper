@@ -37,6 +37,7 @@ class ZookeeperBase < CZookeeper
     @req_mutex = Mutex.new
     @current_req_id = 1
     @host = host
+    @_running = nil # used by the C layer
     reopen(timeout)
     return nil unless connected?
     setup_dispatch_thread!
@@ -60,13 +61,28 @@ class ZookeeperBase < CZookeeper
     state == ZOO_ASSOCIATING_STATE
   end
 
+  def close
+    @_running = false;
+    wake_event_loop!
+
+    begin
+      @dispatcher.join
+    rescue Exception => e
+      $stderr.puts "Error in dispatch thread, #{e.class}: #{e.message}\n" << e.backtrace.map{|n| "\t#{n}"}.join("\n")
+    end
+
+    super
+  end
+
 protected
+  def running?
+    false|@_running
+  end
+
   # XXX: for some reason this doesn't work from ZookeeperCommon
   def setup_dispatch_thread!
     @dispatcher = Thread.new {
-      while true do
-        dispatch_next_callback
-      end
+      dispatch_next_callback while running?
     }
   end
 
