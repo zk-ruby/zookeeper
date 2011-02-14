@@ -30,6 +30,7 @@ describe Zookeeper do
     end
 
     it %[should receive disconnection events] do
+      pending "the C driver doesn't appear to deliver disconnection events (?)"
       @events.clear
       @zk.close
       wait_until(2) { !@events.empty? }

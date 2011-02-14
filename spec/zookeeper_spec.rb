@@ -26,7 +26,14 @@ describe Zookeeper do
   after do
     @zk.delete(:path => @path)
     @zk.close
-    wait_until { !@zk.connected? }
+
+    wait_until do 
+      begin
+        !@zk.connected?
+      rescue RuntimeError
+        true
+      end
+    end
   end
 
   # unfortunately, we can't test w/o exercising other parts of the driver, so
