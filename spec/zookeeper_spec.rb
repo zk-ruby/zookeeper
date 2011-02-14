@@ -15,11 +15,18 @@ describe Zookeeper do
     @path = "/_zktest_"
     @data = "underpants"
 
+    @zk = Zookeeper.new('localhost:2181')
+
+    # uncomment for driver debugging output
+    #@zk.set_debug_level(Zookeeper::ZOO_LOG_LEVEL_DEBUG) unless defined?(::JRUBY_VERSION)
+
     @zk.create(:path => @path, :data => @data)
   end
 
   after do
     @zk.delete(:path => @path)
+    @zk.close
+    wait_until { !@zk.connected? }
   end
 
   # unfortunately, we can't test w/o exercising other parts of the driver, so

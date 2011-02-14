@@ -26,6 +26,8 @@ class ZookeeperBase
   ANY_VERSION = -1
   DEFAULT_SESSION_TIMEOUT = 10_000
 
+  ZKRB_GLOBAL_CB_REQ = -1 unless defined?(ZKRB_GLOBAL_CB_REQ)
+
   JZKD::Stat.class_eval do
     MEMBERS = [:version, :czxid, :mzxid, :ctime, :mtime, :cversion, :aversion, :ephemeralOwner, :dataLength, :numChildren, :pzxid]
     def to_hash
@@ -48,6 +50,12 @@ class ZookeeperBase
 
     def to_hash
       { :perms => getPerms, :id => getId.to_hash }
+    end
+  end
+
+  JZK::WatchedEvent.class_eval do
+    def to_hash
+      { :type => getType.getIntValue, :state => getState.getIntValue, :path => getPath }
     end
   end
 
@@ -122,10 +130,33 @@ class ZookeeperBase
         queue.push(:rc => rc, :req_id => req_id, :path => path)
       end
     end
+
+    class WatcherCallback < Callback
+      include JZK::Watcher
+
+      def initialize(event_queue)
+        @event_queue = event_queue
+        super(ZookeeperBase::ZKRB_GLOBAL_CB_REQ)
+      end
+
+      def process(event)
+        logger.debug { "WatcherCallback got event: #{event.to_hash}" }
+        hash = event.to_hash.merge(:req_id => req_id)
+        @event_queue.push(hash)
+      end
+    end
   end
 
   def reopen(timeout=10, watcher=nil)
-    @jzk = JZK::ZooKeeper.new(@host, DEFAULT_SESSION_TIMEOUT, (watcher || @default_watcher))
+    watcher ||= @default_watcher
+
+    @req_mutex.synchronize do
+      # flushes all outstanding watcher reqs.
+      @watcher_req = {}
+      set_default_global_watcher(&watcher)
+    end
+
+    @jzk = JZK::ZooKeeper.new(@host, DEFAULT_SESSION_TIMEOUT, JavaCB::WatcherCallback.new(@event_queue))
 
     if timeout > 0
       time_to_stop = Time.now + timeout
@@ -142,11 +173,13 @@ class ZookeeperBase
     @host = host
     @event_queue = Queue.new
     @current_req_id = 0
-    @req_mutex = Mutex.new
+    @req_mutex = Monitor.new
     @watcher_reqs = {}
     @completion_reqs = {}
-    @default_watcher = (watcher || lambda { |*a| true })
-    reopen(timeout, @default_watcher)
+
+    watcher ||= get_default_global_watcher
+
+    reopen(timeout, watcher)
     return nil unless connected?
     setup_dispatch_thread!
   end
@@ -313,10 +346,14 @@ class ZookeeperBase
   end
 
   # set the watcher object/proc that will receive all global events (such as session/state events)
-  def set_global_default_watcher(&block)
+  #---
+  # XXX: this code needs to be duplicated from ext/zookeeper_base.rb because
+  # it's called from the initializer, and because of the C impl. we can't have
+  # the two decend from a common base, and a module wouldn't work
+  def set_default_global_watcher(&block)
     @req_mutex.synchronize do
       @default_watcher = block
-      @jzk.register(@default_watcher)
+      @watcher_reqs[ZKRB_GLOBAL_CB_REQ] = { :watcher => @default_watcher, :watcher_context => nil }
     end
   end
 
@@ -355,6 +392,15 @@ class ZookeeperBase
         break if Time.now > time_to_stop
         sleep 0.3
       end
+    end
+
+  protected
+    # TODO: Make all global puts configurable
+    def get_default_global_watcher
+      Proc.new { |args|
+        logger.debug { "Ruby ZK Global CB called type=#{event_by_value(args[:type])} state=#{state_by_value(args[:state])}" }
+        true
+      }
     end
 
   private

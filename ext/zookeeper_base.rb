@@ -18,7 +18,16 @@ class ZookeeperBase < CZookeeper
   ZOO_LOG_LEVEL_DEBUG  = 4
   
   def reopen(timeout = 10, watcher=nil)
+    watcher ||= @default_watcher
+
+    @req_mutex.synchronize do
+      # flushes all outstanding watcher reqs.
+      @watcher_req = {}
+      set_default_global_watcher(&watcher)
+    end
+
     init(@host)
+
     if timeout > 0
       time_to_stop = Time.now + timeout
       until state == Zookeeper::ZOO_CONNECTED_STATE
@@ -27,20 +36,17 @@ class ZookeeperBase < CZookeeper
       end
     end
 
-    watcher ||= @default_watcher
-    # flushes all outstanding watcher reqs.
-    @watcher_reqs = { ZKRB_GLOBAL_CB_REQ => { :watcher => watcher, :watcher_context => self } }
     state
   end
 
   def initialize(host, timeout = 10, watcher=nil)
     @watcher_reqs = {}
     @completion_reqs = {}
-    @req_mutex = Mutex.new
+    @req_mutex = Monitor.new
     @current_req_id = 1
     @host = host
 
-    set_default_global_watcher(watcher || get_default_global_watcher)
+    watcher ||= get_default_global_watcher
 
     @_running = nil # used by the C layer
     reopen(timeout, watcher)
@@ -78,8 +84,8 @@ class ZookeeperBase < CZookeeper
   # set the watcher object/proc that will receive all global events (such as session/state events)
   def set_default_global_watcher(&block)
     @req_mutex.synchronize do
-      @default_watcher = { :watcher => block, :watcher_context => self } # save this here for reopen() to use
-      @watcher_reqs[ZKRB_GLOBAL_CB_REQ] = @default_watcher
+      @default_watcher = block # save this here for reopen() to use
+      @watcher_reqs[ZKRB_GLOBAL_CB_REQ] = { :watcher => @default_watcher, :watcher_context => nil }
     end
   end
 
