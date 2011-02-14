@@ -19,11 +19,11 @@ end
 require 'zookeeper_base'
 
 class Zookeeper < ZookeeperBase
-  def reopen(timeout=10)
+  def reopen(timeout=10, watcher=nil)
     super
   end
 
-  def initialize(host, timeout=10)
+  def initialize(host, timeout=10, watcher=nil)
     super
   end
 

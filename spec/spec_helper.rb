@@ -16,17 +16,6 @@ end
 
 RSpec.configure do |config|
   config.mock_with :flexmock
-
-  config.before(:all) do
-    @zk = Zookeeper.new('localhost:2181')
-
-    # uncomment for driver debugging output
-    #@zk.set_debug_level(Zookeeper::ZOO_LOG_LEVEL_DEBUG) unless defined?(::JRUBY_VERSION)
-  end
-
-  config.after(:all) do
-    @zk.close
-  end
 end
 
 
