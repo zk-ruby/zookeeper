@@ -124,10 +124,8 @@ class ZookeeperBase
     end
   end
 
-  def reopen(timeout=10)
-    silent_watcher = lambda { |*a| }
-
-    @jzk = JZK::ZooKeeper.new(@host, DEFAULT_SESSION_TIMEOUT, silent_watcher)
+  def reopen(timeout=10, watcher=nil)
+    @jzk = JZK::ZooKeeper.new(@host, DEFAULT_SESSION_TIMEOUT, (watcher || @default_watcher))
 
     if timeout > 0
       time_to_stop = Time.now + timeout
@@ -140,14 +138,15 @@ class ZookeeperBase
     state
   end
 
-  def initialize(host, timeout=10)
+  def initialize(host, timeout=10, watcher=nil)
     @host = host
     @event_queue = Queue.new
     @current_req_id = 0
     @req_mutex = Mutex.new
     @watcher_reqs = {}
     @completion_reqs = {}
-    reopen(timeout)
+    @default_watcher = (watcher || lambda { |*a| true })
+    reopen(timeout, @default_watcher)
     return nil unless connected?
     setup_dispatch_thread!
   end
@@ -311,6 +310,14 @@ class ZookeeperBase
     end
 
     @dispatcher.join
+  end
+
+  # set the watcher object/proc that will receive all global events (such as session/state events)
+  def set_global_default_watcher(&block)
+    @req_mutex.synchronize do
+      @default_watcher = block
+      @jzk.register(@default_watcher)
+    end
   end
 
   protected
