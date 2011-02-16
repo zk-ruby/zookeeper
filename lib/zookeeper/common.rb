@@ -61,14 +61,23 @@ protected
     hash[:acl] = hash[:acl].map { |acl| ZookeeperACLs::ACL.new(acl) } if hash[:acl]
     
     callback_context = is_completion ? get_completion(hash[:req_id]) : get_watcher(hash[:req_id])
-    callback = is_completion ? callback_context[:callback] : callback_context[:watcher]
-    hash[:context] = callback_context[:context]
 
-    # TODO: Eventually enforce derivation from Zookeeper::Callback
-    if callback.respond_to?(:call)
-      callback.call(hash)
+    # when connectivity with the server is lost, on reconnection it's possible
+    # to receive duplicate responses. If we've already handled a response for a
+    # given req_id, this value will be nil, and we just ignore it.
+    if callback_context
+      callback = is_completion ? callback_context[:callback] : callback_context[:watcher]
+
+      hash[:context] = callback_context[:context]
+
+      # TODO: Eventually enforce derivation from Zookeeper::Callback
+      if callback.respond_to?(:call)
+        callback.call(hash)
+      else
+        # puts "dispatch_next_callback found non-callback => #{callback.inspect}"
+      end
     else
-      # puts "dispatch_next_callback found non-callback => #{callback.inspect}"
+      logger.warn { "Duplicate event received (no handler for req_id #{hash[:req_id]}, event: #{hash.inspect}" }
     end
   end
 
