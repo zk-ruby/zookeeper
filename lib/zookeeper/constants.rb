@@ -6,6 +6,7 @@ module ZookeeperConstants
   # session state
   ZOO_EXPIRED_SESSION_STATE  = -112
   ZOO_AUTH_FAILED_STATE      = -113
+  ZOO_CLOSED_STATE           = 0
   ZOO_CONNECTING_STATE       = 1
   ZOO_ASSOCIATING_STATE      = 2
   ZOO_CONNECTED_STATE        = 3
