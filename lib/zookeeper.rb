@@ -138,6 +138,14 @@ class Zookeeper < ZookeeperBase
     super
   end
 
+  def connecting?
+    super
+  end
+
+  def associating?
+    super
+  end
+
 private
   def setup_call(opts)
     req_id = nil
@@ -153,14 +161,6 @@ private
   def setup_watcher(req_id, call_opts)
     @watcher_reqs[req_id] = { :watcher => call_opts[:watcher],
                               :context => call_opts[:watcher_context] }
-  end
-
-  def connecting?
-    super
-  end
-
-  def associating?
-    super
   end
 
   # TODO: Sanitize user mistakes by unregistering watchers from ops that
