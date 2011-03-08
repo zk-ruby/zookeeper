@@ -322,7 +322,7 @@ class ZookeeperBase
 
   def assert_open
     # XXX don't know how to check for valid session state!
-    raise ZookeeperException::ConnectionClosed unless connected?
+    raise ZookeeperException::NotConnected unless connected?
   end
 
   KILL_TOKEN = :__kill_token__
