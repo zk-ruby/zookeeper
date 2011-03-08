@@ -57,7 +57,7 @@ class ZookeeperBase < CZookeeper
   # if either of these happen, the user will need to renegotiate a connection via reopen
   def assert_open
     raise ZookeeperException::SessionExpired if state == ZOO_EXPIRED_SESSION_STATE
-    raise ZookeeperException::ConnectionClosed unless connected?
+    raise ZookeeperException::NotConnected   unless connected?
   end
 
   def connected?
