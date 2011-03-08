@@ -3,7 +3,7 @@ $:.push File.expand_path("../lib", __FILE__)
 
 Gem::Specification.new do |s|
   s.name        = "slyphon-zookeeper"
-  s.version     = '0.1.3'
+  s.version     = '0.1.4'
 
   s.authors     = ["Phillip Pearson", "Eric Maland", "Evan Weaver", "Brian Wickman", "Jonathan D. Simms"]
   s.email       = ["slyphon@gmail.com"]
