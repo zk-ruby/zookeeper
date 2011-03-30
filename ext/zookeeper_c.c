@@ -423,12 +423,7 @@ static VALUE method_get_next_event(VALUE self) {
   for (;;) {
     zkrb_event_t *event = zkrb_dequeue(zk->queue, 1);
 
-    /*
-     * If no events found, wait for an event by using rb_thread_select() on the
-     * queue's pipe. Note that the ZK handle might be closed while we're
-     * waiting; if this happens, the rb_thread_select() will fail, and we can't
-     * safely touch the "zk" instance handle.
-     */
+    /* Wait for an event using rb_thread_select() on the queue's pipe */
     if (event == NULL) {
       int fd = zk->queue->pipe_read;
       fd_set rset;
