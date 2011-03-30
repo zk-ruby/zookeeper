@@ -34,6 +34,7 @@ class Zookeeper < CZookeeper
     end
     # flushes all outstanding watcher reqs.
     @watcher_reqs = { ZKRB_GLOBAL_CB_REQ => { :watcher => get_default_global_watcher } }
+    setup_dispatch_thread!
     state
   end
 
@@ -44,7 +45,6 @@ class Zookeeper < CZookeeper
     @current_req_id = 1
     @host = host
     return nil if reopen(timeout) != Zookeeper::ZOO_CONNECTED_STATE
-    setup_dispatch_thread!
   end
 
 public
@@ -151,18 +151,27 @@ public
     options[:callback] ? rv : rv.merge(:acl => acls, :stat => Stat.new(stat))
   end
 
+  # To close a Zk handle, first shutdown the dispatcher thread; this is done by
+  # signalling the waiting thread that there is a pending close. We then release
+  # the C-land Zk state.
+  def close
+    signal_pending_close
+    @dispatcher.join
+    super
+  end
+
 private
   def setup_dispatch_thread!
     @dispatcher = Thread.new {
       while true do
-        dispatch_next_callback
+        hash = get_next_event
+        break if hash.nil? # Pending close => exit dispatcher thread
+        dispatch_event(hash)
       end
     }
   end
 
-  def dispatch_next_callback
-    hash = get_next_event
-
+  def dispatch_event(hash)
     is_completion = hash.has_key?(:rc)
 
     hash[:stat] = Stat.new(hash[:stat]) if hash.has_key?(:stat)

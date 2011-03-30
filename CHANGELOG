@@ -1,3 +1,5 @@
+v0.4.4 Fix race condition on close, possible data corruption on async get.
+
 v0.4.3 Fix a handful of memory-related bugs, fix SIGSEGV on master change, reduce latency of event handling, fix compilation on OSX.
 
 v0.4.2 Add options to Zookeeper#initialize, silence most Zookeeper logs.

@@ -26,6 +26,7 @@ struct zkrb_instance_data {
   zhandle_t            *zh;
   clientid_t          myid;
   zkrb_queue_t      *queue;
+  int        pending_close;
 };
 
 typedef enum {
@@ -99,6 +100,7 @@ static VALUE method_init(int argc, VALUE* argv, VALUE self) {
            free_zkrb_instance_data,
            zk_local_ctx);
   zk_local_ctx->queue = zkrb_queue_alloc();
+  zk_local_ctx->pending_close = 0;
 
   zoo_deterministic_conn_order(0);
 
@@ -440,6 +442,9 @@ static VALUE method_get_next_event(VALUE self) {
       if (read(fd, buf, sizeof(buf)) == -1)
         rb_raise(rb_eRuntimeError, "read failed: %d", errno);
 
+      if (zk->pending_close)
+        return Qnil;
+
       continue;
     }
 
@@ -461,6 +466,15 @@ static VALUE method_client_id(VALUE self) {
   FETCH_DATA_PTR(self, zk);
   const clientid_t *id = zoo_client_id(zk->zh);
   return UINT2NUM(id->client_id);
+}
+
+static VALUE method_signal_pending_close(VALUE self) {
+  FETCH_DATA_PTR(self, zk);
+
+  zk->pending_close = 1;
+  zkrb_signal(zk->queue);
+
+  return Qnil;
 }
 
 static VALUE method_close(VALUE self) {
@@ -519,6 +533,7 @@ static void zkrb_define_methods(void) {
   DEFINE_METHOD(set_acl, 5);
   DEFINE_METHOD(get_acl, 3);
   DEFINE_METHOD(client_id, 0);
+  DEFINE_METHOD(signal_pending_close, 0);
   DEFINE_METHOD(close, 0);
   DEFINE_METHOD(deterministic_conn_order, 1);
   DEFINE_METHOD(is_unrecoverable, 0);

@@ -69,6 +69,14 @@ zkrb_event_t* zkrb_dequeue(zkrb_queue_t *q, int need_lock) {
   }
 }
 
+void zkrb_signal(zkrb_queue_t *q) {
+  pthread_mutex_lock(&zkrb_q_mutex);
+  ssize_t ret = write(q->pipe_write, "0", 1);   /* Wake up Ruby listener */
+  pthread_mutex_unlock(&zkrb_q_mutex);
+  if (ret == -1)
+    rb_raise(rb_eRuntimeError, "write to pipe failed: %d", errno);
+}
+
 zkrb_queue_t *zkrb_queue_alloc(void) {
   int pfd[2];
   if (pipe(pfd) == -1)
