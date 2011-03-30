@@ -22,7 +22,7 @@ class Zookeeper < CZookeeper
   ZOO_LOG_LEVEL_WARN   = 2
   ZOO_LOG_LEVEL_INFO   = 3
   ZOO_LOG_LEVEL_DEBUG  = 4
-  
+
   def reopen(timeout = 10)
     init(@host)
     if timeout > 0
@@ -52,14 +52,14 @@ public
     assert_open
     assert_supported_keys(options, [:path, :watcher, :watcher_context, :callback, :callback_context])
     assert_required_keys(options, [:path])
-    
+
     req_id = setup_call(options)
     rc, value, stat = super(req_id, options[:path], options[:callback], options[:watcher])
 
     rv = { :req_id => req_id, :rc => rc }
     options[:callback] ? rv : rv.merge(:data => value, :stat => Stat.new(stat))
   end
-  
+
   def set(options = {})
     assert_open
     assert_supported_keys(options, [:path, :data, :version, :callback, :callback_context])
@@ -72,7 +72,7 @@ public
     rv = { :req_id => req_id, :rc => rc }
     options[:callback] ? rv : rv.merge(:stat => Stat.new(stat))
   end
-  
+
   def get_children(options = {})
     assert_open
     assert_supported_keys(options, [:path, :callback, :callback_context, :watcher, :watcher_context])
@@ -96,34 +96,34 @@ public
     rv = { :req_id => req_id, :rc => rc }
     options[:callback] ? rv : rv.merge(:stat => Stat.new(stat))
   end
-  
+
   def create(options = {})
     assert_open
     assert_supported_keys(options, [:path, :data, :acl, :ephemeral, :sequence, :callback, :callback_context])
     assert_required_keys(options, [:path])
-    
+
     flags = 0
     flags |= ZOO_EPHEMERAL if options[:ephemeral]
     flags |= ZOO_SEQUENCE if options[:sequence]
 
     options[:acl] ||= ZOO_OPEN_ACL_UNSAFE
-    
+
     req_id = setup_call(options)
     rc, newpath = super(req_id, options[:path], options[:data], options[:callback], options[:acl], flags)
-    
+
     rv = { :req_id => req_id, :rc => rc }
-    options[:callback] ? rv : rv.merge(:path => newpath) 
+    options[:callback] ? rv : rv.merge(:path => newpath)
   end
-  
+
   def delete(options = {})
     assert_open
     assert_supported_keys(options, [:path, :version, :callback, :callback_context])
     assert_required_keys(options, [:path])
     options[:version] ||= -1
-    
+
     req_id = setup_call(options)
     rc = super(req_id, options[:path], options[:version], options[:callback])
-    
+
     { :req_id => req_id, :rc => rc }
   end
 
@@ -132,21 +132,21 @@ public
     assert_supported_keys(options, [:path, :acl, :version, :callback, :callback_context])
     assert_required_keys(options, [:path, :acl])
     options[:version] ||= -1
-    
+
     req_id = setup_call(options)
     rc = super(req_id, options[:path], options[:acl], options[:callback], options[:version])
-    
+
     { :req_id => req_id, :rc => rc }
   end
-  
+
   def get_acl(options = {})
     assert_open
     assert_supported_keys(options, [:path, :callback, :callback_context])
     assert_required_keys(options, [:path])
-    
+
     req_id = setup_call(options)
     rc, acls, stat = super(req_id, options[:path], options[:callback])
-    
+
     rv = { :req_id => req_id, :rc => rc }
     options[:callback] ? rv : rv.merge(:acl => acls, :stat => Stat.new(stat))
   end
@@ -164,14 +164,14 @@ private
     hash = get_next_event
 
     is_completion = hash.has_key?(:rc)
-    
+
     hash[:stat] = Stat.new(hash[:stat]) if hash.has_key?(:stat)
     hash[:acl] = hash[:acl].map { |acl| ACL.new(acl) } if hash[:acl]
-    
+
     callback_context = is_completion ? get_completion(hash[:req_id]) : get_watcher(hash[:req_id])
     callback = is_completion ? callback_context[:callback] : callback_context[:watcher]
     hash[:context] = callback_context[:context]
-    
+
     # TODO: Eventually enforce derivation from Zookeeper::Callback
     if callback.respond_to?(:call)
       callback.call(hash)
@@ -179,7 +179,7 @@ private
       # puts "dispatch_next_callback found non-callback => #{callback.inspect}"
     end
   end
-  
+
   def setup_call(opts)
     req_id = nil
     @req_mutex.synchronize {
@@ -190,7 +190,7 @@ private
     }
     req_id
   end
-  
+
   def setup_watcher(req_id, call_opts)
     @watcher_reqs[req_id] = { :watcher => call_opts[:watcher],
                               :context => call_opts[:watcher_context] }
@@ -200,13 +200,13 @@ private
     @completion_reqs[req_id] = { :callback => call_opts[:callback],
                                  :context => call_opts[:callback_context] }
   end
-  
+
   def get_watcher(req_id)
     @req_mutex.synchronize {
       req_id != ZKRB_GLOBAL_CB_REQ ? @watcher_reqs.delete(req_id) : @watcher_reqs[req_id]
     }
   end
-  
+
   def get_completion(req_id)
     @req_mutex.synchronize { @completion_reqs.delete(req_id) }
   end

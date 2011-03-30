@@ -105,7 +105,7 @@ static VALUE method_init(int argc, VALUE* argv, VALUE self) {
   zkrb_calling_context *ctx =
     zkrb_calling_context_alloc(ZKRB_GLOBAL_REQ, zk_local_ctx->queue);
 
-  zk_local_ctx->zh = 
+  zk_local_ctx->zh =
       zookeeper_init(
           RSTRING_PTR(hostPort),
           zkrb_state_callback,
@@ -113,7 +113,7 @@ static VALUE method_init(int argc, VALUE* argv, VALUE self) {
           &zk_local_ctx->myid,
           ctx,
           0);
-  
+
 #warning [wickman] TODO handle this properly on the Ruby side rather than C side
   if (!zk_local_ctx->zh) {
     rb_raise(rb_eRuntimeError, "error connecting to zookeeper: %d", errno);
@@ -156,10 +156,10 @@ static VALUE method_init(int argc, VALUE* argv, VALUE self) {
 
 static VALUE method_get_children(VALUE self, VALUE reqid, VALUE path, VALUE async, VALUE watch) {
   STANDARD_PREAMBLE(self, zk, reqid, path, async, watch, data_ctx, watch_ctx, call_type);
-  
+
   struct String_vector strings;
   struct Stat stat;
-  
+
   int rc;
   switch (call_type) {
     case SYNC:
@@ -169,11 +169,11 @@ static VALUE method_get_children(VALUE self, VALUE reqid, VALUE path, VALUE asyn
     case SYNC_WATCH:
       rc = zoo_wget_children2(zk->zh, RSTRING_PTR(path), zkrb_state_callback, watch_ctx, &strings, &stat);
       break;
-      
+
     case ASYNC:
       rc = zoo_aget_children2(zk->zh, RSTRING_PTR(path), 0, zkrb_strings_stat_callback, data_ctx);
       break;
-      
+
     case ASYNC_WATCH:
       rc = zoo_awget_children2(zk->zh, RSTRING_PTR(path), zkrb_state_callback, watch_ctx, zkrb_strings_stat_callback, data_ctx);
       break;
@@ -190,7 +190,7 @@ static VALUE method_get_children(VALUE self, VALUE reqid, VALUE path, VALUE asyn
 
 static VALUE method_exists(VALUE self, VALUE reqid, VALUE path, VALUE async, VALUE watch) {
   STANDARD_PREAMBLE(self, zk, reqid, path, async, watch, data_ctx, watch_ctx, call_type);
-  
+
   struct Stat stat;
 
   int rc;
@@ -202,11 +202,11 @@ static VALUE method_exists(VALUE self, VALUE reqid, VALUE path, VALUE async, VAL
     case SYNC_WATCH:
       rc = zoo_wexists(zk->zh, RSTRING_PTR(path), zkrb_state_callback, watch_ctx, &stat);
       break;
-      
+
     case ASYNC:
       rc = zoo_aexists(zk->zh, RSTRING_PTR(path), 0, zkrb_stat_callback, data_ctx);
       break;
-      
+
     case ASYNC_WATCH:
       rc = zoo_awexists(zk->zh, RSTRING_PTR(path), zkrb_state_callback, watch_ctx, zkrb_stat_callback, data_ctx);
       break;
@@ -223,12 +223,12 @@ static VALUE method_exists(VALUE self, VALUE reqid, VALUE path, VALUE async, VAL
 static VALUE method_create(VALUE self, VALUE reqid, VALUE path, VALUE data, VALUE async, VALUE acls, VALUE flags) {
   VALUE watch = Qfalse;
   STANDARD_PREAMBLE(self, zk, reqid, path, async, watch, data_ctx, watch_ctx, call_type);
-  
+
   if (data != Qnil) Check_Type(data, T_STRING);
   Check_Type(flags, T_FIXNUM);
   const char *data_ptr = (data == Qnil) ? NULL : RSTRING_PTR(data);
   size_t      data_len = (data == Qnil) ? -1   : RSTRING_LEN(data);
-  
+
   struct ACL_vector *aclptr = NULL;
   if (acls != Qnil) { aclptr = zkrb_ruby_to_aclvector(acls); }
   char realpath[16384];
@@ -261,10 +261,10 @@ static VALUE method_create(VALUE self, VALUE reqid, VALUE path, VALUE data, VALU
 }
 
 static VALUE method_delete(VALUE self, VALUE reqid, VALUE path, VALUE version, VALUE async) {
-  VALUE watch = Qfalse; 
+  VALUE watch = Qfalse;
   STANDARD_PREAMBLE(self, zk, reqid, path, async, watch, data_ctx, watch_ctx, call_type);
   Check_Type(version, T_FIXNUM);
-  
+
   int rc = 0;
   switch (call_type) {
     case SYNC:
@@ -293,7 +293,7 @@ static VALUE method_get(VALUE self, VALUE reqid, VALUE path, VALUE async, VALUE 
   struct Stat stat;
 
   int rc;
-  
+
   switch (call_type) {
     case SYNC:
       rc = zoo_get(zk->zh, RSTRING_PTR(path), 0, data, &data_len, &stat);
@@ -302,11 +302,11 @@ static VALUE method_get(VALUE self, VALUE reqid, VALUE path, VALUE async, VALUE 
     case SYNC_WATCH:
       rc = zoo_wget(zk->zh, RSTRING_PTR(path), zkrb_state_callback, watch_ctx, data, &data_len, &stat);
       break;
-      
+
     case ASYNC:
       rc = zoo_aget(zk->zh, RSTRING_PTR(path), 0, zkrb_data_callback, data_ctx);
       break;
-      
+
     case ASYNC_WATCH:
       rc = zoo_awget(zk->zh, RSTRING_PTR(path), zkrb_state_callback, watch_ctx, zkrb_data_callback, data_ctx);
       break;
@@ -329,7 +329,7 @@ static VALUE method_get(VALUE self, VALUE reqid, VALUE path, VALUE async, VALUE 
 static VALUE method_set(VALUE self, VALUE reqid, VALUE path, VALUE data, VALUE async, VALUE version) {
   VALUE watch = Qfalse;
   STANDARD_PREAMBLE(self, zk, reqid, path, async, watch, data_ctx, watch_ctx, call_type);
-  
+
   struct Stat stat;
   if (data != Qnil) Check_Type(data, T_STRING);
   const char *data_ptr = (data == Qnil) ? NULL : RSTRING_PTR(data);
@@ -389,7 +389,7 @@ static VALUE method_get_acl(VALUE self, VALUE reqid, VALUE path, VALUE async) {
 
   struct ACL_vector acls;
   struct Stat stat;
-  
+
   int rc;
   switch (call_type) {
     case SYNC:
@@ -517,7 +517,7 @@ static void zkrb_define_methods(void) {
   DEFINE_METHOD(get, 4);
   DEFINE_METHOD(set, 5);
   DEFINE_METHOD(set_acl, 5);
-  DEFINE_METHOD(get_acl, 3);  
+  DEFINE_METHOD(get_acl, 3);
   DEFINE_METHOD(client_id, 0);
   DEFINE_METHOD(close, 0);
   DEFINE_METHOD(deterministic_conn_order, 1);
@@ -528,11 +528,11 @@ static void zkrb_define_methods(void) {
   // DEFINE_METHOD(add_auth, 3);
   // DEFINE_METHOD(async, 1);
 
-  // methods for the ruby-side event manager  
+  // methods for the ruby-side event manager
   DEFINE_METHOD(get_next_event, 0);
   DEFINE_METHOD(has_events, 0);
 
-  // Make these class methods?  
+  // Make these class methods?
   DEFINE_METHOD(set_debug_level, 1);
   DEFINE_METHOD(zerror, 1);
 }
