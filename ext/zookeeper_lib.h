@@ -109,6 +109,7 @@ void           zkrb_event_free(zkrb_event_t *ptr);
 void                 zkrb_enqueue(zkrb_queue_t *queue, zkrb_event_t *elt);
 zkrb_event_t *       zkrb_peek(zkrb_queue_t *queue);
 zkrb_event_t *       zkrb_dequeue(zkrb_queue_t *queue, int need_lock);
+void                 zkrb_signal(zkrb_queue_t *queue);
 
 void zkrb_print_stat(const struct Stat *s);
 
