@@ -49,6 +49,9 @@ class ZookeeperBase < CZookeeper
     watcher ||= get_default_global_watcher
 
     @_running = nil # used by the C layer
+
+    yield self if block_given?
+
     reopen(timeout, watcher)
     return nil unless connected?
     setup_dispatch_thread!
