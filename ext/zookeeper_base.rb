@@ -76,7 +76,7 @@ class ZookeeperBase < CZookeeper
   end
 
   def close
-    @_running = false;
+    @_running = false
     wake_event_loop!
     
     @dispatcher.join
