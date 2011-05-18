@@ -100,7 +100,6 @@ static VALUE method_init(int argc, VALUE* argv, VALUE self) {
            free_zkrb_instance_data,
            zk_local_ctx);
   zk_local_ctx->queue = zkrb_queue_alloc();
-  zk_local_ctx->pending_close = 0;
 
   zoo_deterministic_conn_order(0);
 
