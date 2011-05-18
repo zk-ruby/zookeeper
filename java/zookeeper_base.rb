@@ -179,6 +179,9 @@ class ZookeeperBase
 
     watcher ||= get_default_global_watcher
 
+    # allows connected-state handlers to be registered before 
+    yield self if block_given?
+
     reopen(timeout, watcher)
     return nil unless connected?
     setup_dispatch_thread!

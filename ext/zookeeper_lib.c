@@ -69,6 +69,14 @@ zkrb_event_t* zkrb_dequeue(zkrb_queue_t *q, int need_lock) {
   }
 }
 
+void zkrb_signal(zkrb_queue_t *q) {
+  pthread_mutex_lock(&zkrb_q_mutex);
+  ssize_t ret = write(q->pipe_write, "0", 1);   /* Wake up Ruby listener */
+  pthread_mutex_unlock(&zkrb_q_mutex);
+  if (ret == -1)
+    rb_raise(rb_eRuntimeError, "write to pipe failed: %d", errno);
+}
+
 zkrb_queue_t *zkrb_queue_alloc(void) {
   int pfd[2];
   if (pipe(pfd) == -1)
@@ -194,7 +202,7 @@ VALUE zkrb_event_to_ruby(zkrb_event_t *event) {
     case ZKRB_STAT: {
       struct zkrb_stat_completion *stat_ctx = event->completion.stat_completion;
       rb_hash_aset(hash, GET_SYM("stat"), stat_ctx->stat ? zkrb_stat_to_rarray(stat_ctx->stat) : Qnil);
-      break;      
+      break;
     }
     case ZKRB_STRING: {
       struct zkrb_string_completion *string_ctx = event->completion.string_completion;
@@ -342,7 +350,7 @@ void zkrb_data_callback(
   event->rc = rc;
   event->type = ZKRB_DATA;
   event->completion.data_completion = dc;
-  
+
   zkrb_enqueue(queue, event);
 }
 
@@ -361,7 +369,7 @@ void zkrb_stat_callback(
   event->rc = rc;
   event->type = ZKRB_STAT;
   event->completion.stat_completion = sc;
-  
+
   zkrb_enqueue(queue, event);
 }
 
@@ -381,7 +389,7 @@ void zkrb_string_callback(
   event->rc = rc;
   event->type = ZKRB_STRING;
   event->completion.string_completion = sc;
-  
+
   zkrb_enqueue(queue, event);
 }
 
@@ -400,7 +408,7 @@ void zkrb_strings_callback(
   event->rc = rc;
   event->type = ZKRB_STRINGS;
   event->completion.strings_completion = sc;
-  
+
   zkrb_enqueue(queue, event);
 }
 
@@ -420,7 +428,7 @@ void zkrb_strings_stat_callback(
   event->rc = rc;
   event->type = ZKRB_STRINGS_STAT;
   event->completion.strings_stat_completion = sc;
-  
+
   zkrb_enqueue(queue, event);
 }
 
@@ -435,7 +443,7 @@ void zkrb_void_callback(
   event->rc = rc;
   event->type = ZKRB_VOID;
   event->completion.void_completion = NULL;
-  
+
   zkrb_enqueue(queue, event);
 }
 
@@ -456,7 +464,7 @@ void zkrb_acl_callback(
   event->rc = rc;
   event->type = ZKRB_ACL;
   event->completion.acl_completion = ac;
-  
+
   /* should be synchronized */
   zkrb_enqueue(queue, event);
 }
@@ -494,22 +502,22 @@ struct ACL_vector * zkrb_ruby_to_aclvector(VALUE acl_ary) {
 #warning [wickman] TODO test zkrb_ruby_to_aclvector
 struct ACL zkrb_ruby_to_acl(VALUE rubyacl) {
   struct ACL acl;
-  
+
   VALUE perms  = rb_iv_get(rubyacl, "@perms");
   VALUE rubyid = rb_iv_get(rubyacl, "@id");
   acl.perms  = NUM2INT(perms);
   acl.id = zkrb_ruby_to_id(rubyid);
-  
+
   return acl;
 }
 
 #warning [wickman] TODO zkrb_ruby_to_id error checking? test
 struct Id zkrb_ruby_to_id(VALUE rubyid) {
   struct Id id;
-  
+
   VALUE scheme = rb_iv_get(rubyid, "@scheme");
   VALUE ident  = rb_iv_get(rubyid, "@id");
-  
+
   if (scheme != Qnil) {
     id.scheme = malloc(RSTRING_LEN(scheme) + 1);
     strncpy(id.scheme, RSTRING_PTR(scheme), RSTRING_LEN(scheme));
@@ -525,7 +533,7 @@ struct Id zkrb_ruby_to_id(VALUE rubyid) {
   } else {
     id.id = NULL;
   }
-  
+
   return id;
 }
 
@@ -549,17 +557,17 @@ VALUE zkrb_string_vector_to_ruby(struct String_vector *string_vector) {
 
 VALUE zkrb_stat_to_rarray(const struct Stat* stat) {
   return rb_ary_new3(11,
-		     LL2NUM(stat->czxid),
-		     LL2NUM(stat->mzxid),
-		     LL2NUM(stat->ctime),
-		     LL2NUM(stat->mtime),
-		     INT2NUM(stat->version),
-		     INT2NUM(stat->cversion),
-		     INT2NUM(stat->aversion),
-		     LL2NUM(stat->ephemeralOwner),
-		     INT2NUM(stat->dataLength),
-		     INT2NUM(stat->numChildren),
-		     LL2NUM(stat->pzxid));
+             LL2NUM(stat->czxid),
+             LL2NUM(stat->mzxid),
+             LL2NUM(stat->ctime),
+             LL2NUM(stat->mtime),
+             INT2NUM(stat->version),
+             INT2NUM(stat->cversion),
+             INT2NUM(stat->aversion),
+             LL2NUM(stat->ephemeralOwner),
+             INT2NUM(stat->dataLength),
+             INT2NUM(stat->numChildren),
+             LL2NUM(stat->pzxid));
 }
 
 VALUE zkrb_stat_to_rhash(const struct Stat *stat) {
