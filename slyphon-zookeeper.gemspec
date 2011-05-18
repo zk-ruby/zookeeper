@@ -3,9 +3,9 @@ $:.push File.expand_path("../lib", __FILE__)
 
 Gem::Specification.new do |s|
   s.name        = "slyphon-zookeeper"
-  s.version     = '0.1.4'
+  s.version     = '0.1.5'
 
-  s.authors     = ["Phillip Pearson", "Eric Maland", "Evan Weaver", "Brian Wickman", "Jonathan D. Simms"]
+  s.authors     = ["Phillip Pearson", "Eric Maland", "Evan Weaver", "Brian Wickman", "Neil Conway", "Jonathan D. Simms"]
   s.email       = ["slyphon@gmail.com"]
   s.summary     = %q{twitter's zookeeper client}
   s.description = s.summary
