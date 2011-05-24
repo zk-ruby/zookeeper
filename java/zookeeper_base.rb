@@ -3,7 +3,7 @@ require 'thread'
 require 'rubygems'
 
 gem 'slyphon-log4j', '= 1.2.15'
-gem 'slyphon-zookeeper_jar', '= 3.3.1'
+gem 'slyphon-zookeeper_jar', '= 3.3.3'
 
 require 'log4j'
 require 'zookeeper_jar'
