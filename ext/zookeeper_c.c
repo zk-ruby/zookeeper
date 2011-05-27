@@ -17,6 +17,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <sys/fcntl.h>
 
 #include "zookeeper_lib.h"
 
@@ -67,6 +68,49 @@ static void print_zkrb_instance_data(struct zkrb_instance_data* ptr) {
   fprintf(stderr, "   id = %llx\n",         ptr->myid.client_id);
   fprintf(stderr, "    q = %p\n",           ptr->queue);
   fprintf(stderr, "}\n");
+}
+
+// cargo culted from io.c
+static VALUE zkrb_new_instance _((VALUE));
+
+static VALUE zkrb_new_instance(VALUE args) {
+    return rb_class_new_instance(2, (VALUE*)args+1, *(VALUE*)args);
+}
+
+static int zkrb_dup(int orig) {
+    int fd;
+
+    fd = dup(orig);
+    if (fd < 0) {
+	if (errno == EMFILE || errno == ENFILE || errno == ENOMEM) {
+	    rb_gc();
+	    fd = dup(orig);
+	}
+	if (fd < 0) {
+	    rb_sys_fail(0);
+	}
+    }
+    return fd;
+}
+
+static VALUE create_selectable_io(zkrb_queue_t *q) {
+  // rb_cIO is the ruby IO class?
+
+  int pipe, state, read_fd;
+  VALUE args[3], reader;
+
+  read_fd = zkrb_dup(q->pipe_read);
+
+  args[0] = rb_cIO;
+  args[1] = INT2NUM(read_fd);
+  args[2] = INT2FIX(O_RDONLY);
+  reader = rb_protect(zkrb_new_instance, (VALUE)args, &state);
+
+  if (state) {
+    rb_jump_tag(state);
+  }
+
+  return reader;
 }
 
 static VALUE method_init(int argc, VALUE* argv, VALUE self) {
@@ -121,6 +165,7 @@ static VALUE method_init(int argc, VALUE* argv, VALUE self) {
   }
 
   rb_iv_set(self, "@data", data);
+  rb_iv_set(self, "@selectable_io", create_selectable_io(zk_local_ctx->queue));
   rb_iv_set(self, "@_running", Qtrue);
 
   return Qnil;
@@ -421,6 +466,27 @@ static int is_running(VALUE self) {
   return RTEST(rval);
 }
 
+static VALUE method_get_next_event_non_blocking(VALUE self) {
+  char buf[64];
+  FETCH_DATA_PTR(self, zk);
+
+  if (!is_running(self)) {
+/*      fprintf(stderr, "method_get_next_event: running is false, returning nil\n");*/
+    return Qnil;  // this case for shutdown
+  }
+
+  zkrb_event_t *event = zkrb_dequeue(zk->queue, 1);
+
+  if (event == NULL) {
+    return Qnil; // no event for you!
+  }
+  else {
+    VALUE hash = zkrb_event_to_ruby(event);
+    zkrb_event_free(event);
+    return hash;
+  }
+}
+
 static VALUE method_get_next_event(VALUE self) {
   char buf[64];
   FETCH_DATA_PTR(self, zk);
@@ -565,6 +631,8 @@ static void zkrb_define_methods(void) {
   // Make these class methods?
   DEFINE_METHOD(set_debug_level, 1);
   DEFINE_METHOD(zerror, 1);
+
+  rb_attr(Zookeeper, rb_intern("selectable_io"), 1, 0, Qtrue);
 
   rb_define_method(Zookeeper, "wake_event_loop!", method_wake_event_loop_bang, 0);
 }
