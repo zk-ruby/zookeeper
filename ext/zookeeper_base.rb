@@ -16,7 +16,8 @@ class ZookeeperBase < CZookeeper
   ZOO_LOG_LEVEL_WARN   = 2
   ZOO_LOG_LEVEL_INFO   = 3
   ZOO_LOG_LEVEL_DEBUG  = 4
-  
+
+ 
   def reopen(timeout = 10, watcher=nil)
     watcher ||= @default_watcher
 
@@ -79,7 +80,14 @@ class ZookeeperBase < CZookeeper
     @_running = false
     wake_event_loop!
     
-    @dispatcher.join
+    @dispatcher.join if @dispatcher
+    
+    # this is set up in the C init method, but it's easier to 
+    # do the teardown here
+    begin
+      @selectable_io.close if @selectable_io
+    rescue IOError
+    end
 
     super
   end

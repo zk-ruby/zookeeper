@@ -466,28 +466,8 @@ static int is_running(VALUE self) {
   return RTEST(rval);
 }
 
-static VALUE method_get_next_event_non_blocking(VALUE self) {
-  char buf[64];
-  FETCH_DATA_PTR(self, zk);
 
-  if (!is_running(self)) {
-/*      fprintf(stderr, "method_get_next_event: running is false, returning nil\n");*/
-    return Qnil;  // this case for shutdown
-  }
-
-  zkrb_event_t *event = zkrb_dequeue(zk->queue, 1);
-
-  if (event == NULL) {
-    return Qnil; // no event for you!
-  }
-  else {
-    VALUE hash = zkrb_event_to_ruby(event);
-    zkrb_event_free(event);
-    return hash;
-  }
-}
-
-static VALUE method_get_next_event(VALUE self) {
+static VALUE method_get_next_event(VALUE self, VALUE blocking) {
   char buf[64];
   FETCH_DATA_PTR(self, zk);
 
@@ -505,19 +485,24 @@ static VALUE method_get_next_event(VALUE self) {
 
     /* Wait for an event using rb_thread_select() on the queue's pipe */
     if (event == NULL) {
-      int fd = zk->queue->pipe_read;
-      fd_set rset;
+      if (NIL_P(blocking) || (blocking == Qfalse)) { 
+	return Qnil; // no event for us
+      } 
+      else {
+	int fd = zk->queue->pipe_read;
+	fd_set rset;
 
-      FD_ZERO(&rset);
-      FD_SET(fd, &rset);
+	FD_ZERO(&rset);
+	FD_SET(fd, &rset);
 
-      if (rb_thread_select(fd + 1, &rset, NULL, NULL, NULL) == -1)
-        rb_raise(rb_eRuntimeError, "select failed: %d", errno);
+	if (rb_thread_select(fd + 1, &rset, NULL, NULL, NULL) == -1)
+	  rb_raise(rb_eRuntimeError, "select failed: %d", errno);
 
-      if (read(fd, buf, sizeof(buf)) == -1)
-        rb_raise(rb_eRuntimeError, "read failed: %d", errno);
+	if (read(fd, buf, sizeof(buf)) == -1)
+	  rb_raise(rb_eRuntimeError, "read failed: %d", errno);
 
-      continue;
+	continue;
+      }
     }
 
     VALUE hash = zkrb_event_to_ruby(event);
@@ -625,7 +610,7 @@ static void zkrb_define_methods(void) {
   // DEFINE_METHOD(async, 1);
 
   // methods for the ruby-side event manager
-  DEFINE_METHOD(get_next_event, 0);
+  DEFINE_METHOD(get_next_event, 1);
   DEFINE_METHOD(has_events, 0);
 
   // Make these class methods?

@@ -49,8 +49,8 @@ protected
   end
 
 
-  def dispatch_next_callback
-    hash = get_next_event
+  def dispatch_next_callback(blocking=true)
+    hash = get_next_event(blocking)
     return nil unless hash
     
     logger.debug {  "dispatch_next_callback got event: #{hash.inspect}" }
