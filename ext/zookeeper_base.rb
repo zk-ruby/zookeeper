@@ -100,11 +100,11 @@ class ZookeeperBase < CZookeeper
     end
   end
 
-protected
   def running?
     false|@_running
   end
 
+protected
   def setup_dispatch_thread!
     @dispatcher = Thread.new do
       while running?
