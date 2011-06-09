@@ -8,10 +8,10 @@ module ZookeeperEM
     attr_reader :em_connection
 
     def initialize(*a, &b)
-      super(*a, &b)
       @on_close       = EM::DefaultDeferrable.new
       @on_attached    = EM::DefaultDeferrable.new
       @em_connection  = nil
+      super(*a, &b)
     end
 
     # EM::DefaultDeferrable that will be called back when our em_connection has been detached
