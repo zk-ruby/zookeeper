@@ -5,13 +5,22 @@ module ZookeeperACLs
       @scheme = hash[:scheme]
       @id = hash[:id]
     end
+
+    def to_hash
+      { :id => id, :scheme => scheme }
+    end
   end
     
   class ACL
     attr_reader :perms, :id
     def initialize(hash)
       @perms = hash[:perms]
-      @id = hash[:id]
+      v = hash[:id]
+      @id = v.kind_of?(Hash) ? Id.new(v) : v
+    end
+
+    def to_hash
+      { :perms => perms, :id => id.to_hash }
     end
   end
   

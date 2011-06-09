@@ -1,53 +1,32 @@
 # Ruby wrapper for the Zookeeper C API
 
-require 'zookeeper_c'
 require 'thread'
-require 'zookeeper/callbacks'
+require 'zookeeper/common'
 require 'zookeeper/constants'
+require 'zookeeper/callbacks'
 require 'zookeeper/exceptions'
 require 'zookeeper/stat'
 require 'zookeeper/acls'
+require 'logger'
 
-class Zookeeper < CZookeeper
-  include ZookeeperCallbacks
-  include ZookeeperConstants
-  include ZookeeperExceptions
-  include ZookeeperACLs
-  include ZookeeperStat
+if defined?(::JRUBY_VERSION)
+  $LOAD_PATH.unshift(File.expand_path('../java', File.dirname(__FILE__))).uniq!
+else
+  $LOAD_PATH.unshift(File.expand_path('../ext', File.dirname(__FILE__))).uniq!
+  require 'zookeeper_c'
+end
 
-  ZKRB_GLOBAL_CB_REQ   = -1
+require 'zookeeper_base'
 
-  # debug levels
-  ZOO_LOG_LEVEL_ERROR  = 1
-  ZOO_LOG_LEVEL_WARN   = 2
-  ZOO_LOG_LEVEL_INFO   = 3
-  ZOO_LOG_LEVEL_DEBUG  = 4
-
-  def reopen(timeout = 10)
-    init(@host)
-    if timeout > 0
-      time_to_stop = Time.now + timeout
-      until state == Zookeeper::ZOO_CONNECTED_STATE
-        break if Time.now > time_to_stop
-        sleep 0.1
-      end
-    end
-    # flushes all outstanding watcher reqs.
-    @watcher_reqs = { ZKRB_GLOBAL_CB_REQ => { :watcher => get_default_global_watcher } }
-    setup_dispatch_thread!
-    state
+class Zookeeper < ZookeeperBase
+  def reopen(timeout=10, watcher=nil)
+    super
   end
 
-  def initialize(host, timeout = 10)
-    @watcher_reqs = {}
-    @completion_reqs = {}
-    @req_mutex = Mutex.new
-    @current_req_id = 1
-    @host = host
-    return nil if reopen(timeout) != Zookeeper::ZOO_CONNECTED_STATE
+  def initialize(host, timeout=10, watcher=nil)
+    super
   end
 
-public
   def get(options = {})
     assert_open
     assert_supported_keys(options, [:path, :watcher, :watcher_context, :callback, :callback_context])
@@ -151,44 +130,23 @@ public
     options[:callback] ? rv : rv.merge(:acl => acls, :stat => Stat.new(stat))
   end
 
-  # To close a Zk handle, first shutdown the dispatcher thread; this is done by
-  # signalling the waiting thread that there is a pending close. We then release
-  # the C-land Zk state.
-  def close
-    signal_pending_close
-    @dispatcher.join
+  def state
+    super
+  end
+
+  def connected?
+    super
+  end
+
+  def connecting?
+    super
+  end
+
+  def associating?
     super
   end
 
 private
-  def setup_dispatch_thread!
-    @dispatcher = Thread.new {
-      while true do
-        hash = get_next_event
-        break if hash.nil? # Pending close => exit dispatcher thread
-        dispatch_event(hash)
-      end
-    }
-  end
-
-  def dispatch_event(hash)
-    is_completion = hash.has_key?(:rc)
-
-    hash[:stat] = Stat.new(hash[:stat]) if hash.has_key?(:stat)
-    hash[:acl] = hash[:acl].map { |acl| ACL.new(acl) } if hash[:acl]
-
-    callback_context = is_completion ? get_completion(hash[:req_id]) : get_watcher(hash[:req_id])
-    callback = is_completion ? callback_context[:callback] : callback_context[:watcher]
-    hash[:context] = callback_context[:context]
-
-    # TODO: Eventually enforce derivation from Zookeeper::Callback
-    if callback.respond_to?(:call)
-      callback.call(hash)
-    else
-      # puts "dispatch_next_callback found non-callback => #{callback.inspect}"
-    end
-  end
-
   def setup_call(opts)
     req_id = nil
     @req_mutex.synchronize {
@@ -205,22 +163,6 @@ private
                               :context => call_opts[:watcher_context] }
   end
 
-  def setup_completion(req_id, call_opts)
-    @completion_reqs[req_id] = { :callback => call_opts[:callback],
-                                 :context => call_opts[:callback_context] }
-  end
-
-  def get_watcher(req_id)
-    @req_mutex.synchronize {
-      req_id != ZKRB_GLOBAL_CB_REQ ? @watcher_reqs.delete(req_id) : @watcher_reqs[req_id]
-    }
-  end
-
-  def get_completion(req_id)
-    @req_mutex.synchronize { @completion_reqs.delete(req_id) }
-  end
-
-public
   # TODO: Sanitize user mistakes by unregistering watchers from ops that
   # don't return ZOK (except wexists)?  Make users clean up after themselves for now.
   def unregister_watcher(req_id)
@@ -228,37 +170,11 @@ public
       @watcher_reqs.delete(req_id)
     }
   end
-
-private
-  # TODO: Make all global puts configurable
-  def get_default_global_watcher
-    Proc.new { |args|
-      # puts "Ruby ZK Global CB called type=#{event_by_value(args[:type])} state=#{state_by_value(args[:state])}"
-      true
-    }
-  end
-
-  # if either of these happen, the user will need to renegotiate a connection via reopen
+  
+  # must be supplied by parent class impl.
   def assert_open
-    if state == ZOO_EXPIRED_SESSION_STATE
-      raise ZookeeperException::SessionExpired
-    elsif state != Zookeeper::ZOO_CONNECTED_STATE
-      raise ZookeeperException::ConnectionClosed
-    end
+    super
   end
 
-  def assert_supported_keys(args, supported)
-    unless (args.keys - supported).empty?
-      raise ZookeeperException::BadArguments,
-            "Supported arguments are: #{supported.inspect}, but arguments #{args.keys.inspect} were supplied instead"
-    end
-  end
-
-  def assert_required_keys(args, required)
-    unless (required - args.keys).empty?
-      raise ZookeeperException::BadArguments,
-            "Required arguments are: #{required.inspect}, but only the arguments #{args.keys.inspect} were supplied."
-    end
-  end
 end
 
