@@ -91,8 +91,6 @@ module ZookeeperEM
 
     # we have an event waiting
     def notify_readable
-      @io.read(1)
-
       if @zk_client.running?
         @zk_client.dispatch_next_callback(false)
       else

@@ -59,6 +59,33 @@ class ZookeeperBase
     end
   end
 
+  class QueueWithPipe
+    def initialize
+      r, w = IO.pipe
+      @pipe = { :read => r, :write => w }
+      @queue = Queue.new
+    end
+
+    def push(*a)
+      @queue.push(*a)
+      @pipe[:write].write(1)
+    end
+
+    def pop(non_blocking=false)
+      @queue.pop(non_blocking)
+      @pipe[:read].read(1)  # if non_blocking is true and an exception is raised, this won't get called
+    end
+
+    def close
+      @pipe[:read].close 
+      @pipe[:write].close
+    end
+
+    def selectable_io
+      @pipe[:read]
+    end
+  end
+
   # used for internal dispatching
   module JavaCB #:nodoc:
     class Callback
@@ -171,11 +198,12 @@ class ZookeeperBase
 
   def initialize(host, timeout=10, watcher=nil)
     @host = host
-    @event_queue = Queue.new
+    @event_queue = QueueWithPipe.new
     @current_req_id = 0
     @req_mutex = Monitor.new
     @watcher_reqs = {}
     @completion_reqs = {}
+    @_running = false
 
     watcher ||= get_default_global_watcher
 
@@ -201,6 +229,10 @@ class ZookeeperBase
 
   def associating?
     state == JZK::ZooKeeper::States::ASSOCIATING
+  end
+
+  def running?
+    @_running
   end
 
   def get(req_id, path, callback, watcher)
@@ -332,20 +364,26 @@ class ZookeeperBase
 
   class DispatchShutdownException < StandardError; end
 
+  def wake_event_loop!
+    @event_queue.push(KILL_TOKEN)    # ignored by dispatch_next_callback
+  end
+
   def close
     @req_mutex.synchronize do
+      @_running = false
+
       if @jzk
         @jzk.close
         wait_until { !connected? }
       end
 
       if @dispatcher 
-        @dispatcher[:running] = false
-        @event_queue.push(KILL_TOKEN)    # ignored by dispatch_next_callback
+        wake_event_loop!
       end
     end
 
-    @dispatcher.join
+    @dispatcher.join if @dispatcher
+    @event_queue.close
   end
 
   # set the watcher object/proc that will receive all global events (such as session/state events)
@@ -360,6 +398,19 @@ class ZookeeperBase
     end
   end
 
+  def selectable_io
+    @event_queue.selectable_io
+  end
+
+  def get_next_event(blocking=true)
+    @event_queue.pop(!blocking).tap do |event|
+      logger.debug { "get_next_event delivering event: #{event}" }
+      raise DispatchShutdownException if event == KILL_TOKEN
+    end
+  rescue ThreadError
+    nil
+  end
+ 
   protected
     def handle_keeper_exception
       yield
@@ -376,18 +427,15 @@ class ZookeeperBase
     end
    
     def create_watcher(req_id, path)
+      logger.debug { "creating watcher for req_id: #{req_id} path: #{path}" }
       lambda do |event|
+        logger.debug { "watcher for req_id #{req_id}, path: #{path} called back" }
         h = { :req_id => req_id, :type => event.type.int_value, :state => event.state.int_value, :path => path }
         @event_queue.push(h)
       end
     end
 
-    def get_next_event
-      @event_queue.pop.tap do |event|
-        raise DispatchShutdownException if event == KILL_TOKEN
-      end
-    end
-    
+   
     # method to wait until block passed returns true or timeout (default is 10 seconds) is reached 
     def wait_until(timeout=10, &block)
       time_to_stop = Time.now + timeout
@@ -409,10 +457,10 @@ class ZookeeperBase
   private
     def setup_dispatch_thread!
       logger.debug {  "starting dispatch thread" }
-      @dispatcher = Thread.new do
-        Thread.current[:running] = true
+      @_running = true
 
-        while Thread.current[:running]
+      @dispatcher = Thread.new do
+        while running?
           begin
             dispatch_next_callback 
           rescue DispatchShutdownException
