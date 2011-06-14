@@ -98,7 +98,7 @@ module ZookeeperEM
     # we have an event waiting
     def notify_readable
       if @zk_client.running?
-        logger.debug { "@zk_client.running? #{@zk_client.running?}" }
+#         logger.debug { "@zk_client.running? #{@zk_client.running?}" }
         
         # we had an event waiting, so call this method again in the next tick
         # until we've dispatched all waiting events
