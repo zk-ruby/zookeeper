@@ -114,6 +114,7 @@ module ZookeeperEM
 
     protected
       def deliver_events
+        return unless @zk_client.running?
         EM.next_tick { deliver_events } if @zk_client.dispatch_next_callback(false)
       end
 
