@@ -114,13 +114,23 @@ class ZookeeperBase
 
       def processResult(rc, path, queue, data, stat)
         logger.debug { "#{self.class.name}#processResult rc: #{rc}, req_id: #{req_id}, path: #{path}, queue: #{queue.inspect}, data: #{data.inspect}, stat: #{stat.inspect}" }
-        queue.push({
+
+        hash = {
           :rc     => rc,
           :req_id => req_id,
           :path   => path,
-          :data   => (rc == Zookeeper::ZOK) ? String.from_java_bytes(data) : nil,
-          :stat   => stat.to_hash,
-        })
+          :data   => nil,
+          :stat   => nil,
+        }
+
+        if rc == Zookeeper::ZOK
+          hash.merge!({
+            :data   => String.from_java_bytes(data),
+            :stat   => stat.to_hash,
+          })
+        end
+
+        queue.push(hash)
       end
     end
 
