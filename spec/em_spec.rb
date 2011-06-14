@@ -87,13 +87,6 @@ describe 'ZookeeperEM' do
           teardown_and_done
         end
       end
-
-      it %[should not be read-ready if there's no event] do
-        setup_zk do
-
-        end
-      end
-
     end
 
     describe 'em_connection' do

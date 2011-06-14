@@ -104,16 +104,18 @@ module ZookeeperEM
       if @zk_client.running?
         logger.debug { "dispatching events while #{@zk_client.running?}" }
 
-        while @zk_client.running?
-          break unless @zk_client.dispatch_next_callback(false)
-        end
-
+        deliver_events
       else
         logger.debug { "@zk_client was not running? we're detaching!" }
         detach
         @on_detach.succeed
       end
     end
+
+    protected
+      def deliver_events
+        EM.next_tick { deliver_events } if @zk_client.dispatch_next_callback(false)
+      end
 
     private
       def logger
