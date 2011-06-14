@@ -43,7 +43,9 @@ module ZookeeperEM
       @on_close.callback(&block) if block
 
       really_close = lambda do
+        logger.debug { "calling close_handle in C" }
         close_handle unless closed?
+        logger.debug { "calling on_close.succeed" }
         on_close.succeed
       end
 
