@@ -35,13 +35,15 @@ module ZookeeperEM
     # connection has been closed
     #
     def close(&block)
+      return on_close(&block) unless running?
+
       @_running = false
-      wake_event_loop!
+      wake_event_loop! unless closed?
 
       @on_close.callback(&block) if block
 
       really_close = lambda do
-        super
+        super unless closed?
         on_close.succeed
       end
 
@@ -61,10 +63,12 @@ module ZookeeperEM
     # instead of setting up a dispatch thread here, we instead attach
     # the #selectable_io to the event loop 
     def setup_dispatch_thread!
-      @_running = true
-
       EM.schedule do
-        @em_connection = EM.watch(selectable_io, ZKConnection, self) { |cnx| cnx.notify_readable = true }
+        begin
+          @em_connection = EM.watch(selectable_io, ZKConnection, self) { |cnx| cnx.notify_readable = true }
+        rescue Exception => e
+          $stderr.puts "caught exception from EM.watch(): #{e.inspect}"
+        end
         on_attached.succeed
       end
     end
@@ -98,11 +102,11 @@ module ZookeeperEM
     # we have an event waiting
     def notify_readable
       if @zk_client.running?
-#         logger.debug { "@zk_client.running? #{@zk_client.running?}" }
-        
-        # we had an event waiting, so call this method again in the next tick
-        # until we've dispatched all waiting events
-        EM.next_tick { notify_readable } if @zk_client.dispatch_next_callback(false)
+        logger.debug { "dispatching events while #{@zk_client.running?}" }
+
+        while @zk_client.running?
+          break unless @zk_client.dispatch_next_callback(false)
+        end
 
       else
         logger.debug { "@zk_client was not running? we're detaching!" }

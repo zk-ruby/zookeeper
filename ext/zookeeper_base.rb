@@ -27,7 +27,9 @@ class ZookeeperBase < CZookeeper
       set_default_global_watcher(&watcher)
     end
 
-    init(@host)
+    init(@host, @options)
+
+    $stderr.puts "@_running is #{@_running.inspect}"
 
     if timeout > 0
       time_to_stop = Time.now + timeout
@@ -40,16 +42,18 @@ class ZookeeperBase < CZookeeper
     state
   end
 
-  def initialize(host, timeout = 10, watcher=nil)
+  def initialize(host, timeout = 10, watcher=nil, options={})
     @watcher_reqs = {}
     @completion_reqs = {}
     @req_mutex = Monitor.new
     @current_req_id = 1
     @host = host
+    @options = options
 
     watcher ||= get_default_global_watcher
 
-    @_running = nil # used by the C layer
+    @_running = nil   # used by the C layer
+    @_closed = false  # also used by the C layer
 
     yield self if block_given?
 
@@ -78,9 +82,11 @@ class ZookeeperBase < CZookeeper
 
   def close
     @_running = false
-    wake_event_loop!
-    
-    @dispatcher.join if @dispatcher
+
+    if @dispatcher
+      wake_event_loop! unless @_closed
+      @dispatcher.join 
+    end
     
     # this is set up in the C init method, but it's easier to 
     # do the teardown here
@@ -89,7 +95,7 @@ class ZookeeperBase < CZookeeper
     rescue IOError
     end
 
-    super
+    super unless @_closed
   end
 
   # set the watcher object/proc that will receive all global events (such as session/state events)
@@ -98,6 +104,10 @@ class ZookeeperBase < CZookeeper
       @default_watcher = block # save this here for reopen() to use
       @watcher_reqs[ZKRB_GLOBAL_CB_REQ] = { :watcher => @default_watcher, :watcher_context => nil }
     end
+  end
+
+  def closed?
+    false|@_closed
   end
 
   def running?

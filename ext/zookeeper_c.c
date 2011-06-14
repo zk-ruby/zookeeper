@@ -39,6 +39,12 @@ typedef enum {
 #define IS_SYNC(zkrbcall) ((zkrbcall)==SYNC || (zkrbcall)==SYNC_WATCH)
 #define IS_ASYNC(zkrbcall) ((zkrbcall)==ASYNC || (zkrbcall)==ASYNC_WATCH)
 
+/*static void zkrb_debug_log(char *debug_str) {*/
+/*  if (ZKRBDebugging) {*/
+/*    fprintf(stderr, "%s\n", debug_str);*/
+/*  }*/
+/*}*/
+
 static int destroy_zkrb_instance(struct zkrb_instance_data* ptr) {
   int rv = ZOK;
 
@@ -82,13 +88,13 @@ static int zkrb_dup(int orig) {
 
     fd = dup(orig);
     if (fd < 0) {
-	if (errno == EMFILE || errno == ENFILE || errno == ENOMEM) {
-	    rb_gc();
-	    fd = dup(orig);
-	}
-	if (fd < 0) {
-	    rb_sys_fail(0);
-	}
+        if (errno == EMFILE || errno == ENFILE || errno == ENOMEM) {
+            rb_gc();
+            fd = dup(orig);
+        }
+        if (fd < 0) {
+            rb_sys_fail(0);
+        }
     }
     return fd;
 }
@@ -486,22 +492,22 @@ static VALUE method_get_next_event(VALUE self, VALUE blocking) {
     /* Wait for an event using rb_thread_select() on the queue's pipe */
     if (event == NULL) {
       if (NIL_P(blocking) || (blocking == Qfalse)) { 
-	return Qnil; // no event for us
+        return Qnil; // no event for us
       } 
       else {
-	int fd = zk->queue->pipe_read;
-	fd_set rset;
+        int fd = zk->queue->pipe_read;
+        fd_set rset;
 
-	FD_ZERO(&rset);
-	FD_SET(fd, &rset);
+        FD_ZERO(&rset);
+        FD_SET(fd, &rset);
 
-	if (rb_thread_select(fd + 1, &rset, NULL, NULL, NULL) == -1)
-	  rb_raise(rb_eRuntimeError, "select failed: %d", errno);
+        if (rb_thread_select(fd + 1, &rset, NULL, NULL, NULL) == -1)
+          rb_raise(rb_eRuntimeError, "select failed: %d", errno);
 
-	if (read(fd, buf, sizeof(buf)) == -1)
-	  rb_raise(rb_eRuntimeError, "read failed: %d", errno);
+        if (read(fd, buf, sizeof(buf)) == -1)
+          rb_raise(rb_eRuntimeError, "read failed: %d", errno);
 
-	continue;
+        continue;
       }
     }
 
@@ -547,8 +553,18 @@ static VALUE method_wake_event_loop_bang(VALUE self) {
 static VALUE method_close(VALUE self) {
   FETCH_DATA_PTR(self, zk);
 
+  if (ZKRBDebugging) {
+    fprintf(stderr, "CLOSING ZK INSTANCE:");
+    print_zkrb_instance_data(zk);
+  }
+
   /* Note that after zookeeper_close() returns, ZK handle is invalid */
   int rc = destroy_zkrb_instance(zk);
+
+  // this is a value on the ruby side we can check to see if destroy_zkrb_instance
+  // has been called
+  rb_iv_set(self, "@_closed", Qtrue);
+
   return INT2FIX(rc);
 }
 

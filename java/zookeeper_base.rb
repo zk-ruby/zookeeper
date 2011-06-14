@@ -225,7 +225,7 @@ class ZookeeperBase
     state
   end
 
-  def initialize(host, timeout=10, watcher=nil)
+  def initialize(host, timeout=10, watcher=nil, options={})
     @host = host
     @event_queue = QueueWithPipe.new
     @current_req_id = 0
@@ -233,6 +233,7 @@ class ZookeeperBase
     @watcher_reqs = {}
     @completion_reqs = {}
     @_running = false
+    @options = {}
 
     watcher ||= get_default_global_watcher
 
