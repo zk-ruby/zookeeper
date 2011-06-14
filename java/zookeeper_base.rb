@@ -232,7 +232,8 @@ class ZookeeperBase
     @req_mutex = Monitor.new
     @watcher_reqs = {}
     @completion_reqs = {}
-    @_running = false
+    @_running = nil
+    @_closed  = false
     @options = {}
 
     watcher ||= get_default_global_watcher
@@ -242,6 +243,7 @@ class ZookeeperBase
 
     reopen(timeout, watcher)
     return nil unless connected?
+    @_running = true
     setup_dispatch_thread!
   end
 
@@ -263,6 +265,14 @@ class ZookeeperBase
 
   def running?
     @_running
+  end
+
+  def closed?
+    @_closed
+  end
+
+  def set_debug_level(*a)
+    # IGNORED IN JRUBY
   end
 
   def get(req_id, path, callback, watcher)
@@ -401,6 +411,7 @@ class ZookeeperBase
   def close
     @req_mutex.synchronize do
       @_running = false
+      @_closed = true
 
       if @jzk
         @jzk.close
@@ -487,8 +498,6 @@ class ZookeeperBase
   private
     def setup_dispatch_thread!
       logger.debug {  "starting dispatch thread" }
-      @_running = true
-
       @dispatcher = Thread.new do
         while running?
           begin

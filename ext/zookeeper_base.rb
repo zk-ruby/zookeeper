@@ -84,7 +84,7 @@ class ZookeeperBase < CZookeeper
     @_running = false
 
     if @dispatcher
-      wake_event_loop! unless @_closed
+      wake_event_loop! unless closed?
       @dispatcher.join 
     end
     
@@ -95,7 +95,7 @@ class ZookeeperBase < CZookeeper
     rescue IOError
     end
 
-    super unless @_closed
+    super unless closed?
   end
 
   # set the watcher object/proc that will receive all global events (such as session/state events)
