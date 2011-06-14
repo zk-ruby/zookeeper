@@ -97,18 +97,17 @@ module ZookeeperEM
 
     # we have an event waiting
     def notify_readable
-      logger.debug { "notify_readable called by reactor" }
+      if @zk_client.running?
+        logger.debug { "@zk_client.running? #{@zk_client.running?}" }
+        
+        # we had an event waiting, so call this method again in the next tick
+        # until we've dispatched all waiting events
+        EM.next_tick { notify_readable } if @zk_client.dispatch_next_callback(false)
 
-      while true
-        if @zk_client.running?
-          logger.debug { "@zk_client.running? #{@zk_client.running?}" }
-          break unless @zk_client.dispatch_next_callback(false)
-        else
-          logger.debug { "@zk_client was not running? we're detaching!" }
-          detach
-          @on_detach.succeed
-          return
-        end
+      else
+        logger.debug { "@zk_client was not running? we're detaching!" }
+        detach
+        @on_detach.succeed
       end
     end
 
