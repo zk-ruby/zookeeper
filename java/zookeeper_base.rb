@@ -80,8 +80,7 @@ class ZookeeperBase
     end
 
     def close
-      @pipe[:read].close 
-      @pipe[:write].close
+      @pipe.values.each { |io| io.close unless io.closed? }
     end
 
     def selectable_io
