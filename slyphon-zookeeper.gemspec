@@ -16,7 +16,7 @@ Gem::Specification.new do |s|
   s.files         = `git ls-files`.split("\n")
   s.require_paths = ["lib"]
 
-  if ENV['JAVA_GEM']
+  if ENV['JAVA_GEM'] or defined?(::JRUBY_VERSION)
     s.platform = 'java'
     s.add_runtime_dependency('slyphon-log4j',         '= 1.2.15')
     s.add_runtime_dependency('slyphon-zookeeper_jar', '= 3.3.3')
