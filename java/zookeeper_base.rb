@@ -147,7 +147,7 @@ class ZookeeperBase
       include JZK::AsyncCallback::StatCallback
 
       def processResult(rc, path, queue, stat)
-        logger.debug { "StatCallback#processResult rc: #{rc.inspect}, req_id: #{req_id}, path: #{path.inspect}, queue: #{queue.inspect}, stat: #{stat.inspect}" }
+        logger.debug { "#{self.class.name}#processResult rc: #{rc.inspect}, req_id: #{req_id}, path: #{path.inspect}, queue: #{queue.inspect}, stat: #{stat.inspect}" }
         queue.push(:rc => rc, :req_id => req_id, :stat => (stat and stat.to_hash), :path => path)
       end
     end
@@ -157,7 +157,15 @@ class ZookeeperBase
 
       def processResult(rc, path, queue, children, stat)
         logger.debug { "#{self.class.name}#processResult rc: #{rc}, req_id: #{req_id}, path: #{path}, queue: #{queue.inspect}, children: #{children.inspect}, stat: #{stat.inspect}" }
-        queue.push(:rc => rc, :req_id => req_id, :path => path, :strings => children.to_a, :stat => stat.to_hash)
+        hash = {
+          :rc       => rc, 
+          :req_id   => req_id, 
+          :path     => path, 
+          :strings  => (children && children.to_a), 
+          :stat     => (stat and stat.to_hash),
+        }
+
+        queue.push(hash)
       end
     end
 
@@ -167,7 +175,7 @@ class ZookeeperBase
       def processResult(rc, path, queue, acl, stat)
         logger.debug { "ACLCallback#processResult rc: #{rc.inspect}, req_id: #{req_id}, path: #{path.inspect}, queue: #{queue.inspect}, acl: #{acl.inspect}, stat: #{stat.inspect}" }
         a = Array(acl).map { |a| a.to_hash }
-        queue.push(:rc => rc, :req_id => req_id, :path => path, :acl => a, :stat => stat.to_hash)
+        queue.push(:rc => rc, :req_id => req_id, :path => path, :acl => a, :stat => (stat && stat.to_hash))
       end
     end
 
