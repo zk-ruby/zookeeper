@@ -43,7 +43,7 @@ module ZookeeperEM
       @on_close.callback(&block) if block
 
       really_close = lambda do
-        super unless closed?
+        close_handle unless closed?
         on_close.succeed
       end
 

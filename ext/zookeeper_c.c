@@ -550,7 +550,7 @@ static VALUE method_wake_event_loop_bang(VALUE self) {
 //   return Qnil;
 // }
 
-static VALUE method_close(VALUE self) {
+static VALUE method_close_handle(VALUE self) {
   FETCH_DATA_PTR(self, zk);
 
   if (ZKRBDebugging) {
@@ -616,7 +616,7 @@ static void zkrb_define_methods(void) {
   DEFINE_METHOD(set_acl, 5);
   DEFINE_METHOD(get_acl, 3);
   DEFINE_METHOD(client_id, 0);
-  DEFINE_METHOD(close, 0);
+  DEFINE_METHOD(close_handle, 0);
   DEFINE_METHOD(deterministic_conn_order, 1);
   DEFINE_METHOD(is_unrecoverable, 0);
   DEFINE_METHOD(recv_timeout, 1);

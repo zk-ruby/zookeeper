@@ -411,13 +411,9 @@ class ZookeeperBase
   def close
     @req_mutex.synchronize do
       @_running = false
-      @_closed = true
 
-      if @jzk
-        @jzk.close
-        wait_until { !connected? }
-      end
-
+      
+      # XXX: why is wake_event_loop! here?
       if @dispatcher 
         wake_event_loop!
       end
@@ -425,6 +421,15 @@ class ZookeeperBase
 
     @dispatcher.join if @dispatcher
     @event_queue.close
+    close_handle
+  end
+
+  def close_handle
+    if @jzk
+      @jzk.close
+      wait_until { !connected? }
+      @_closed = true
+    end
   end
 
   # set the watcher object/proc that will receive all global events (such as session/state events)

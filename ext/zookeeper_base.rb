@@ -29,7 +29,7 @@ class ZookeeperBase < CZookeeper
 
     init(@host, @options)
 
-    $stderr.puts "@_running is #{@_running.inspect}"
+#     $stderr.puts "@_running is #{@_running.inspect}"
 
     if timeout > 0
       time_to_stop = Time.now + timeout
@@ -95,7 +95,7 @@ class ZookeeperBase < CZookeeper
     rescue IOError
     end
 
-    super unless closed?
+    close_handle unless closed?
   end
 
   # set the watcher object/proc that will receive all global events (such as session/state events)
