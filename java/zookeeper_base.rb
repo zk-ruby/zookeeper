@@ -119,8 +119,8 @@ class ZookeeperBase
           :rc     => rc,
           :req_id => req_id,
           :path   => path,
-          :data   => data and String.from_java_bytes(data),
-          :stat   => stat and stat.to_hash,
+          :data   => (data && String.from_java_bytes(data)),
+          :stat   => (stat && stat.to_hash),
         }
 
 #         if rc == Zookeeper::ZOK
