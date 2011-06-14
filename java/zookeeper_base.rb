@@ -66,14 +66,17 @@ class ZookeeperBase
       @queue = Queue.new
     end
 
-    def push(*a)
-      @queue.push(*a)
-      @pipe[:write].write(1)
+    def push(obj)
+      rv = @queue.push(obj)
+      @pipe[:write].write('0')
+      logger.debug { "pushed #{obj.inspect} onto queue and wrote to pipe" }
+      rv
     end
 
     def pop(non_blocking=false)
-      @queue.pop(non_blocking)
+      rv = @queue.pop(non_blocking)
       @pipe[:read].read(1)  # if non_blocking is true and an exception is raised, this won't get called
+      rv
     end
 
     def close
@@ -84,6 +87,11 @@ class ZookeeperBase
     def selectable_io
       @pipe[:read]
     end
+
+    private
+      def logger
+        Zookeeper.logger
+      end
   end
 
   # used for internal dispatching
@@ -105,6 +113,7 @@ class ZookeeperBase
       include JZK::AsyncCallback::DataCallback
 
       def processResult(rc, path, queue, data, stat)
+        logger.debug { "#{self.class.name}#processResult rc: #{rc}, req_id: #{req_id}, path: #{path}, queue: #{queue.inspect}, data: #{data.inspect}, stat: #{stat.inspect}" }
         queue.push({
           :rc     => rc,
           :req_id => req_id,
@@ -119,6 +128,7 @@ class ZookeeperBase
       include JZK::AsyncCallback::StringCallback
 
       def processResult(rc, path, queue, str)
+        logger.debug { "#{self.class.name}#processResult rc: #{rc}, req_id: #{req_id}, path: #{path}, queue: #{queue.inspect}, str: #{str.inspect}" }
         queue.push(:rc => rc, :req_id => req_id, :path => path, :string => str)
       end
     end
@@ -127,7 +137,7 @@ class ZookeeperBase
       include JZK::AsyncCallback::StatCallback
 
       def processResult(rc, path, queue, stat)
-        logger.debug { "StatCallback#processResult rc: #{rc.inspect}, path: #{path.inspect}, queue: #{queue.inspect}, stat: #{stat.inspect}" }
+        logger.debug { "StatCallback#processResult rc: #{rc.inspect}, req_id: #{req_id}, path: #{path.inspect}, queue: #{queue.inspect}, stat: #{stat.inspect}" }
         queue.push(:rc => rc, :req_id => req_id, :stat => (stat and stat.to_hash), :path => path)
       end
     end
@@ -136,6 +146,7 @@ class ZookeeperBase
       include JZK::AsyncCallback::Children2Callback
 
       def processResult(rc, path, queue, children, stat)
+        logger.debug { "#{self.class.name}#processResult rc: #{rc}, req_id: #{req_id}, path: #{path}, queue: #{queue.inspect}, children: #{children.inspect}, stat: #{stat.inspect}" }
         queue.push(:rc => rc, :req_id => req_id, :path => path, :strings => children.to_a, :stat => stat.to_hash)
       end
     end
@@ -144,7 +155,7 @@ class ZookeeperBase
       include JZK::AsyncCallback::ACLCallback
       
       def processResult(rc, path, queue, acl, stat)
-        logger.debug { "ACLCallback#processResult #{rc.inspect} #{path.inspect} #{queue.inspect} #{acl.inspect} #{stat.inspect}" }
+        logger.debug { "ACLCallback#processResult rc: #{rc.inspect}, req_id: #{req_id}, path: #{path.inspect}, queue: #{queue.inspect}, acl: #{acl.inspect}, stat: #{stat.inspect}" }
         a = Array(acl).map { |a| a.to_hash }
         queue.push(:rc => rc, :req_id => req_id, :path => path, :acl => a, :stat => stat.to_hash)
       end
@@ -154,6 +165,7 @@ class ZookeeperBase
       include JZK::AsyncCallback::VoidCallback
 
       def processResult(rc, path, queue)
+        logger.debug { "#{self.class.name}#processResult rc: #{rc}, req_id: #{req_id}, queue: #{queue.inspect}" }
         queue.push(:rc => rc, :req_id => req_id, :path => path)
       end
     end
@@ -167,7 +179,7 @@ class ZookeeperBase
       end
 
       def process(event)
-        logger.debug { "WatcherCallback got event: #{event.to_hash}" }
+        logger.debug { "WatcherCallback got event: #{event.to_hash.inspect}" }
         hash = event.to_hash.merge(:req_id => req_id)
         @event_queue.push(hash)
       end
@@ -404,7 +416,7 @@ class ZookeeperBase
 
   def get_next_event(blocking=true)
     @event_queue.pop(!blocking).tap do |event|
-      logger.debug { "get_next_event delivering event: #{event}" }
+      logger.debug { "get_next_event delivering event: #{event.inspect}" }
       raise DispatchShutdownException if event == KILL_TOKEN
     end
   rescue ThreadError

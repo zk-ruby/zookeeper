@@ -8,7 +8,7 @@ module ZookeeperCommon
 
   module ClassMethods
     def logger
-      @logger ||= Logger.new('/dev/null') # UNIX: YOU MUST USE IT!
+      @logger ||= Logger.new('/dev/null').tap { |l| l.level = Logger::FATAL } # UNIX: YOU MUST USE IT!
     end
 
     def logger=(logger)
@@ -48,12 +48,12 @@ protected
     @req_mutex.synchronize { @completion_reqs.delete(req_id) }
   end
 
-
   def dispatch_next_callback(blocking=true)
     hash = get_next_event(blocking)
+    logger.debug { "get_next_event returned: #{hash.inspect}" }
     return nil unless hash
     
-    logger.debug {  "dispatch_next_callback got event: #{hash.inspect}" }
+    logger.debug { "dispatch_next_callback got event: #{hash.inspect}" }
 
     is_completion = hash.has_key?(:rc)
     
@@ -79,8 +79,8 @@ protected
     else
       logger.warn { "Duplicate event received (no handler for req_id #{hash[:req_id]}, event: #{hash.inspect}" }
     end
+    true
   end
-
 
   def assert_supported_keys(args, supported)
     unless (args.keys - supported).empty?
@@ -94,11 +94,6 @@ protected
       raise ZookeeperExceptions::ZookeeperException::BadArguments,
             "Required arguments are: #{required.inspect}, but only the arguments #{args.keys.inspect} were supplied."
     end
-  end
-
-  # supplied by parent class impl.
-  def logger
-    self.class.logger
   end
 end
 

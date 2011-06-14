@@ -61,6 +61,8 @@ module ZookeeperEM
     # instead of setting up a dispatch thread here, we instead attach
     # the #selectable_io to the event loop 
     def setup_dispatch_thread!
+      @_running = true
+
       EM.schedule do
         @em_connection = EM.watch(selectable_io, ZKConnection, self) { |cnx| cnx.notify_readable = true }
         on_attached.succeed
@@ -89,15 +91,31 @@ module ZookeeperEM
       @on_detach
     end
 
+    def receive_data(data)
+      logger.debug { "receive_data called: #{data.inspect}" }
+    end
+
     # we have an event waiting
     def notify_readable
-      if @zk_client.running?
-        @zk_client.dispatch_next_callback(false)
-      else
-        detach
-        @on_detach.succeed
+      logger.debug { "notify_readable called by reactor" }
+
+      while true
+        if @zk_client.running?
+          logger.debug { "@zk_client.running? #{@zk_client.running?}" }
+          break unless @zk_client.dispatch_next_callback(false)
+        else
+          logger.debug { "@zk_client was not running? we're detaching!" }
+          detach
+          @on_detach.succeed
+          return
+        end
       end
     end
+
+    private
+      def logger
+        Zookeeper.logger
+      end
   end
 end
 
