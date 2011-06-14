@@ -35,24 +35,23 @@ module ZookeeperEM
     # connection has been closed
     #
     def close(&block)
-      return on_close(&block) unless running?
+      logger.debug { "close called, closed? #{closed?} running? #{running?}" }
+
+      unless running?
+        logger.debug { "we are not running, so returning on_close deferred" }
+        return on_close(&block)
+      end
 
       @_running = false
       wake_event_loop! unless closed?
 
       @on_close.callback(&block) if block
 
-      really_close = lambda do
-        logger.debug { "calling close_handle in C" }
-        close_handle unless closed?
-        logger.debug { "calling on_close.succeed" }
-        on_close.succeed
-      end
-
       if @em_connection
-        @em_connection.on_detach.callback(&really_close)
+        logger.debug { "we have an @em_connection, so detach" }
+        @em_connection.detach
       else
-        really_close.call
+        really_close
       end
 
       on_close
@@ -62,12 +61,24 @@ module ZookeeperEM
     public :dispatch_next_callback
 
   protected
+    def really_close
+      unless closed?
+        logger.debug { "calling close_handle in native driver" }
+        close_handle
+
+        logger.debug { "calling on_close.succeed" }
+        on_close.succeed
+      end
+    end
+
     # instead of setting up a dispatch thread here, we instead attach
     # the #selectable_io to the event loop 
     def setup_dispatch_thread!
       EM.schedule do
         begin
           @em_connection = EM.watch(selectable_io, ZKConnection, self) { |cnx| cnx.notify_readable = true }
+          @em_connection.on_detach.callback(&method(:really_close))
+          @em_connection.on_detach.errback(&method(:really_close))
         rescue Exception => e
           $stderr.puts "caught exception from EM.watch(): #{e.inspect}"
         end
@@ -84,14 +95,14 @@ module ZookeeperEM
   # dispatch_next_event and read a single byte off the pipe.
   #
   class ZKConnection < EM::Connection
-    # called back when we've successfully detached from the EM reactor
-    attr_reader :on_detach
 
     def initialize(zk_client)
       @zk_client = zk_client
       @on_detach = EM::DefaultDeferrable.new
+      @on_detach.callback { logger.debug { "on_detach callback fired" } }
     end
 
+    # called back when we've successfully detached from the EM reactor
     def on_detach(&blk)
       @on_detach.callback(&blk) if blk
       @on_detach
@@ -101,24 +112,21 @@ module ZookeeperEM
       logger.debug { "receive_data called: #{data.inspect}" }
     end
 
+    def detach
+      super
+      @on_detach.succeed
+    end
+
     # we have an event waiting
     def notify_readable
       if @zk_client.running?
         logger.debug { "dispatching events while #{@zk_client.running?}" }
-
-        deliver_events
+        EM.next_tick { notify_readable } if @zk_client.dispatch_next_callback(false)
       else
         logger.debug { "@zk_client was not running? we're detaching!" }
         detach
-        @on_detach.succeed
       end
     end
-
-    protected
-      def deliver_events
-        return unless @zk_client.running?
-        EM.next_tick { deliver_events } if @zk_client.dispatch_next_callback(false)
-      end
 
     private
       def logger
