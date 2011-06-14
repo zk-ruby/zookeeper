@@ -119,16 +119,16 @@ class ZookeeperBase
           :rc     => rc,
           :req_id => req_id,
           :path   => path,
-          :data   => nil,
-          :stat   => nil,
+          :data   => data and String.from_java_bytes(data),
+          :stat   => stat and stat.to_hash,
         }
 
-        if rc == Zookeeper::ZOK
-          hash.merge!({
-            :data   => String.from_java_bytes(data),
-            :stat   => stat.to_hash,
-          })
-        end
+#         if rc == Zookeeper::ZOK
+#           hash.merge!({
+#             :data   => String.from_java_bytes(data),
+#             :stat   => stat.to_hash,
+#           })
+#         end
 
         queue.push(hash)
       end
