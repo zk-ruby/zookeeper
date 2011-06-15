@@ -130,10 +130,12 @@ module ZookeeperEM
     end
 
     # we have an event waiting
-    def notify_readable
+    def notify_readable(framework_call=true)
       if @zk_client.running?
-        logger.debug { "#{self.class.name}: dispatching events while #{@zk_client.running?}" }
-        EM.next_tick { notify_readable } if @zk_client.dispatch_next_callback(false)
+        logger.debug { "#{self.class.name}: dispatching events while #{@zk_client.running?}, framework_call: #{framework_call}" }
+        if val = @zk_client.dispatch_next_callback(false)
+          EM.next_tick { notify_readable(false) } 
+        end
       elsif attached?
         logger.debug { "#{self.class.name}: @zk_client was not running? and attached? #{attached?}, detaching!" }
         detach
