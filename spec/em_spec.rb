@@ -12,7 +12,6 @@ describe 'ZookeeperEM' do
 
     def setup_zk
       @zk = ZookeeperEM::Client.new('localhost:2181')
-      @zk.set_debug_level(4)
       em do
         @zk.on_attached do
           yield

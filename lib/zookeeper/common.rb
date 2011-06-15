@@ -51,10 +51,9 @@ protected
   def dispatch_next_callback(blocking=true)
     hash = get_next_event(blocking)
     Zookeeper.logger.debug { "get_next_event returned: #{hash.inspect}" }
+
     return nil unless hash
     
-#     logger.debug { "dispatch_next_callback got event: #{hash.inspect}" }
-
     is_completion = hash.has_key?(:rc)
     
     hash[:stat] = ZookeeperStat::Stat.new(hash[:stat]) if hash.has_key?(:stat)

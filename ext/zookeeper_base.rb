@@ -27,7 +27,7 @@ class ZookeeperBase < CZookeeper
       set_default_global_watcher(&watcher)
     end
 
-    init(@host, @options)
+    init(@host)
 
 #     $stderr.puts "@_running is #{@_running.inspect}"
 
@@ -42,13 +42,12 @@ class ZookeeperBase < CZookeeper
     state
   end
 
-  def initialize(host, timeout = 10, watcher=nil, options={})
+  def initialize(host, timeout = 10, watcher=nil)
     @watcher_reqs = {}
     @completion_reqs = {}
     @req_mutex = Monitor.new
     @current_req_id = 1
     @host = host
-    @options = options
 
     watcher ||= get_default_global_watcher
 

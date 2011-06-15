@@ -60,10 +60,16 @@ class ZookeeperBase
   end
 
   class QueueWithPipe
+    attr_writer :clear_reads_on_pop
+
     def initialize
       r, w = IO.pipe
       @pipe = { :read => r, :write => w }
       @queue = Queue.new
+
+      # with the EventMachine client, we want to let EM handle clearing the
+      # event pipe, so we set this to false
+      @clear_reads_on_pop = true
     end
 
     def push(obj)
@@ -75,7 +81,10 @@ class ZookeeperBase
 
     def pop(non_blocking=false)
       rv = @queue.pop(non_blocking)
-      @pipe[:read].read(1)  # if non_blocking is true and an exception is raised, this won't get called
+
+      # if non_blocking is true and an exception is raised, this won't get called
+      @pipe[:read].read(1) if clear_reads_on_pop?
+
       rv
     end
 
@@ -88,6 +97,10 @@ class ZookeeperBase
     end
 
     private
+      def clear_reads_on_pop?
+        @clear_reads_on_pop
+      end
+
       def logger
         Zookeeper.logger
       end
@@ -271,6 +284,10 @@ class ZookeeperBase
     @_closed
   end
 
+  def self.set_debug_level(*a)
+    # IGNORED IN JRUBY
+  end
+
   def set_debug_level(*a)
     # IGNORED IN JRUBY
   end
@@ -421,14 +438,18 @@ class ZookeeperBase
 
     @dispatcher.join if @dispatcher
     @event_queue.close
-    close_handle
+    close_handle unless closed?
   end
 
   def close_handle
+    @req_mutex.synchronize do
+      return if @_closed
+      @_closed = true
+    end
+
     if @jzk
       @jzk.close
       wait_until { !connected? }
-      @_closed = true
     end
   end
 
@@ -444,7 +465,11 @@ class ZookeeperBase
     end
   end
 
+  # by accessing this selectable_io you indicate that you intend to clear it
+  # when you have delivered an event by reading one byte per event.
+  #
   def selectable_io
+    @event_queue.clear_reads_on_pop = false
     @event_queue.selectable_io
   end
 
@@ -481,17 +506,15 @@ class ZookeeperBase
       end
     end
 
-   
     # method to wait until block passed returns true or timeout (default is 10 seconds) is reached 
     def wait_until(timeout=10, &block)
       time_to_stop = Time.now + timeout
       until yield do 
         break if Time.now > time_to_stop
-        sleep 0.3
+        sleep 0.1
       end
     end
 
-  protected
     # TODO: Make all global puts configurable
     def get_default_global_watcher
       Proc.new { |args|
@@ -500,7 +523,6 @@ class ZookeeperBase
       }
     end
 
-  private
     def setup_dispatch_thread!
       logger.debug {  "starting dispatch thread" }
       @dispatcher = Thread.new do
