@@ -84,8 +84,6 @@ module ZookeeperEM
       EM.schedule do
         begin
           @em_connection = EM.watch(selectable_io, ZKConnection, self) { |cnx| cnx.notify_readable = true }
-#           @em_connection.on_detach.callback(&method(:really_close))
-#           @em_connection.on_detach.errback(&method(:really_close))
         rescue Exception => e
           $stderr.puts "caught exception from EM.watch(): #{e.inspect}"
         end
@@ -105,32 +103,39 @@ module ZookeeperEM
 
     def initialize(zk_client)
       @zk_client = zk_client
-      @on_detach = EM::DefaultDeferrable.new
-      @on_detach.callback { logger.debug { "#{self.class.name}: on_detach callback fired" } }
+#       @on_detach = EM::DefaultDeferrable.new
+#       @on_detach.callback { logger.debug { "#{self.class.name}: on_detach callback fired" } }
+      @attached = true
     end
 
     # called back when we've successfully detached from the EM reactor
-    def on_detach(&blk)
-      @on_detach.callback(&blk) if blk
-      @on_detach
-    end
+#     def on_detach(&blk)
+#       @on_detach.callback(&blk) if blk
+#       @on_detach
+#     end
 
     def receive_data(data)
       logger.debug { "#{self.class.name}: receive_data called: #{data.inspect}" }
     end
 
-#     def detach
-#       super
-#       @on_detach.succeed
-#     end
+    def attached?
+      @attached
+    end
+
+    def detach
+      return unless @attached
+      @attached = false
+      super
+      logger.debug { "detached" }
+    end
 
     # we have an event waiting
     def notify_readable
       if @zk_client.running?
         logger.debug { "#{self.class.name}: dispatching events while #{@zk_client.running?}" }
         EM.next_tick { notify_readable } if @zk_client.dispatch_next_callback(false)
-      else
-        logger.debug { "#{self.class.name}: @zk_client was not running? we're detaching!" }
+      elsif attached?
+        logger.debug { "#{self.class.name}: @zk_client was not running? and attached? #{attached?}, detaching!" }
         detach
       end
     end
