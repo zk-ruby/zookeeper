@@ -2,20 +2,6 @@ module ZookeeperCommon
   # sigh, i guess define this here?
   ZKRB_GLOBAL_CB_REQ   = -1
 
-  def self.included(mod)
-    mod.extend(ZookeeperCommon::ClassMethods)
-  end
-
-  module ClassMethods
-    def logger
-      @logger ||= Logger.new('/dev/null').tap { |l| l.level = Logger::FATAL } # UNIX: YOU MUST USE IT!
-    end
-
-    def logger=(logger)
-      @logger = logger
-    end
-  end
-
 protected
   def setup_call(opts)
     req_id = nil
@@ -94,5 +80,6 @@ protected
             "Required arguments are: #{required.inspect}, but only the arguments #{args.keys.inspect} were supplied."
     end
   end
+
 end
 

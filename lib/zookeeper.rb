@@ -19,6 +19,17 @@ end
 require 'zookeeper_base'
 
 class Zookeeper < ZookeeperBase
+  @@logger = nil unless defined?(@@logger)
+
+  def self.logger
+    @@logger ||= Logger.new('/dev/null').tap { |l| l.level = Logger::FATAL } # UNIX: FOR GREAT JUSTICE !!
+  end
+
+  def self.logger=(logger)
+    @@logger = logger
+  end
+
+
   def reopen(timeout=10, watcher=nil)
     super
   end
@@ -200,6 +211,10 @@ protected
   # TODO: describe what this does
   def get_default_global_watcher
     super
+  end
+
+  def logger
+    Zookeeper.logger
   end
 
 private
