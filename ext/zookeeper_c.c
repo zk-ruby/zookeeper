@@ -496,16 +496,27 @@ static VALUE method_get_next_event(VALUE self, VALUE blocking) {
       } 
       else {
         int fd = zk->queue->pipe_read;
-        fd_set rset;
+        ssize_t bytes_read = 0;
 
-        FD_ZERO(&rset);
-        FD_SET(fd, &rset);
+        fd_set rset;        // a file descriptor set for use w/ select()
+
+        FD_ZERO(&rset);     // FD_ZERO clears the set
+        FD_SET(fd, &rset);  // FD_SET adds fd to the rset
+
+        // first arg is nfds: "the highest-numbered file descriptor in any of the three sets, plus 1"
+        // why? F*** you, that's why!
 
         if (rb_thread_select(fd + 1, &rset, NULL, NULL, NULL) == -1)
           rb_raise(rb_eRuntimeError, "select failed: %d", errno);
 
-        if (read(fd, buf, sizeof(buf)) == -1)
+        bytes_read = read(fd, buf, sizeof(buf));
+
+        if (bytes_read == -1) {
           rb_raise(rb_eRuntimeError, "read failed: %d", errno);
+        }
+        else if (ZKRBDebugging) {
+          fprintf(stderr, "read %d bytes from the queue's pipe\n", bytes_read);
+        }
 
         continue;
       }
@@ -589,7 +600,7 @@ static VALUE method_recv_timeout(VALUE self) {
 }
 
 // how do you make a class method??
-static VALUE method_set_debug_level(VALUE self, VALUE level) {
+static VALUE klass_method_set_debug_level(VALUE klass, VALUE level) {
   Check_Type(level, T_FIXNUM);
   ZKRBDebugging = (FIX2INT(level) == ZOO_LOG_LEVEL_DEBUG);
   zoo_set_debug_level(FIX2INT(level));
@@ -630,8 +641,10 @@ static void zkrb_define_methods(void) {
   DEFINE_METHOD(has_events, 0);
 
   // Make these class methods?
-  DEFINE_METHOD(set_debug_level, 1);
+/*  DEFINE_METHOD(set_debug_level, 1);*/
   DEFINE_METHOD(zerror, 1);
+
+  rb_define_singleton_method(Zookeeper, "set_debug_level", klass_method_set_debug_level, 1);
 
   rb_attr(Zookeeper, rb_intern("selectable_io"), 1, 0, Qtrue);
 

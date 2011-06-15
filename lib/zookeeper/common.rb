@@ -50,7 +50,7 @@ protected
 
   def dispatch_next_callback(blocking=true)
     hash = get_next_event(blocking)
-    logger.debug { "get_next_event returned: #{hash.inspect}" }
+    Zookeeper.logger.debug { "get_next_event returned: #{hash.inspect}" }
     return nil unless hash
     
 #     logger.debug { "dispatch_next_callback got event: #{hash.inspect}" }

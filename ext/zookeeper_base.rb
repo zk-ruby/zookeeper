@@ -98,6 +98,11 @@ class ZookeeperBase < CZookeeper
     close_handle unless closed?
   end
 
+  def set_debug_level(int)
+    warn "DEPRECATION WARNING: #{self.class.name}#set_debug_level, it has moved to the class level and will be removed in a future release"
+    self.class.set_debug_level(int)
+  end
+
   # set the watcher object/proc that will receive all global events (such as session/state events)
   def set_default_global_watcher(&block)
     @req_mutex.synchronize do

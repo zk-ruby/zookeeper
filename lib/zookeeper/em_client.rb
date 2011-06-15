@@ -49,13 +49,8 @@ module ZookeeperEM
       wake_event_loop! unless closed?
       @em_connection.detach if @em_connection
       selectable_io.close unless selectable_io.closed?
+      logger.debug { "closing handle" }
       close_handle
-
-#       if @em_connection
-#         logger.debug { "we have an @em_connection, so detach" }
-#       else
-#         really_close
-#       end
 
       on_close.succeed
       on_close
@@ -114,10 +109,6 @@ module ZookeeperEM
 #       @on_detach
 #     end
 
-    def receive_data(data)
-      logger.debug { "#{self.class.name}: receive_data called: #{data.inspect}" }
-    end
-
     def attached?
       @attached
     end
@@ -126,16 +117,16 @@ module ZookeeperEM
       return unless @attached
       @attached = false
       super
-      logger.debug { "detached" }
+      logger.debug { "#{self.class.name}: detached" }
     end
 
     # we have an event waiting
-    def notify_readable(framework_call=true)
+    def notify_readable
       if @zk_client.running?
-        logger.debug { "#{self.class.name}: dispatching events while #{@zk_client.running?}, framework_call: #{framework_call}" }
-        if val = @zk_client.dispatch_next_callback(false)
-          EM.next_tick { notify_readable(false) } 
-        end
+        logger.debug { "#{self.class.name}: dispatching events while #{@zk_client.running?}" }
+
+        read_io_nb if @zk_client.dispatch_next_callback(false)
+
       elsif attached?
         logger.debug { "#{self.class.name}: @zk_client was not running? and attached? #{attached?}, detaching!" }
         detach
@@ -143,6 +134,11 @@ module ZookeeperEM
     end
 
     private
+      def read_io_nb(size=1)
+        @io.read_nonblock(1)
+      rescue Errno::EWOULDBLOCK, Errno::EAGAIN, IOError
+      end
+      
       def logger
         Zookeeper.logger
       end
