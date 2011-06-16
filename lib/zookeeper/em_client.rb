@@ -37,23 +37,23 @@ module ZookeeperEM
     def close(&block)
       on_close(&block)
 
-      logger.debug { "close called, closed? #{closed?} running? #{running?}" }
+      @start_stop_mutex.synchronize do
+        logger.debug { "close called, closed? #{closed?} running? #{running?}" }
 
-      if running?
-        @_running = false
+        if running?
+          @_running = false
 
-#         wake_event_loop!
-
-        unless closed?
           @em_connection.detach if @em_connection
           @em_connection = nil
 
-          logger.debug { "closing handle" }
-          close_handle
-          selectable_io.close unless selectable_io.closed?
+          unless closed?
+            logger.debug { "closing handle" }
+            close_handle
+            selectable_io.close unless selectable_io.closed?
+          end
+        else
+          logger.debug { "we are not running, so returning on_close deferred" }
         end
-      else
-        logger.debug { "we are not running, so returning on_close deferred" }
       end
 
       on_close.succeed

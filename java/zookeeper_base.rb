@@ -225,13 +225,15 @@ class ZookeeperBase
       set_default_global_watcher(&watcher)
     end
 
-    @jzk = JZK::ZooKeeper.new(@host, DEFAULT_SESSION_TIMEOUT, JavaCB::WatcherCallback.new(@event_queue))
+    @start_stop_mutex.synchronize do
+      @jzk = JZK::ZooKeeper.new(@host, DEFAULT_SESSION_TIMEOUT, JavaCB::WatcherCallback.new(@event_queue))
 
-    if timeout > 0
-      time_to_stop = Time.now + timeout
-      until connected?
-        break if Time.now > time_to_stop
-        sleep 0.1
+      if timeout > 0
+        time_to_stop = Time.now + timeout
+        until connected?
+          break if Time.now > time_to_stop
+          sleep 0.1
+        end
       end
     end
 
@@ -248,6 +250,7 @@ class ZookeeperBase
     @_running = nil
     @_closed  = false
     @options = {}
+    @start_stop_mutex = Mutex.new
 
     watcher ||= get_default_global_watcher
 
@@ -451,9 +454,11 @@ class ZookeeperBase
       @_closed = true
     end
 
-    if @jzk
-      @jzk.close
-      wait_until { !connected? }
+    @start_stop_mutex do
+      if @jzk
+        @jzk.close
+        wait_until { !connected? }
+      end
     end
   end
 

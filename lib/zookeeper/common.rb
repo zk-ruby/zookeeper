@@ -34,6 +34,11 @@ protected
     @req_mutex.synchronize { @completion_reqs.delete(req_id) }
   end
 
+  def get_next_event(blocking=true)
+    return nil if closed? # protect against this happening in a callback after close
+    super(blocking) 
+  end
+
   def dispatch_next_callback(blocking=true)
     hash = get_next_event(blocking)
     Zookeeper.logger.debug { "get_next_event returned: #{hash.inspect}" }

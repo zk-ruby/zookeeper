@@ -161,7 +161,7 @@ static VALUE method_init(int argc, VALUE* argv, VALUE self) {
   zkrb_calling_context *ctx =
     zkrb_calling_context_alloc(ZKRB_GLOBAL_REQ, zk_local_ctx->queue);
 
-  pthread_mutex_lock(&zkrb_init_mutex);
+/*  pthread_mutex_lock(&zkrb_init_mutex);*/
 
   zk_local_ctx->zh =
       zookeeper_init(
@@ -172,7 +172,7 @@ static VALUE method_init(int argc, VALUE* argv, VALUE self) {
           ctx,
           0);
 
-  pthread_mutex_unlock(&zkrb_init_mutex);
+/*  pthread_mutex_unlock(&zkrb_init_mutex);*/
 
 #warning [wickman] TODO handle this properly on the Ruby side rather than C side
   if (!zk_local_ctx->zh) {

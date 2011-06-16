@@ -29,13 +29,15 @@ class ZookeeperBase < CZookeeper
 
     init(@host)
 
-#     $stderr.puts "@_running is #{@_running.inspect}"
+  #     $stderr.puts "@_running is #{@_running.inspect}"
 
-    if timeout > 0
-      time_to_stop = Time.now + timeout
-      until state == Zookeeper::ZOO_CONNECTED_STATE
-        break if Time.now > time_to_stop
-        sleep 0.1
+    @start_stop_mutex.synchronize do
+      if timeout > 0
+        time_to_stop = Time.now + timeout
+        until state == Zookeeper::ZOO_CONNECTED_STATE
+          break if Time.now > time_to_stop
+          sleep 0.1
+        end
       end
     end
 
@@ -48,6 +50,8 @@ class ZookeeperBase < CZookeeper
     @req_mutex = Monitor.new
     @current_req_id = 1
     @host = host
+
+    @start_stop_mutex = Mutex.new
 
     watcher ||= get_default_global_watcher
 
@@ -80,23 +84,25 @@ class ZookeeperBase < CZookeeper
   end
 
   def close
-    if @_running
-      @_running = false
+    @start_stop_mutex.synchronize do
+      if @_running
+        @_running = false
 
-      if @dispatcher
-        wake_event_loop! unless closed?
-        @dispatcher.join 
+        if @dispatcher
+          wake_event_loop! unless closed?
+          @dispatcher.join 
+        end
       end
-    end
 
-    unless closed?
-      close_handle
-      
-      # this is set up in the C init method, but it's easier to 
-      # do the teardown here
-      begin
-        @selectable_io.close if @selectable_io
-      rescue IOError
+      unless closed?
+        close_handle
+        
+        # this is set up in the C init method, but it's easier to 
+        # do the teardown here
+        begin
+          @selectable_io.close if @selectable_io
+        rescue IOError
+        end
       end
     end
   end
@@ -127,7 +133,7 @@ protected
     @dispatcher = Thread.new do
       while running?
         begin                     # calling user code, so protect ourselves
-          dispatch_next_callback 
+          dispatch_next_callback
         rescue Exception => e
           $stderr.puts "Error in dispatch thread, #{e.class}: #{e.message}\n" << e.backtrace.map{|n| "\t#{n}"}.join("\n")
         end
