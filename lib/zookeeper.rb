@@ -19,16 +19,17 @@ end
 require 'zookeeper_base'
 
 class Zookeeper < ZookeeperBase
-  @@logger = nil unless defined?(@@logger)
+  unless defined?(@@logger)
+    @@logger = Logger.new('/dev/null').tap { |l| l.level = Logger::FATAL } # UNIX: FOR GREAT JUSTICE !!
+  end
 
   def self.logger
-    @@logger ||= Logger.new('/dev/null').tap { |l| l.level = Logger::FATAL } # UNIX: FOR GREAT JUSTICE !!
+    @@logger
   end
 
   def self.logger=(logger)
     @@logger = logger
   end
-
 
   def reopen(timeout=10, watcher=nil)
     super
