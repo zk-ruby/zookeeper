@@ -80,21 +80,25 @@ class ZookeeperBase < CZookeeper
   end
 
   def close
-    @_running = false
+    if @_running
+      @_running = false
 
-    if @dispatcher
-      wake_event_loop! unless closed?
-      @dispatcher.join 
-    end
-    
-    # this is set up in the C init method, but it's easier to 
-    # do the teardown here
-    begin
-      @selectable_io.close if @selectable_io
-    rescue IOError
+      if @dispatcher
+        wake_event_loop! unless closed?
+        @dispatcher.join 
+      end
     end
 
-    close_handle unless closed?
+    unless closed?
+      close_handle
+      
+      # this is set up in the C init method, but it's easier to 
+      # do the teardown here
+      begin
+        @selectable_io.close if @selectable_io
+      rescue IOError
+      end
+    end
   end
 
   def set_debug_level(int)
