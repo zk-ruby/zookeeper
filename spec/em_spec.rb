@@ -95,6 +95,7 @@ describe 'ZookeeperEM' do
 
       it %[should be nil before the reactor is started] do
         @zk.em_connection.should be_nil
+
         em do
           teardown_and_done
         end

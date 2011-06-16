@@ -18,8 +18,10 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <sys/fcntl.h>
+#include <pthread.h>
 
 #include "zookeeper_lib.h"
+
 
 static VALUE Zookeeper = Qnil;
 
@@ -38,6 +40,8 @@ typedef enum {
 
 #define IS_SYNC(zkrbcall) ((zkrbcall)==SYNC || (zkrbcall)==SYNC_WATCH)
 #define IS_ASYNC(zkrbcall) ((zkrbcall)==ASYNC || (zkrbcall)==ASYNC_WATCH)
+
+pthread_mutex_t zkrb_init_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 /*static void zkrb_debug_log(char *debug_str) {*/
 /*  if (ZKRBDebugging) {*/
@@ -122,6 +126,7 @@ static VALUE create_selectable_io(zkrb_queue_t *q) {
 static VALUE method_init(int argc, VALUE* argv, VALUE self) {
   VALUE hostPort;
   VALUE options;
+
   rb_scan_args(argc, argv, "11", &hostPort, &options);
 
   if (NIL_P(options)) {
@@ -156,6 +161,8 @@ static VALUE method_init(int argc, VALUE* argv, VALUE self) {
   zkrb_calling_context *ctx =
     zkrb_calling_context_alloc(ZKRB_GLOBAL_REQ, zk_local_ctx->queue);
 
+  pthread_mutex_lock(&zkrb_init_mutex);
+
   zk_local_ctx->zh =
       zookeeper_init(
           RSTRING_PTR(hostPort),
@@ -165,6 +172,8 @@ static VALUE method_init(int argc, VALUE* argv, VALUE self) {
           ctx,
           0);
 
+  pthread_mutex_unlock(&zkrb_init_mutex);
+
 #warning [wickman] TODO handle this properly on the Ruby side rather than C side
   if (!zk_local_ctx->zh) {
     rb_raise(rb_eRuntimeError, "error connecting to zookeeper: %d", errno);
@@ -173,6 +182,7 @@ static VALUE method_init(int argc, VALUE* argv, VALUE self) {
   rb_iv_set(self, "@data", data);
   rb_iv_set(self, "@selectable_io", create_selectable_io(zk_local_ctx->queue));
   rb_iv_set(self, "@_running", Qtrue);
+
 
   return Qnil;
 }
