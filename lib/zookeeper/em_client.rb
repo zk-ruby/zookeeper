@@ -39,18 +39,22 @@ module ZookeeperEM
 
       logger.debug { "close called, closed? #{closed?} running? #{running?}" }
 
-      unless running?
+      if running?
+        @_running = false
+
+#         wake_event_loop!
+
+        unless closed?
+          @em_connection.detach if @em_connection
+          @em_connection = nil
+
+          logger.debug { "closing handle" }
+          close_handle
+          selectable_io.close unless selectable_io.closed?
+        end
+      else
         logger.debug { "we are not running, so returning on_close deferred" }
-        return on_close
       end
-
-      @_running = false
-
-      wake_event_loop! unless closed?
-      @em_connection.detach if @em_connection
-      selectable_io.close unless selectable_io.closed?
-      logger.debug { "closing handle" }
-      close_handle
 
       on_close.succeed
       on_close
@@ -60,29 +64,18 @@ module ZookeeperEM
     public :dispatch_next_callback
 
   protected
-#     def really_close
-#       unless closed?
-#         logger.debug { "#{self.class.name}: calling close_handle in native driver" }
-
-#         close_handle
-
-#         selectable_io.close unless selectable_io.closed?
-
-#         logger.debug { "#{self.class.name}: calling on_close.succeed" }
-#         on_close.succeed
-#       end
-#     end
-
     # instead of setting up a dispatch thread here, we instead attach
     # the #selectable_io to the event loop 
     def setup_dispatch_thread!
       EM.schedule do
-        begin
-          @em_connection = EM.watch(selectable_io, ZKConnection, self) { |cnx| cnx.notify_readable = true }
-        rescue Exception => e
-          $stderr.puts "caught exception from EM.watch(): #{e.inspect}"
+        if running? and not closed?
+          begin
+            @em_connection = EM.watch(selectable_io, ZKConnection, self) { |cnx| cnx.notify_readable = true }
+          rescue Exception => e
+            $stderr.puts "caught exception from EM.watch(): #{e.inspect}"
+          end
+          on_attached.succeed
         end
-        on_attached.succeed
       end
     end
   end
@@ -98,16 +91,8 @@ module ZookeeperEM
 
     def initialize(zk_client)
       @zk_client = zk_client
-#       @on_detach = EM::DefaultDeferrable.new
-#       @on_detach.callback { logger.debug { "#{self.class.name}: on_detach callback fired" } }
       @attached = true
     end
-
-    # called back when we've successfully detached from the EM reactor
-#     def on_detach(&blk)
-#       @on_detach.callback(&blk) if blk
-#       @on_detach
-#     end
 
     def attached?
       @attached
