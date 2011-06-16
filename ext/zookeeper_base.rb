@@ -27,11 +27,12 @@ class ZookeeperBase < CZookeeper
       set_default_global_watcher(&watcher)
     end
 
-    init(@host)
 
   #     $stderr.puts "@_running is #{@_running.inspect}"
 
     @start_stop_mutex.synchronize do
+      init(@host)
+
       if timeout > 0
         time_to_stop = Time.now + timeout
         until state == Zookeeper::ZOO_CONNECTED_STATE
@@ -85,16 +86,16 @@ class ZookeeperBase < CZookeeper
 
   def close
     @start_stop_mutex.synchronize do
-      if @_running
-        @_running = false
+      @_running = false if @_running
+    end
 
-        if @dispatcher
-          wake_event_loop! unless closed?
-          @dispatcher.join 
-        end
-      end
+    if @dispatcher
+      wake_event_loop! unless @_closed
+      @dispatcher.join 
+    end
 
-      unless closed?
+    @start_stop_mutex.synchronize do
+      unless @_closed
         close_handle
         
         # this is set up in the C init method, but it's easier to 
@@ -121,11 +122,11 @@ class ZookeeperBase < CZookeeper
   end
 
   def closed?
-    false|@_closed
+    @start_stop_mutex.synchronize { false|@_closed }
   end
 
   def running?
-    false|@_running
+    @start_stop_mutex.synchronize { false|@_running }
   end
 
 protected

@@ -430,35 +430,29 @@ class ZookeeperBase
 
   def close
     @req_mutex.synchronize do
-      if @_running
-        @_running = false
-
+      @_running = false if @_running
+    end
         
-        # XXX: why is wake_event_loop! here?
-        if @dispatcher 
-          wake_event_loop!
-          @dispatcher.join 
-        end
-      end
+    # XXX: why is wake_event_loop! here?
+    if @dispatcher 
+      wake_event_loop!
+      @dispatcher.join 
+    end
 
-      unless closed?
-        @event_queue.close
+    unless @_closed
+      @start_stop_mutex.synchronize do
+        @_closed = true
         close_handle
       end
+
+      @event_queue.close
     end
   end
 
   def close_handle
-    @req_mutex.synchronize do
-      return if @_closed
-      @_closed = true
-    end
-
-    @start_stop_mutex do
-      if @jzk
-        @jzk.close
-        wait_until { !connected? }
-      end
+    if @jzk
+      @jzk.close
+      wait_until { !connected? }
     end
   end
 
