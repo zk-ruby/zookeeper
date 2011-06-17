@@ -19,6 +19,18 @@ end
 require 'zookeeper_base'
 
 class Zookeeper < ZookeeperBase
+  unless defined?(@@logger)
+    @@logger = Logger.new('/dev/null').tap { |l| l.level = Logger::FATAL } # UNIX: FOR GREAT JUSTICE !!
+  end
+
+  def self.logger
+    @@logger
+  end
+
+  def self.logger=(logger)
+    @@logger = logger
+  end
+
   def reopen(timeout=10, watcher=nil)
     super
   end
@@ -130,6 +142,11 @@ class Zookeeper < ZookeeperBase
     options[:callback] ? rv : rv.merge(:acl => acls, :stat => Stat.new(stat))
   end
 
+  # close this client and any underyling connections
+  def close
+    super
+  end
+
   def state
     super
   end
@@ -144,6 +161,61 @@ class Zookeeper < ZookeeperBase
 
   def associating?
     super
+  end
+
+  # for expert use only. set the underlying debug level for the C layer, has no
+  # effect in java
+  #
+  def self.set_debug_level(val)
+    super
+  end
+
+  # DEPRECATED: use the class-level method instead
+  def set_debug_level(val)
+    super
+  end
+
+  # has the underlying connection been closed?
+  def closed?
+    super
+  end
+
+  # is the event delivery system running?
+  def running?
+    super
+  end
+
+  # returns an IO object that will be readable when an event is ready for dispatching
+  # (for internal use only)
+  def selectable_io
+    super
+  end
+
+  # closes the underlying connection object
+  # (for internal use only)
+  def close_handle
+    super
+  end
+
+protected
+  # used during shutdown, awaken the event delivery thread if it's blocked
+  # waiting for the next event
+  def wake_event_loop!
+    super
+  end
+  
+  # starts the event delivery subsystem going. after calling this method, running? will be true
+  def setup_dispatch_thread!
+    super
+  end
+
+  # TODO: describe what this does
+  def get_default_global_watcher
+    super
+  end
+
+  def logger
+    Zookeeper.logger
   end
 
 private
@@ -175,6 +247,5 @@ private
   def assert_open
     super
   end
-
 end
 

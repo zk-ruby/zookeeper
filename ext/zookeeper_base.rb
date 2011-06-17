@@ -16,7 +16,8 @@ class ZookeeperBase < CZookeeper
   ZOO_LOG_LEVEL_WARN   = 2
   ZOO_LOG_LEVEL_INFO   = 3
   ZOO_LOG_LEVEL_DEBUG  = 4
-  
+
+ 
   def reopen(timeout = 10, watcher=nil)
     watcher ||= @default_watcher
 
@@ -26,13 +27,15 @@ class ZookeeperBase < CZookeeper
       set_default_global_watcher(&watcher)
     end
 
-    init(@host)
+    @start_stop_mutex.synchronize do
+      init(@host)
 
-    if timeout > 0
-      time_to_stop = Time.now + timeout
-      until state == Zookeeper::ZOO_CONNECTED_STATE
-        break if Time.now > time_to_stop
-        sleep 0.1
+      if timeout > 0
+        time_to_stop = Time.now + timeout
+        until state == Zookeeper::ZOO_CONNECTED_STATE
+          break if Time.now > time_to_stop
+          sleep 0.1
+        end
       end
     end
 
@@ -46,9 +49,12 @@ class ZookeeperBase < CZookeeper
     @current_req_id = 1
     @host = host
 
+    @start_stop_mutex = Mutex.new
+
     watcher ||= get_default_global_watcher
 
-    @_running = nil # used by the C layer
+    @_running = nil   # used by the C layer
+    @_closed = false  # also used by the C layer
 
     yield self if block_given?
 
@@ -76,12 +82,32 @@ class ZookeeperBase < CZookeeper
   end
 
   def close
-    @_running = false
-    wake_event_loop!
-    
-    @dispatcher.join
+    @start_stop_mutex.synchronize do
+      @_running = false if @_running
+    end
 
-    super
+    if @dispatcher
+      wake_event_loop! unless @_closed
+      @dispatcher.join 
+    end
+
+    @start_stop_mutex.synchronize do
+      unless @_closed
+        close_handle
+        
+        # this is set up in the C init method, but it's easier to 
+        # do the teardown here
+        begin
+          @selectable_io.close if @selectable_io
+        rescue IOError
+        end
+      end
+    end
+  end
+
+  def set_debug_level(int)
+    warn "DEPRECATION WARNING: #{self.class.name}#set_debug_level, it has moved to the class level and will be removed in a future release"
+    self.class.set_debug_level(int)
   end
 
   # set the watcher object/proc that will receive all global events (such as session/state events)
@@ -92,16 +118,20 @@ class ZookeeperBase < CZookeeper
     end
   end
 
-protected
-  def running?
-    false|@_running
+  def closed?
+    @start_stop_mutex.synchronize { false|@_closed }
   end
 
+  def running?
+    @start_stop_mutex.synchronize { false|@_running }
+  end
+
+protected
   def setup_dispatch_thread!
     @dispatcher = Thread.new do
       while running?
         begin                     # calling user code, so protect ourselves
-          dispatch_next_callback 
+          dispatch_next_callback
         rescue Exception => e
           $stderr.puts "Error in dispatch thread, #{e.class}: #{e.message}\n" << e.backtrace.map{|n| "\t#{n}"}.join("\n")
         end

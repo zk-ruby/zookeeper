@@ -4,18 +4,9 @@ module ZookeeperCommon
   # sigh, i guess define this here?
   ZKRB_GLOBAL_CB_REQ   = -1
 
-  def self.included(mod)
-    mod.extend(ZookeeperCommon::ClassMethods)
-  end
-
-  module ClassMethods
-    def logger
-      @logger ||= Logger.new('/dev/null') # UNIX: YOU MUST USE IT!
-    end
-
-    def logger=(logger)
-      @logger = logger
-    end
+  def get_next_event(blocking=true)
+    return nil if closed? # protect against this happening in a callback after close
+    super(blocking) 
   end
 
 protected
@@ -50,13 +41,12 @@ protected
     @req_mutex.synchronize { @completion_reqs.delete(req_id) }
   end
 
+  def dispatch_next_callback(blocking=true)
+    hash = get_next_event(blocking)
+#     Zookeeper.logger.debug { "get_next_event returned: #{hash.inspect}" }
 
-  def dispatch_next_callback
-    hash = get_next_event
     return nil unless hash
     
-    logger.debug {  "dispatch_next_callback got event: #{hash.inspect}" }
-
     is_completion = hash.has_key?(:rc)
     
     hash[:stat] = ZookeeperStat::Stat.new(hash[:stat]) if hash.has_key?(:stat)
@@ -81,8 +71,8 @@ protected
     else
       logger.warn { "Duplicate event received (no handler for req_id #{hash[:req_id]}, event: #{hash.inspect}" }
     end
+    true
   end
-
 
   def assert_supported_keys(args, supported)
     unless (args.keys - supported).empty?
@@ -98,9 +88,5 @@ protected
     end
   end
 
-  # supplied by parent class impl.
-  def logger
-    self.class.logger
-  end
 end
 

@@ -59,6 +59,53 @@ class ZookeeperBase
     end
   end
 
+  class QueueWithPipe
+    attr_writer :clear_reads_on_pop
+
+    def initialize
+      r, w = IO.pipe
+      @pipe = { :read => r, :write => w }
+      @queue = Queue.new
+
+      # with the EventMachine client, we want to let EM handle clearing the
+      # event pipe, so we set this to false
+      @clear_reads_on_pop = true
+    end
+
+    def push(obj)
+      rv = @queue.push(obj)
+      @pipe[:write].write('0')
+      logger.debug { "pushed #{obj.inspect} onto queue and wrote to pipe" }
+      rv
+    end
+
+    def pop(non_blocking=false)
+      rv = @queue.pop(non_blocking)
+
+      # if non_blocking is true and an exception is raised, this won't get called
+      @pipe[:read].read(1) if clear_reads_on_pop?
+
+      rv
+    end
+
+    def close
+      @pipe.values.each { |io| io.close unless io.closed? }
+    end
+
+    def selectable_io
+      @pipe[:read]
+    end
+
+    private
+      def clear_reads_on_pop?
+        @clear_reads_on_pop
+      end
+
+      def logger
+        Zookeeper.logger
+      end
+  end
+
   # used for internal dispatching
   module JavaCB #:nodoc:
     class Callback
@@ -78,13 +125,24 @@ class ZookeeperBase
       include JZK::AsyncCallback::DataCallback
 
       def processResult(rc, path, queue, data, stat)
-        queue.push({
+        logger.debug { "#{self.class.name}#processResult rc: #{rc}, req_id: #{req_id}, path: #{path}, queue: #{queue.inspect}, data: #{data.inspect}, stat: #{stat.inspect}" }
+
+        hash = {
           :rc     => rc,
           :req_id => req_id,
           :path   => path,
-          :data   => String.from_java_bytes(data),
-          :stat   => stat.to_hash,
-        })
+          :data   => (data && String.from_java_bytes(data)),
+          :stat   => (stat && stat.to_hash),
+        }
+
+#         if rc == Zookeeper::ZOK
+#           hash.merge!({
+#             :data   => String.from_java_bytes(data),
+#             :stat   => stat.to_hash,
+#           })
+#         end
+
+        queue.push(hash)
       end
     end
 
@@ -92,6 +150,7 @@ class ZookeeperBase
       include JZK::AsyncCallback::StringCallback
 
       def processResult(rc, path, queue, str)
+        logger.debug { "#{self.class.name}#processResult rc: #{rc}, req_id: #{req_id}, path: #{path}, queue: #{queue.inspect}, str: #{str.inspect}" }
         queue.push(:rc => rc, :req_id => req_id, :path => path, :string => str)
       end
     end
@@ -100,7 +159,7 @@ class ZookeeperBase
       include JZK::AsyncCallback::StatCallback
 
       def processResult(rc, path, queue, stat)
-        logger.debug { "StatCallback#processResult rc: #{rc.inspect}, path: #{path.inspect}, queue: #{queue.inspect}, stat: #{stat.inspect}" }
+        logger.debug { "#{self.class.name}#processResult rc: #{rc.inspect}, req_id: #{req_id}, path: #{path.inspect}, queue: #{queue.inspect}, stat: #{stat.inspect}" }
         queue.push(:rc => rc, :req_id => req_id, :stat => (stat and stat.to_hash), :path => path)
       end
     end
@@ -109,7 +168,16 @@ class ZookeeperBase
       include JZK::AsyncCallback::Children2Callback
 
       def processResult(rc, path, queue, children, stat)
-        queue.push(:rc => rc, :req_id => req_id, :path => path, :strings => children.to_a, :stat => stat.to_hash)
+        logger.debug { "#{self.class.name}#processResult rc: #{rc}, req_id: #{req_id}, path: #{path}, queue: #{queue.inspect}, children: #{children.inspect}, stat: #{stat.inspect}" }
+        hash = {
+          :rc       => rc, 
+          :req_id   => req_id, 
+          :path     => path, 
+          :strings  => (children && children.to_a), 
+          :stat     => (stat and stat.to_hash),
+        }
+
+        queue.push(hash)
       end
     end
 
@@ -117,9 +185,9 @@ class ZookeeperBase
       include JZK::AsyncCallback::ACLCallback
       
       def processResult(rc, path, queue, acl, stat)
-        logger.debug { "ACLCallback#processResult #{rc.inspect} #{path.inspect} #{queue.inspect} #{acl.inspect} #{stat.inspect}" }
+        logger.debug { "ACLCallback#processResult rc: #{rc.inspect}, req_id: #{req_id}, path: #{path.inspect}, queue: #{queue.inspect}, acl: #{acl.inspect}, stat: #{stat.inspect}" }
         a = Array(acl).map { |a| a.to_hash }
-        queue.push(:rc => rc, :req_id => req_id, :path => path, :acl => a, :stat => stat.to_hash)
+        queue.push(:rc => rc, :req_id => req_id, :path => path, :acl => a, :stat => (stat && stat.to_hash))
       end
     end
 
@@ -127,6 +195,7 @@ class ZookeeperBase
       include JZK::AsyncCallback::VoidCallback
 
       def processResult(rc, path, queue)
+        logger.debug { "#{self.class.name}#processResult rc: #{rc}, req_id: #{req_id}, queue: #{queue.inspect}" }
         queue.push(:rc => rc, :req_id => req_id, :path => path)
       end
     end
@@ -140,7 +209,7 @@ class ZookeeperBase
       end
 
       def process(event)
-        logger.debug { "WatcherCallback got event: #{event.to_hash}" }
+        logger.debug { "WatcherCallback got event: #{event.to_hash.inspect}" }
         hash = event.to_hash.merge(:req_id => req_id)
         @event_queue.push(hash)
       end
@@ -156,26 +225,32 @@ class ZookeeperBase
       set_default_global_watcher(&watcher)
     end
 
-    @jzk = JZK::ZooKeeper.new(@host, DEFAULT_SESSION_TIMEOUT, JavaCB::WatcherCallback.new(@event_queue))
+    @start_stop_mutex.synchronize do
+      @jzk = JZK::ZooKeeper.new(@host, DEFAULT_SESSION_TIMEOUT, JavaCB::WatcherCallback.new(@event_queue))
 
-    if timeout > 0
-      time_to_stop = Time.now + timeout
-      until connected?
-        break if Time.now > time_to_stop
-        sleep 0.1
+      if timeout > 0
+        time_to_stop = Time.now + timeout
+        until connected?
+          break if Time.now > time_to_stop
+          sleep 0.1
+        end
       end
     end
 
     state
   end
 
-  def initialize(host, timeout=10, watcher=nil)
+  def initialize(host, timeout=10, watcher=nil, options={})
     @host = host
-    @event_queue = Queue.new
+    @event_queue = QueueWithPipe.new
     @current_req_id = 0
     @req_mutex = Monitor.new
     @watcher_reqs = {}
     @completion_reqs = {}
+    @_running = nil
+    @_closed  = false
+    @options = {}
+    @start_stop_mutex = Mutex.new
 
     watcher ||= get_default_global_watcher
 
@@ -184,6 +259,7 @@ class ZookeeperBase
 
     reopen(timeout, watcher)
     return nil unless connected?
+    @_running = true
     setup_dispatch_thread!
   end
 
@@ -201,6 +277,22 @@ class ZookeeperBase
 
   def associating?
     state == JZK::ZooKeeper::States::ASSOCIATING
+  end
+
+  def running?
+    @_running
+  end
+
+  def closed?
+    @_closed
+  end
+
+  def self.set_debug_level(*a)
+    # IGNORED IN JRUBY
+  end
+
+  def set_debug_level(*a)
+    # IGNORED IN JRUBY
   end
 
   def get(req_id, path, callback, watcher)
@@ -332,20 +424,36 @@ class ZookeeperBase
 
   class DispatchShutdownException < StandardError; end
 
+  def wake_event_loop!
+    @event_queue.push(KILL_TOKEN)    # ignored by dispatch_next_callback
+  end
+
   def close
     @req_mutex.synchronize do
-      if @jzk
-        @jzk.close
-        wait_until { !connected? }
-      end
-
-      if @dispatcher 
-        @dispatcher[:running] = false
-        @event_queue.push(KILL_TOKEN)    # ignored by dispatch_next_callback
-      end
+      @_running = false if @_running
+    end
+        
+    # XXX: why is wake_event_loop! here?
+    if @dispatcher 
+      wake_event_loop!
+      @dispatcher.join 
     end
 
-    @dispatcher.join
+    unless @_closed
+      @start_stop_mutex.synchronize do
+        @_closed = true
+        close_handle
+      end
+
+      @event_queue.close
+    end
+  end
+
+  def close_handle
+    if @jzk
+      @jzk.close
+      wait_until { !connected? }
+    end
   end
 
   # set the watcher object/proc that will receive all global events (such as session/state events)
@@ -360,6 +468,23 @@ class ZookeeperBase
     end
   end
 
+  # by accessing this selectable_io you indicate that you intend to clear it
+  # when you have delivered an event by reading one byte per event.
+  #
+  def selectable_io
+    @event_queue.clear_reads_on_pop = false
+    @event_queue.selectable_io
+  end
+
+  def get_next_event(blocking=true)
+    @event_queue.pop(!blocking).tap do |event|
+      logger.debug { "get_next_event delivering event: #{event.inspect}" }
+      raise DispatchShutdownException if event == KILL_TOKEN
+    end
+  rescue ThreadError
+    nil
+  end
+ 
   protected
     def handle_keeper_exception
       yield
@@ -376,28 +501,23 @@ class ZookeeperBase
     end
    
     def create_watcher(req_id, path)
+      logger.debug { "creating watcher for req_id: #{req_id} path: #{path}" }
       lambda do |event|
+        logger.debug { "watcher for req_id #{req_id}, path: #{path} called back" }
         h = { :req_id => req_id, :type => event.type.int_value, :state => event.state.int_value, :path => path }
         @event_queue.push(h)
       end
     end
 
-    def get_next_event
-      @event_queue.pop.tap do |event|
-        raise DispatchShutdownException if event == KILL_TOKEN
-      end
-    end
-    
     # method to wait until block passed returns true or timeout (default is 10 seconds) is reached 
     def wait_until(timeout=10, &block)
       time_to_stop = Time.now + timeout
       until yield do 
         break if Time.now > time_to_stop
-        sleep 0.3
+        sleep 0.1
       end
     end
 
-  protected
     # TODO: Make all global puts configurable
     def get_default_global_watcher
       Proc.new { |args|
@@ -406,13 +526,10 @@ class ZookeeperBase
       }
     end
 
-  private
     def setup_dispatch_thread!
       logger.debug {  "starting dispatch thread" }
       @dispatcher = Thread.new do
-        Thread.current[:running] = true
-
-        while Thread.current[:running]
+        while running?
           begin
             dispatch_next_callback 
           rescue DispatchShutdownException
