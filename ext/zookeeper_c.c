@@ -25,6 +25,8 @@
 
 static VALUE Zookeeper = Qnil;
 
+// slyphon: possibly add a lock to this for synchronizing during get_next_event
+
 struct zkrb_instance_data {
   zhandle_t            *zh;
   clientid_t          myid;
@@ -40,14 +42,6 @@ typedef enum {
 
 #define IS_SYNC(zkrbcall) ((zkrbcall)==SYNC || (zkrbcall)==SYNC_WATCH)
 #define IS_ASYNC(zkrbcall) ((zkrbcall)==ASYNC || (zkrbcall)==ASYNC_WATCH)
-
-pthread_mutex_t zkrb_init_mutex = PTHREAD_MUTEX_INITIALIZER;
-
-/*static void zkrb_debug_log(char *debug_str) {*/
-/*  if (ZKRBDebugging) {*/
-/*    fprintf(stderr, "%s\n", debug_str);*/
-/*  }*/
-/*}*/
 
 static int destroy_zkrb_instance(struct zkrb_instance_data* ptr) {
   int rv = ZOK;
@@ -161,8 +155,6 @@ static VALUE method_init(int argc, VALUE* argv, VALUE self) {
   zkrb_calling_context *ctx =
     zkrb_calling_context_alloc(ZKRB_GLOBAL_REQ, zk_local_ctx->queue);
 
-/*  pthread_mutex_lock(&zkrb_init_mutex);*/
-
   zk_local_ctx->zh =
       zookeeper_init(
           RSTRING_PTR(hostPort),
@@ -171,8 +163,6 @@ static VALUE method_init(int argc, VALUE* argv, VALUE self) {
           &zk_local_ctx->myid,
           ctx,
           0);
-
-/*  pthread_mutex_unlock(&zkrb_init_mutex);*/
 
 #warning [wickman] TODO handle this properly on the Ruby side rather than C side
   if (!zk_local_ctx->zh) {
@@ -483,6 +473,8 @@ static int is_running(VALUE self) {
 }
 
 
+/* slyphon: NEED TO PROTECT THIS AGAINST SHUTDOWN */
+
 static VALUE method_get_next_event(VALUE self, VALUE blocking) {
   char buf[64];
   FETCH_DATA_PTR(self, zk);
@@ -578,13 +570,14 @@ static VALUE method_close_handle(VALUE self) {
     fprintf(stderr, "CLOSING ZK INSTANCE:");
     print_zkrb_instance_data(zk);
   }
-
-  /* Note that after zookeeper_close() returns, ZK handle is invalid */
-  int rc = destroy_zkrb_instance(zk);
-
+  
   // this is a value on the ruby side we can check to see if destroy_zkrb_instance
   // has been called
   rb_iv_set(self, "@_closed", Qtrue);
+
+
+  /* Note that after zookeeper_close() returns, ZK handle is invalid */
+  int rc = destroy_zkrb_instance(zk);
 
   return INT2FIX(rc);
 }
@@ -609,7 +602,6 @@ static VALUE method_recv_timeout(VALUE self) {
   return INT2NUM(zoo_recv_timeout(zk->zh));
 }
 
-// how do you make a class method??
 static VALUE klass_method_set_debug_level(VALUE klass, VALUE level) {
   Check_Type(level, T_FIXNUM);
   ZKRBDebugging = (FIX2INT(level) == ZOO_LOG_LEVEL_DEBUG);
@@ -651,7 +643,6 @@ static void zkrb_define_methods(void) {
   DEFINE_METHOD(has_events, 0);
 
   // Make these class methods?
-/*  DEFINE_METHOD(set_debug_level, 1);*/
   DEFINE_METHOD(zerror, 1);
 
   rb_define_singleton_method(Zookeeper, "set_debug_level", klass_method_set_debug_level, 1);

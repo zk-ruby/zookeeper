@@ -111,7 +111,7 @@ module ZookeeperEM
     # we have an event waiting
     def notify_readable
       if @zk_client.running?
-        logger.debug { "#{self.class.name}: dispatching events while #{@zk_client.running?}" }
+#         logger.debug { "#{self.class.name}: dispatching events while #{@zk_client.running?}" }
 
         read_io_nb if @zk_client.dispatch_next_callback(false)
 

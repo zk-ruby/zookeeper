@@ -27,9 +27,6 @@ class ZookeeperBase < CZookeeper
       set_default_global_watcher(&watcher)
     end
 
-
-  #     $stderr.puts "@_running is #{@_running.inspect}"
-
     @start_stop_mutex.synchronize do
       init(@host)
 
