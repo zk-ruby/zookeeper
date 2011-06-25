@@ -49,7 +49,7 @@ class ZookeeperBase < CZookeeper
     @current_req_id = 1
     @host = host
 
-    @start_stop_mutex = Monitor.new
+    @start_stop_mutex = Mutex.new
 
     watcher ||= get_default_global_watcher
 
@@ -132,38 +132,6 @@ class ZookeeperBase < CZookeeper
     return ZOO_CLOSED_STATE if closed?
     super
   end
-
-#   def get(*a)
-#     barf_unless_running! { super }
-#   end
-
-#   def set(*a)
-#     barf_unless_running! { super }
-#   end
-
-#   def get_children(*a)
-#     barf_unless_running! { super }
-#   end
-
-#   def stat(*a)
-#     barf_unless_running! { super }
-#   end
-
-#   def create(*a)
-#     barf_unless_running! { super }
-#   end
-
-#   def delete(*a)
-#     barf_unless_running! { super }
-#   end
-
-#   def set_acl(*a)
-#     barf_unless_running! { super }
-#   end
-
-#   def get_acl(*a)
-#     barf_unless_running! { super }
-#   end
 
 protected
   def barf_unless_running!
