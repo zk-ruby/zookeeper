@@ -82,26 +82,20 @@ class ZookeeperBase < CZookeeper
   end
 
   def close
-#     $stderr.puts "#{__FILE__}:#{__LINE__} close called!"
     @start_stop_mutex.synchronize do
-#       $stderr.puts "#{__FILE__}:#{__LINE__} set @_running = false"
       @_running = false if @_running
     end
 
     if @dispatcher
       unless @_closed
-#         $stderr.puts "#{__FILE__}:#{__LINE__} waking event loop!"
         wake_event_loop! 
       end
-#       $stderr.puts "#{__FILE__}:#{__LINE__} joining dispatcher thread"
       @dispatcher.join 
     end
 
     @start_stop_mutex.synchronize do
       unless @_closed
-#         $stderr.puts "#{__FILE__}:#{__LINE__} closing handle"
         close_handle
-#         $stderr.puts "#{__FILE__}:#{__LINE__} closed handle"
       end
     end
         
