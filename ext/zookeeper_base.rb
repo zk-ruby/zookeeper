@@ -49,7 +49,7 @@ class ZookeeperBase < CZookeeper
     @current_req_id = 1
     @host = host
 
-    @start_stop_mutex = Mutex.new
+    @start_stop_mutex = Monitor.new
 
     watcher ||= get_default_global_watcher
 
@@ -82,26 +82,34 @@ class ZookeeperBase < CZookeeper
   end
 
   def close
+#     $stderr.puts "#{__FILE__}:#{__LINE__} close called!"
     @start_stop_mutex.synchronize do
+#       $stderr.puts "#{__FILE__}:#{__LINE__} set @_running = false"
       @_running = false if @_running
     end
 
     if @dispatcher
-      wake_event_loop! unless @_closed
+      unless @_closed
+#         $stderr.puts "#{__FILE__}:#{__LINE__} waking event loop!"
+        wake_event_loop! 
+      end
+#       $stderr.puts "#{__FILE__}:#{__LINE__} joining dispatcher thread"
       @dispatcher.join 
     end
 
     @start_stop_mutex.synchronize do
       unless @_closed
+#         $stderr.puts "#{__FILE__}:#{__LINE__} closing handle"
         close_handle
-        
-        # this is set up in the C init method, but it's easier to 
-        # do the teardown here
-        begin
-          @selectable_io.close if @selectable_io
-        rescue IOError
-        end
+#         $stderr.puts "#{__FILE__}:#{__LINE__} closed handle"
       end
+    end
+        
+    # this is set up in the C init method, but it's easier to 
+    # do the teardown here
+    begin
+      @selectable_io.close if @selectable_io
+    rescue IOError
     end
   end
 
@@ -126,7 +134,51 @@ class ZookeeperBase < CZookeeper
     @start_stop_mutex.synchronize { false|@_running }
   end
 
+  def state
+    return ZOO_CLOSED_STATE if closed?
+    super
+  end
+
+#   def get(*a)
+#     barf_unless_running! { super }
+#   end
+
+#   def set(*a)
+#     barf_unless_running! { super }
+#   end
+
+#   def get_children(*a)
+#     barf_unless_running! { super }
+#   end
+
+#   def stat(*a)
+#     barf_unless_running! { super }
+#   end
+
+#   def create(*a)
+#     barf_unless_running! { super }
+#   end
+
+#   def delete(*a)
+#     barf_unless_running! { super }
+#   end
+
+#   def set_acl(*a)
+#     barf_unless_running! { super }
+#   end
+
+#   def get_acl(*a)
+#     barf_unless_running! { super }
+#   end
+
 protected
+  def barf_unless_running!
+    @start_stop_mutex.synchronize do
+      raise ShuttingDownException unless (@_running and not @_closed)
+      yield
+    end
+  end
+
   def setup_dispatch_thread!
     @dispatcher = Thread.new do
       while running?

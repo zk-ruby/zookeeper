@@ -56,6 +56,7 @@ module ZookeeperExceptions
     # these are Ruby client exceptions
     class ConnectionClosed        < ZookeeperException; end
     class NotConnected            < ZookeeperException; end 
+    class ShuttingDownException   < ZookeeperException; end
     
     def self.by_code(code)
       case code
