@@ -521,7 +521,7 @@ static VALUE method_get_next_event(VALUE self, VALUE blocking) {
           rb_raise(rb_eRuntimeError, "read failed: %d", errno);
         }
         else if (ZKRBDebugging) {
-          fprintf(stderr, "read %d bytes from the queue's pipe\n", bytes_read);
+          fprintf(stderr, "read %d bytes from the queue (%p)'s pipe\n", bytes_read, zk->queue);
         }
 
         continue;
