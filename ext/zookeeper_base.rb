@@ -49,7 +49,7 @@ class ZookeeperBase < CZookeeper
     @current_req_id = 1
     @host = host
 
-    @start_stop_mutex = Mutex.new
+    @start_stop_mutex = Monitor.new
 
     watcher ||= get_default_global_watcher
 
