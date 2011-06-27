@@ -472,6 +472,10 @@ static int is_running(VALUE self) {
   return RTEST(rval);
 }
 
+static int is_closed(VALUE self) {
+  VALUE rval = rb_iv_get(self, "@_closed");
+  return RTEST(rval);
+}
 
 /* slyphon: NEED TO PROTECT THIS AGAINST SHUTDOWN */
 
@@ -484,7 +488,7 @@ static VALUE method_get_next_event(VALUE self, VALUE blocking) {
     // we use the is_running(self) method here because it allows us to have a
     // ruby-land semaphore that we can also use in the java extension
     //
-    if (!is_running(self)) {
+    if (is_closed(self) || !is_running(self)) {
 /*      fprintf(stderr, "method_get_next_event: running is false, returning nil\n");*/
       return Qnil;  // this case for shutdown
     }
@@ -517,7 +521,7 @@ static VALUE method_get_next_event(VALUE self, VALUE blocking) {
           rb_raise(rb_eRuntimeError, "read failed: %d", errno);
         }
         else if (ZKRBDebugging) {
-          fprintf(stderr, "read %d bytes from the queue's pipe\n", bytes_read);
+          fprintf(stderr, "read %d bytes from the queue (%p)'s pipe\n", bytes_read, zk->queue);
         }
 
         continue;

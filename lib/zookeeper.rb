@@ -1,6 +1,7 @@
 # Ruby wrapper for the Zookeeper C API
 
 require 'thread'
+require 'monitor'
 require 'zookeeper/common'
 require 'zookeeper/constants'
 require 'zookeeper/callbacks'

@@ -87,21 +87,23 @@ class ZookeeperBase < CZookeeper
     end
 
     if @dispatcher
-      wake_event_loop! unless @_closed
+      unless @_closed
+        wake_event_loop! 
+      end
       @dispatcher.join 
     end
 
     @start_stop_mutex.synchronize do
       unless @_closed
         close_handle
-        
-        # this is set up in the C init method, but it's easier to 
-        # do the teardown here
-        begin
-          @selectable_io.close if @selectable_io
-        rescue IOError
-        end
       end
+    end
+        
+    # this is set up in the C init method, but it's easier to 
+    # do the teardown here
+    begin
+      @selectable_io.close if @selectable_io
+    rescue IOError
     end
   end
 
@@ -126,7 +128,19 @@ class ZookeeperBase < CZookeeper
     @start_stop_mutex.synchronize { false|@_running }
   end
 
+  def state
+    return ZOO_CLOSED_STATE if closed?
+    super
+  end
+
 protected
+  def barf_unless_running!
+    @start_stop_mutex.synchronize do
+      raise ShuttingDownException unless (@_running and not @_closed)
+      yield
+    end
+  end
+
   def setup_dispatch_thread!
     @dispatcher = Thread.new do
       while running?

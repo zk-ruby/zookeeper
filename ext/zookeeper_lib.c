@@ -23,6 +23,16 @@ int ZKRBDebugging;
 
 pthread_mutex_t zkrb_q_mutex = PTHREAD_MUTEX_INITIALIZER;
 
+
+/********************************************************************************
+ *
+ * NOTE: be *very careful* in these functions, calling *ANY* ruby interpreter
+ * function when you're not in an interpreter thread can hork ruby, trigger a
+ * [BUG], corrupt the stack, kill you dog, knock up your daughter, etc. etc.
+ *
+ *********************************************************************************
+*/
+
 /* push/pop is a misnomer, this is a queue */
 void zkrb_enqueue(zkrb_queue_t *q, zkrb_event_t *elt) {
   pthread_mutex_lock(&zkrb_q_mutex);
@@ -37,8 +47,19 @@ void zkrb_enqueue(zkrb_queue_t *q, zkrb_event_t *elt) {
   q->tail->next = NULL;
   ssize_t ret = write(q->pipe_write, "0", 1);   /* Wake up Ruby listener */
   pthread_mutex_unlock(&zkrb_q_mutex);
-  if (ret == -1)
-    rb_raise(rb_eRuntimeError, "write to pipe failed: %d", errno);
+
+  // XXX(slyphon): can't raise a ruby exception here as we may not be calling
+  // this from a ruby thread. Calling into the interpreter from a non-ruby
+  // thread is bad, mm'kay?
+
+  if (ZKRBDebugging) {
+    if ((ret == -1)) {
+      fprintf(stderr, "WARNING: write to queue (%p) pipe failed!\n", q);
+    }
+/*    else {*/
+/*      fprintf(stderr, "successfully enqueued event on queue (%p)\n", q);*/
+/*    }*/
+  }
 }
 
 zkrb_event_t * zkrb_peek(zkrb_queue_t *q) {
@@ -79,6 +100,9 @@ void zkrb_signal(zkrb_queue_t *q) {
 
 zkrb_queue_t *zkrb_queue_alloc(void) {
   int pfd[2];
+
+  // XXX(slyphon): close-on-exec settings?
+
   if (pipe(pfd) == -1)
     rb_raise(rb_eRuntimeError, "create of pipe failed: %d", errno);
 
