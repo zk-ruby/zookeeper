@@ -20,7 +20,12 @@ describe 'ZookeeperEM' do
     end
 
     def teardown_and_done
-      @zk.close { done }
+      @zk.close do 
+        logger.debug { "TEST: about to call done" }
+        EM.next_tick do
+          done
+        end
+      end
     end
 
     describe 'selectable_io' do

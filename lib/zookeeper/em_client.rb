@@ -37,7 +37,7 @@ module ZookeeperEM
     def close(&block)
       on_close(&block)
 
-        logger.debug { "close called, closed? #{closed?} running? #{running?}" }
+      logger.debug { "#{self.class.name}: close called, closed? #{closed?} running? #{running?}" }
 
       if @_running
         @start_stop_mutex.synchronize do
@@ -45,16 +45,18 @@ module ZookeeperEM
         end
 
         if @em_connection
-          @em_connection.detach do
-            logger.debug { "connection unbound, continuing with shutdown" }
-            finish_closing
+          EM.next_tick do
+            @em_connection.detach do
+              logger.debug { "#{self.class.name}: connection unbound, continuing with shutdown" }
+              finish_closing
+            end
           end
         else
-          logger.debug { "em_connection was never set up, finish closing" }
+          logger.debug { "#{self.class.name}: em_connection was never set up, finish closing" }
           finish_closing
         end
       else
-        logger.debug { "we are not running, so returning on_close deferred" }
+        logger.debug { "#{self.class.name}: we are not running, so returning on_close deferred" }
       end
 
       on_close
@@ -119,8 +121,13 @@ module ZookeeperEM
         end
       end
 
-      logger.debug { "firing on_attached callback" }
-      @zk_client.on_attached.succeed
+      # probably because of the way post_init works, unless we fire this
+      # callback in next_tick @em_connection in the client may not be set
+      # (which on_attached callbacks may be relying on)
+      EM.next_tick do 
+        logger.debug { "firing on_attached callback" }
+        @zk_client.on_attached.succeed
+      end
     end
     
     # EM::DefaultDeferrable that will be called back when our em_connection has been detached
