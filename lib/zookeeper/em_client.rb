@@ -44,22 +44,19 @@ module ZookeeperEM
           @_running = false
         end
 
-        @em_connection.detach if @em_connection
-        @em_connection = nil
-
-        unless @_closed
-          @start_stop_mutex.synchronize do
-            logger.debug { "closing handle" }
-            close_handle
+        if @em_connection
+          @em_connection.detach do
+            logger.debug { "connection unbound, continuing with shutdown" }
+            finish_closing
           end
-
-          selectable_io.close unless selectable_io.closed?
+        else
+          logger.debug { "em_connection was never set up, finish closing" }
+          finish_closing
         end
       else
         logger.debug { "we are not running, so returning on_close deferred" }
       end
 
-      on_close.succeed
       on_close
     end
 
@@ -73,13 +70,29 @@ module ZookeeperEM
       EM.schedule do
         if running? and not closed?
           begin
+            logger.debug { "adding EM.watch(#{selectable_io.inspect})" }
             @em_connection = EM.watch(selectable_io, ZKConnection, self) { |cnx| cnx.notify_readable = true }
           rescue Exception => e
             $stderr.puts "caught exception from EM.watch(): #{e.inspect}"
           end
-          on_attached.succeed
         end
       end
+    end
+
+    def finish_closing
+      unless @_closed
+        @start_stop_mutex.synchronize do
+          logger.debug { "closing handle" }
+          close_handle
+        end
+
+        unless selectable_io.closed?
+          logger.debug { "calling close on selectable_io: #{selectable_io.inspect}" }
+          selectable_io.close
+        end
+      end
+
+      on_close.succeed
     end
   end
 
@@ -94,24 +107,48 @@ module ZookeeperEM
 
     def initialize(zk_client)
       @zk_client = zk_client
+    end
+
+    def post_init
+      logger.debug { "post_init called" }
       @attached = true
+
+      @on_unbind = EM::DefaultDeferrable.new.tap do |d|
+        d.callback do
+          logger.debug { "on_unbind deferred fired" }
+        end
+      end
+
+      logger.debug { "firing on_attached callback" }
+      @zk_client.on_attached.succeed
+    end
+    
+    # EM::DefaultDeferrable that will be called back when our em_connection has been detached
+    # and we've completed the close operation
+    def on_unbind(&block)
+      @on_unbind.callback(&block) if block
+      @on_unbind
     end
 
     def attached?
       @attached
     end
 
-    def detach
+    def unbind
+      on_unbind.succeed
+    end
+
+    def detach(&blk)
+      on_unbind(&blk)
       return unless @attached
       @attached = false
-      super
-      logger.debug { "#{self.class.name}: detached" }
+      rval = super()
+      logger.debug { "#{self.class.name}: detached, rval: #{rval.inspect}" }
     end
 
     # we have an event waiting
     def notify_readable
       if @zk_client.running?
-#         logger.debug { "#{self.class.name}: dispatching events while #{@zk_client.running?}" }
 
         read_io_nb if @zk_client.dispatch_next_callback(false)
 
