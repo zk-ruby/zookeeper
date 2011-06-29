@@ -13,6 +13,14 @@ Zookeeper.logger = Logger.new(File.expand_path('../../test.log', __FILE__)).tap 
   log.level = Logger::DEBUG
 end
 
+
+# NOTE: this is a useful debugging setup. have our logs and the low-level C
+# logging statements both go to stderr. to use, comment the above and uncomment
+# below
+
+# Zookeeper.logger = Logger.new($stderr).tap { |l| l.level = Logger::DEBUG }
+# Zookeeper.set_debug_level(4)
+
 def logger
   Zookeeper.logger
 end

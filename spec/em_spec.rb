@@ -20,7 +20,12 @@ describe 'ZookeeperEM' do
     end
 
     def teardown_and_done
-      @zk.close { done }
+      @zk.close do 
+        logger.debug { "TEST: about to call done" }
+        EM.next_tick do
+          done
+        end
+      end
     end
 
     describe 'selectable_io' do
@@ -51,37 +56,6 @@ describe 'ZookeeperEM' do
           r, *_ = IO.select([@zk.selectable_io], [], [], 2)
 
           r.should be_kind_of(Array)
-
-          teardown_and_done
-        end
-      end
-
-      it %[should not be read-ready if there's no event] do
-        pending "get this to work in jruby" if defined?(::JRUBY_VERSION)
-        # there's always an initial event after connect
-        
-        # except in jruby
-#         if defined?(::JRUBY_VERSION)
-#           @zk.get(:path => '/', :callback => @data_cb)
-#         end
-
-        setup_zk do
-          events = 0
-
-          while true
-            r, *_ = IO.select([@zk.selectable_io], [], [], 0.2)
-
-            break unless r
-
-            h = @zk.get_next_event(false)
-            @zk.selectable_io.read(1)
-
-            events += 1
-
-            h.should be_kind_of(Hash)
-          end
-
-          events.should == 1
 
           teardown_and_done
         end

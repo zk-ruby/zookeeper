@@ -19,6 +19,7 @@
 #include <unistd.h>
 #include <sys/fcntl.h>
 #include <pthread.h>
+#include <inttypes.h>
 
 #include "zookeeper_lib.h"
 
@@ -49,7 +50,9 @@ static int destroy_zkrb_instance(struct zkrb_instance_data* ptr) {
   if (ptr->zh) {
     const void *ctx = zoo_get_context(ptr->zh);
     /* Note that after zookeeper_close() returns, ZK handle is invalid */
+    if (ZKRBDebugging) fprintf(stderr, "calling zookeeper_close\n"); 
     rv = zookeeper_close(ptr->zh);
+    if (ZKRBDebugging) fprintf(stderr, "zookeeper_close returned %d\n", rv); 
     free((void *) ctx);
   }
 
@@ -69,7 +72,7 @@ static void print_zkrb_instance_data(struct zkrb_instance_data* ptr) {
   fprintf(stderr, "zkrb_instance_data (%p) {\n", ptr);
   fprintf(stderr, "   zh = %p\n",           ptr->zh);
   fprintf(stderr, "     { state = %d }\n",  zoo_state(ptr->zh));
-  fprintf(stderr, "   id = %llx\n",         ptr->myid.client_id);
+  fprintf(stderr, "   id = %"PRId64"\n",    ptr->myid.client_id);   // PRId64 defined in inttypes.h
   fprintf(stderr, "    q = %p\n",           ptr->queue);
   fprintf(stderr, "}\n");
 }
@@ -521,7 +524,7 @@ static VALUE method_get_next_event(VALUE self, VALUE blocking) {
           rb_raise(rb_eRuntimeError, "read failed: %d", errno);
         }
         else if (ZKRBDebugging) {
-          fprintf(stderr, "read %d bytes from the queue (%p)'s pipe\n", bytes_read, zk->queue);
+          fprintf(stderr, "read %zd bytes from the queue (%p)'s pipe\n", bytes_read, zk->queue);
         }
 
         continue;
@@ -579,9 +582,12 @@ static VALUE method_close_handle(VALUE self) {
   // has been called
   rb_iv_set(self, "@_closed", Qtrue);
 
+  if (ZKRBDebugging) fprintf(stderr, "calling destroy_zkrb_instance\n");
 
   /* Note that after zookeeper_close() returns, ZK handle is invalid */
   int rc = destroy_zkrb_instance(zk);
+
+  if (ZKRBDebugging) fprintf(stderr, "destroy_zkrb_instance returned: %d\n", rc);
 
   return INT2FIX(rc);
 }

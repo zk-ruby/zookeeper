@@ -16,6 +16,7 @@ wickman@twitter.com
 #include <stdlib.h>
 #include <pthread.h>
 #include <unistd.h>
+#include <inttypes.h>
 
 #define GET_SYM(str) ID2SYM(rb_intern(str))
 
@@ -56,9 +57,6 @@ void zkrb_enqueue(zkrb_queue_t *q, zkrb_event_t *elt) {
     if ((ret == -1)) {
       fprintf(stderr, "WARNING: write to queue (%p) pipe failed!\n", q);
     }
-/*    else {*/
-/*      fprintf(stderr, "successfully enqueued event on queue (%p)\n", q);*/
-/*    }*/
   }
 }
 
@@ -283,17 +281,17 @@ VALUE zkrb_event_to_ruby(zkrb_event_t *event) {
 void zkrb_print_stat(const struct Stat *s) {
   fprintf(stderr,  "stat {\n");
   if (s != NULL) {
-    fprintf(stderr,  "\t          czxid: %lld\n", s->czxid);
-    fprintf(stderr,  "\t          mzxid: %lld\n", s->mzxid);
-    fprintf(stderr,  "\t          ctime: %lld\n", s->ctime);
-    fprintf(stderr,  "\t          mtime: %lld\n", s->mtime);
-    fprintf(stderr,  "\t        version: %d\n"  , s->version);
-    fprintf(stderr,  "\t       cversion: %d\n"  , s->cversion);
-    fprintf(stderr,  "\t       aversion: %d\n"  , s->aversion);
-    fprintf(stderr,  "\t ephemeralOwner: %lld\n", s->ephemeralOwner);
-    fprintf(stderr,  "\t     dataLength: %d\n"  , s->dataLength);
-    fprintf(stderr,  "\t    numChildren: %d\n"  , s->numChildren);
-    fprintf(stderr,  "\t          pzxid: %lld\n", s->pzxid);
+    fprintf(stderr,  "\t          czxid: %"PRId64"\n", s->czxid);   // PRId64 defined in inttypes.h
+    fprintf(stderr,  "\t          mzxid: %"PRId64"\n", s->mzxid);
+    fprintf(stderr,  "\t          ctime: %"PRId64"\n", s->ctime);
+    fprintf(stderr,  "\t          mtime: %"PRId64"\n", s->mtime);
+    fprintf(stderr,  "\t        version: %d\n",        s->version);
+    fprintf(stderr,  "\t       cversion: %d\n",        s->cversion);
+    fprintf(stderr,  "\t       aversion: %d\n",        s->aversion);
+    fprintf(stderr,  "\t ephemeralOwner: %"PRId64"\n", s->ephemeralOwner);
+    fprintf(stderr,  "\t     dataLength: %d\n",        s->dataLength);
+    fprintf(stderr,  "\t    numChildren: %d\n",        s->numChildren);
+    fprintf(stderr,  "\t          pzxid: %"PRId64"\n", s->pzxid);
   } else {
     fprintf(stderr, "\tNULL\n");
   }
@@ -309,7 +307,7 @@ zkrb_calling_context *zkrb_calling_context_alloc(int64_t req_id, zkrb_queue_t *q
 
 void zkrb_print_calling_context(zkrb_calling_context *ctx) {
   fprintf(stderr, "calling context (%p){\n", ctx);
-  fprintf(stderr, "\treq_id = %lld\n", ctx->req_id);
+  fprintf(stderr, "\treq_id = %"PRId64"\n", ctx->req_id);
   fprintf(stderr, "\tqueue  = %p\n", ctx->queue);
   fprintf(stderr, "}\n");
 }
