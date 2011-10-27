@@ -3,43 +3,46 @@ zookeeper
 An interface to the Zookeeper distributed configuration server.
 
 For a higher-level interface with a slightly more convenient API and features
-such as locks, have a look at [ZK](https://github.com/slyphon/zk)
+such as locks, have a look at [ZK](https://github.com/slyphon/zk) (also
+available is [ZK-EventMachine](https://github.com/slyphon/zk-eventmachine) for
+those who prefer async).
 
-== License
+## License
 
 Copyright 2008 Phillip Pearson, and 2010 Twitter, Inc. Licensed under the
 MIT License.  See the included LICENSE file.  Portions copyright 2008-2010
 the Apache Software Foundation, licensed under the Apache 2 license, and
 used with permission.
 
-== Install
+## Install
 
 sudo gem install zookeeper
 
-== Usage
+## Usage
 
 Connect to a server:
 
-  require 'rubygems'
-  require 'zookeeper'
-  z = Zookeeper.new("localhost:2181")
-  z.get_children(:path => "/")
+	require 'rubygems'
+	require 'zookeeper'
+	z = Zookeeper.new("localhost:2181")
+	z.get_children(:path => "/")
 
-== Idioms
+## Idioms
 
-  The following methods are initially supported:
-    get
-    set
-    get_children
-    stat
-    create
-    delete
-    get_acl
-    set_acl
+The following methods are initially supported:
+* get
+* set
+* get\_children
+* stat
+* create
+* delete
+* get\_acl
+* set\_acl
 
-  All support async callbacks.  get, get_children and stat support both
-  watchers and callbacks.
+All support async callbacks.  get, get\_children and stat support both
+watchers and callbacks.
 
-  Calls take a dictionary of parameters.  With the exception of set_acl, the
-  only required parameter is :path.  Each call returns a dictionary with at
-  minimum two keys :req_id and :rc.
+Calls take a dictionary of parameters.  With the exception of set\_acl, the
+only required parameter is :path.  Each call returns a dictionary with at
+minimum two keys :req\_id and :rc.
+
