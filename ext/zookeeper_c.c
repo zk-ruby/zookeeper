@@ -17,16 +17,21 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <sys/fcntl.h>
+#include <pthread.h>
+#include <inttypes.h>
 
 #include "zookeeper_lib.h"
 
+
 static VALUE Zookeeper = Qnil;
+
+// slyphon: possibly add a lock to this for synchronizing during get_next_event
 
 struct zkrb_instance_data {
   zhandle_t            *zh;
   clientid_t          myid;
   zkrb_queue_t      *queue;
-  int        pending_close;
 };
 
 typedef enum {
@@ -45,7 +50,9 @@ static int destroy_zkrb_instance(struct zkrb_instance_data* ptr) {
   if (ptr->zh) {
     const void *ctx = zoo_get_context(ptr->zh);
     /* Note that after zookeeper_close() returns, ZK handle is invalid */
+    if (ZKRBDebugging) fprintf(stderr, "calling zookeeper_close\n"); 
     rv = zookeeper_close(ptr->zh);
+    if (ZKRBDebugging) fprintf(stderr, "zookeeper_close returned %d\n", rv); 
     free((void *) ctx);
   }
 
@@ -65,14 +72,58 @@ static void print_zkrb_instance_data(struct zkrb_instance_data* ptr) {
   fprintf(stderr, "zkrb_instance_data (%p) {\n", ptr);
   fprintf(stderr, "   zh = %p\n",           ptr->zh);
   fprintf(stderr, "     { state = %d }\n",  zoo_state(ptr->zh));
-  fprintf(stderr, "   id = %llx\n",         ptr->myid.client_id);
+  fprintf(stderr, "   id = %"PRId64"\n",    ptr->myid.client_id);   // PRId64 defined in inttypes.h
   fprintf(stderr, "    q = %p\n",           ptr->queue);
   fprintf(stderr, "}\n");
+}
+
+// cargo culted from io.c
+static VALUE zkrb_new_instance _((VALUE));
+
+static VALUE zkrb_new_instance(VALUE args) {
+    return rb_class_new_instance(2, (VALUE*)args+1, *(VALUE*)args);
+}
+
+static int zkrb_dup(int orig) {
+    int fd;
+
+    fd = dup(orig);
+    if (fd < 0) {
+        if (errno == EMFILE || errno == ENFILE || errno == ENOMEM) {
+            rb_gc();
+            fd = dup(orig);
+        }
+        if (fd < 0) {
+            rb_sys_fail(0);
+        }
+    }
+    return fd;
+}
+
+static VALUE create_selectable_io(zkrb_queue_t *q) {
+  // rb_cIO is the ruby IO class?
+
+  int pipe, state, read_fd;
+  VALUE args[3], reader;
+
+  read_fd = zkrb_dup(q->pipe_read);
+
+  args[0] = rb_cIO;
+  args[1] = INT2NUM(read_fd);
+  args[2] = INT2FIX(O_RDONLY);
+  reader = rb_protect(zkrb_new_instance, (VALUE)args, &state);
+
+  if (state) {
+    rb_jump_tag(state);
+  }
+
+  return reader;
 }
 
 static VALUE method_init(int argc, VALUE* argv, VALUE self) {
   VALUE hostPort;
   VALUE options;
+
   rb_scan_args(argc, argv, "11", &hostPort, &options);
 
   if (NIL_P(options)) {
@@ -92,6 +143,7 @@ static VALUE method_init(int argc, VALUE* argv, VALUE self) {
     zoo_set_debug_level(log_level);
   }
 
+
   VALUE data;
   struct zkrb_instance_data *zk_local_ctx;
   data = Data_Make_Struct(Zookeeper,
@@ -100,7 +152,6 @@ static VALUE method_init(int argc, VALUE* argv, VALUE self) {
            free_zkrb_instance_data,
            zk_local_ctx);
   zk_local_ctx->queue = zkrb_queue_alloc();
-  zk_local_ctx->pending_close = 0;
 
   zoo_deterministic_conn_order(0);
 
@@ -122,6 +173,9 @@ static VALUE method_init(int argc, VALUE* argv, VALUE self) {
   }
 
   rb_iv_set(self, "@data", data);
+  rb_iv_set(self, "@selectable_io", create_selectable_io(zk_local_ctx->queue));
+  rb_iv_set(self, "@_running", Qtrue);
+
 
   return Qnil;
 }
@@ -416,31 +470,65 @@ static VALUE method_get_acl(VALUE self, VALUE reqid, VALUE path, VALUE async) {
   return output;
 }
 
-static VALUE method_get_next_event(VALUE self) {
+static int is_running(VALUE self) {
+  VALUE rval = rb_iv_get(self, "@_running");
+  return RTEST(rval);
+}
+
+static int is_closed(VALUE self) {
+  VALUE rval = rb_iv_get(self, "@_closed");
+  return RTEST(rval);
+}
+
+/* slyphon: NEED TO PROTECT THIS AGAINST SHUTDOWN */
+
+static VALUE method_get_next_event(VALUE self, VALUE blocking) {
   char buf[64];
   FETCH_DATA_PTR(self, zk);
 
   for (;;) {
+
+    // we use the is_running(self) method here because it allows us to have a
+    // ruby-land semaphore that we can also use in the java extension
+    //
+    if (is_closed(self) || !is_running(self)) {
+/*      fprintf(stderr, "method_get_next_event: running is false, returning nil\n");*/
+      return Qnil;  // this case for shutdown
+    }
+
     zkrb_event_t *event = zkrb_dequeue(zk->queue, 1);
 
     /* Wait for an event using rb_thread_select() on the queue's pipe */
     if (event == NULL) {
-      int fd = zk->queue->pipe_read;
-      fd_set rset;
+      if (NIL_P(blocking) || (blocking == Qfalse)) { 
+        return Qnil; // no event for us
+      } 
+      else {
+        int fd = zk->queue->pipe_read;
+        ssize_t bytes_read = 0;
 
-      FD_ZERO(&rset);
-      FD_SET(fd, &rset);
+        fd_set rset;        // a file descriptor set for use w/ select()
 
-      if (rb_thread_select(fd + 1, &rset, NULL, NULL, NULL) == -1)
-        rb_raise(rb_eRuntimeError, "select failed: %d", errno);
+        FD_ZERO(&rset);     // FD_ZERO clears the set
+        FD_SET(fd, &rset);  // FD_SET adds fd to the rset
 
-      if (read(fd, buf, sizeof(buf)) == -1)
-        rb_raise(rb_eRuntimeError, "read failed: %d", errno);
+        // first arg is nfds: "the highest-numbered file descriptor in any of the three sets, plus 1"
+        // why? F*** you, that's why!
 
-      if (zk->pending_close)
-        return Qnil;
+        if (rb_thread_select(fd + 1, &rset, NULL, NULL, NULL) == -1)
+          rb_raise(rb_eRuntimeError, "select failed: %d", errno);
 
-      continue;
+        bytes_read = read(fd, buf, sizeof(buf));
+
+        if (bytes_read == -1) {
+          rb_raise(rb_eRuntimeError, "read failed: %d", errno);
+        }
+        else if (ZKRBDebugging) {
+          fprintf(stderr, "read %zd bytes from the queue (%p)'s pipe\n", bytes_read, zk->queue);
+        }
+
+        continue;
+      }
     }
 
     VALUE hash = zkrb_event_to_ruby(event);
@@ -463,20 +551,44 @@ static VALUE method_client_id(VALUE self) {
   return UINT2NUM(id->client_id);
 }
 
-static VALUE method_signal_pending_close(VALUE self) {
-  FETCH_DATA_PTR(self, zk);
 
-  zk->pending_close = 1;
+// wake up the event loop, used when shutting down
+static VALUE method_wake_event_loop_bang(VALUE self) {
+  FETCH_DATA_PTR(self, zk); 
+
   zkrb_signal(zk->queue);
 
   return Qnil;
-}
+};
 
-static VALUE method_close(VALUE self) {
+// static VALUE method_signal_pending_close(VALUE self) {
+//   FETCH_DATA_PTR(self, zk);
+// 
+//   zk->pending_close = 1;
+//   zkrb_signal(zk->queue);
+// 
+//   return Qnil;
+// }
+
+static VALUE method_close_handle(VALUE self) {
   FETCH_DATA_PTR(self, zk);
+
+  if (ZKRBDebugging) {
+    fprintf(stderr, "CLOSING ZK INSTANCE:");
+    print_zkrb_instance_data(zk);
+  }
+  
+  // this is a value on the ruby side we can check to see if destroy_zkrb_instance
+  // has been called
+  rb_iv_set(self, "@_closed", Qtrue);
+
+  if (ZKRBDebugging) fprintf(stderr, "calling destroy_zkrb_instance\n");
 
   /* Note that after zookeeper_close() returns, ZK handle is invalid */
   int rc = destroy_zkrb_instance(zk);
+
+  if (ZKRBDebugging) fprintf(stderr, "destroy_zkrb_instance returned: %d\n", rc);
+
   return INT2FIX(rc);
 }
 
@@ -500,8 +612,7 @@ static VALUE method_recv_timeout(VALUE self) {
   return INT2NUM(zoo_recv_timeout(zk->zh));
 }
 
-// how do you make a class method??
-static VALUE method_set_debug_level(VALUE self, VALUE level) {
+static VALUE klass_method_set_debug_level(VALUE klass, VALUE level) {
   Check_Type(level, T_FIXNUM);
   ZKRBDebugging = (FIX2INT(level) == ZOO_LOG_LEVEL_DEBUG);
   zoo_set_debug_level(FIX2INT(level));
@@ -528,8 +639,7 @@ static void zkrb_define_methods(void) {
   DEFINE_METHOD(set_acl, 5);
   DEFINE_METHOD(get_acl, 3);
   DEFINE_METHOD(client_id, 0);
-  DEFINE_METHOD(signal_pending_close, 0);
-  DEFINE_METHOD(close, 0);
+  DEFINE_METHOD(close_handle, 0);
   DEFINE_METHOD(deterministic_conn_order, 1);
   DEFINE_METHOD(is_unrecoverable, 0);
   DEFINE_METHOD(recv_timeout, 1);
@@ -539,13 +649,19 @@ static void zkrb_define_methods(void) {
   // DEFINE_METHOD(async, 1);
 
   // methods for the ruby-side event manager
-  DEFINE_METHOD(get_next_event, 0);
+  DEFINE_METHOD(get_next_event, 1);
   DEFINE_METHOD(has_events, 0);
 
   // Make these class methods?
-  DEFINE_METHOD(set_debug_level, 1);
   DEFINE_METHOD(zerror, 1);
+
+  rb_define_singleton_method(Zookeeper, "set_debug_level", klass_method_set_debug_level, 1);
+
+  rb_attr(Zookeeper, rb_intern("selectable_io"), 1, 0, Qtrue);
+
+  rb_define_method(Zookeeper, "wake_event_loop!", method_wake_event_loop_bang, 0);
 }
+
 void Init_zookeeper_c() {
   ZKRBDebugging = 0;
   /* initialize Zookeeper class */

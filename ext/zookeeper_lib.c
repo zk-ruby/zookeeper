@@ -16,12 +16,23 @@ wickman@twitter.com
 #include <stdlib.h>
 #include <pthread.h>
 #include <unistd.h>
+#include <inttypes.h>
 
 #define GET_SYM(str) ID2SYM(rb_intern(str))
 
 int ZKRBDebugging;
 
 pthread_mutex_t zkrb_q_mutex = PTHREAD_MUTEX_INITIALIZER;
+
+
+/********************************************************************************
+ *
+ * NOTE: be *very careful* in these functions, calling *ANY* ruby interpreter
+ * function when you're not in an interpreter thread can hork ruby, trigger a
+ * [BUG], corrupt the stack, kill you dog, knock up your daughter, etc. etc.
+ *
+ *********************************************************************************
+*/
 
 /* push/pop is a misnomer, this is a queue */
 void zkrb_enqueue(zkrb_queue_t *q, zkrb_event_t *elt) {
@@ -37,8 +48,16 @@ void zkrb_enqueue(zkrb_queue_t *q, zkrb_event_t *elt) {
   q->tail->next = NULL;
   ssize_t ret = write(q->pipe_write, "0", 1);   /* Wake up Ruby listener */
   pthread_mutex_unlock(&zkrb_q_mutex);
-  if (ret == -1)
-    rb_raise(rb_eRuntimeError, "write to pipe failed: %d", errno);
+
+  // XXX(slyphon): can't raise a ruby exception here as we may not be calling
+  // this from a ruby thread. Calling into the interpreter from a non-ruby
+  // thread is bad, mm'kay?
+
+  if (ZKRBDebugging) {
+    if ((ret == -1)) {
+      fprintf(stderr, "WARNING: write to queue (%p) pipe failed!\n", q);
+    }
+  }
 }
 
 zkrb_event_t * zkrb_peek(zkrb_queue_t *q) {
@@ -79,6 +98,9 @@ void zkrb_signal(zkrb_queue_t *q) {
 
 zkrb_queue_t *zkrb_queue_alloc(void) {
   int pfd[2];
+
+  // XXX(slyphon): close-on-exec settings?
+
   if (pipe(pfd) == -1)
     rb_raise(rb_eRuntimeError, "create of pipe failed: %d", errno);
 
@@ -140,18 +162,26 @@ void zkrb_event_free(zkrb_event_t *event) {
     }
     case ZKRB_STRINGS: {
       struct zkrb_strings_completion *strings_ctx = event->completion.strings_completion;
-      int k;
-      for (k = 0; k < strings_ctx->values->count; ++k) free(strings_ctx->values->data[k]);
-      free(strings_ctx->values);
+      if (strings_ctx->values != NULL) {
+        int k;
+        for (k = 0; k < strings_ctx->values->count; ++k) free(strings_ctx->values->data[k]);
+        free(strings_ctx->values);
+      }
       free(strings_ctx);
       break;
     }
     case ZKRB_STRINGS_STAT: {
       struct zkrb_strings_stat_completion *strings_stat_ctx = event->completion.strings_stat_completion;
-      int k;
-      for (k = 0; k < strings_stat_ctx->values->count; ++k) free(strings_stat_ctx->values->data[k]);
-      free(strings_stat_ctx->values);
-      free(strings_stat_ctx->stat);
+      if (strings_stat_ctx->values != NULL) {
+        int k;
+        for (k = 0; k < strings_stat_ctx->values->count; ++k) free(strings_stat_ctx->values->data[k]);
+        free(strings_stat_ctx->values);
+      }
+
+      if (strings_stat_ctx->stat != NULL) {
+        free(strings_stat_ctx->stat);
+      }
+
       free(strings_stat_ctx);
       break;
     }
@@ -200,33 +230,40 @@ VALUE zkrb_event_to_ruby(zkrb_event_t *event) {
       break;
     }
     case ZKRB_STAT: {
+      if (ZKRBDebugging) fprintf(stderr, "zkrb_event_to_ruby ZKRB_STAT\n");
       struct zkrb_stat_completion *stat_ctx = event->completion.stat_completion;
       rb_hash_aset(hash, GET_SYM("stat"), stat_ctx->stat ? zkrb_stat_to_rarray(stat_ctx->stat) : Qnil);
       break;
     }
     case ZKRB_STRING: {
+      if (ZKRBDebugging) fprintf(stderr, "zkrb_event_to_ruby ZKRB_STRING\n");
       struct zkrb_string_completion *string_ctx = event->completion.string_completion;
       rb_hash_aset(hash, GET_SYM("string"), string_ctx->value ? rb_str_new2(string_ctx->value) : Qnil);
       break;
     }
     case ZKRB_STRINGS: {
+      if (ZKRBDebugging) fprintf(stderr, "zkrb_event_to_ruby ZKRB_STRINGS\n");
       struct zkrb_strings_completion *strings_ctx = event->completion.strings_completion;
       rb_hash_aset(hash, GET_SYM("strings"), strings_ctx->values ? zkrb_string_vector_to_ruby(strings_ctx->values) : Qnil);
       break;
     }
     case ZKRB_STRINGS_STAT: {
+      if (ZKRBDebugging) fprintf(stderr, "zkrb_event_to_ruby ZKRB_STRINGS_STAT\n");
       struct zkrb_strings_stat_completion *strings_stat_ctx = event->completion.strings_stat_completion;
       rb_hash_aset(hash, GET_SYM("strings"), strings_stat_ctx->values ? zkrb_string_vector_to_ruby(strings_stat_ctx->values) : Qnil);
       rb_hash_aset(hash, GET_SYM("stat"), strings_stat_ctx->stat ? zkrb_stat_to_rarray(strings_stat_ctx->stat) : Qnil);
       break;
     }
     case ZKRB_ACL: {
+      if (ZKRBDebugging) fprintf(stderr, "zkrb_event_to_ruby ZKRB_ACL\n");
       struct zkrb_acl_completion *acl_ctx = event->completion.acl_completion;
       rb_hash_aset(hash, GET_SYM("acl"), acl_ctx->acl ? zkrb_acl_vector_to_ruby(acl_ctx->acl) : Qnil);
       rb_hash_aset(hash, GET_SYM("stat"), acl_ctx->stat ? zkrb_stat_to_rarray(acl_ctx->stat) : Qnil);
       break;
     }
     case ZKRB_WATCHER: {
+      if (ZKRBDebugging) fprintf(stderr, "zkrb_event_to_ruby ZKRB_WATCHER\n");
+      struct zkrb_acl_completion *acl_ctx = event->completion.acl_completion;
       struct zkrb_watcher_completion *watcher_ctx = event->completion.watcher_completion;
       rb_hash_aset(hash, GET_SYM("type"), INT2FIX(watcher_ctx->type));
       rb_hash_aset(hash, GET_SYM("state"), INT2FIX(watcher_ctx->state));
@@ -244,17 +281,17 @@ VALUE zkrb_event_to_ruby(zkrb_event_t *event) {
 void zkrb_print_stat(const struct Stat *s) {
   fprintf(stderr,  "stat {\n");
   if (s != NULL) {
-    fprintf(stderr,  "\t          czxid: %lld\n", s->czxid);
-    fprintf(stderr,  "\t          mzxid: %lld\n", s->mzxid);
-    fprintf(stderr,  "\t          ctime: %lld\n", s->ctime);
-    fprintf(stderr,  "\t          mtime: %lld\n", s->mtime);
-    fprintf(stderr,  "\t        version: %d\n"  , s->version);
-    fprintf(stderr,  "\t       cversion: %d\n"  , s->cversion);
-    fprintf(stderr,  "\t       aversion: %d\n"  , s->aversion);
-    fprintf(stderr,  "\t ephemeralOwner: %lld\n", s->ephemeralOwner);
-    fprintf(stderr,  "\t     dataLength: %d\n"  , s->dataLength);
-    fprintf(stderr,  "\t    numChildren: %d\n"  , s->numChildren);
-    fprintf(stderr,  "\t          pzxid: %lld\n", s->pzxid);
+    fprintf(stderr,  "\t          czxid: %"PRId64"\n", s->czxid);   // PRId64 defined in inttypes.h
+    fprintf(stderr,  "\t          mzxid: %"PRId64"\n", s->mzxid);
+    fprintf(stderr,  "\t          ctime: %"PRId64"\n", s->ctime);
+    fprintf(stderr,  "\t          mtime: %"PRId64"\n", s->mtime);
+    fprintf(stderr,  "\t        version: %d\n",        s->version);
+    fprintf(stderr,  "\t       cversion: %d\n",        s->cversion);
+    fprintf(stderr,  "\t       aversion: %d\n",        s->aversion);
+    fprintf(stderr,  "\t ephemeralOwner: %"PRId64"\n", s->ephemeralOwner);
+    fprintf(stderr,  "\t     dataLength: %d\n",        s->dataLength);
+    fprintf(stderr,  "\t    numChildren: %d\n",        s->numChildren);
+    fprintf(stderr,  "\t          pzxid: %"PRId64"\n", s->pzxid);
   } else {
     fprintf(stderr, "\tNULL\n");
   }
@@ -270,7 +307,7 @@ zkrb_calling_context *zkrb_calling_context_alloc(int64_t req_id, zkrb_queue_t *q
 
 void zkrb_print_calling_context(zkrb_calling_context *ctx) {
   fprintf(stderr, "calling context (%p){\n", ctx);
-  fprintf(stderr, "\treq_id = %lld\n", ctx->req_id);
+  fprintf(stderr, "\treq_id = %"PRId64"\n", ctx->req_id);
   fprintf(stderr, "\tqueue  = %p\n", ctx->queue);
   fprintf(stderr, "}\n");
 }
@@ -422,6 +459,7 @@ void zkrb_strings_stat_callback(
   struct zkrb_strings_stat_completion *sc = malloc(sizeof(struct zkrb_strings_stat_completion));
   sc->stat = NULL;
   if (stat != NULL) { sc->stat = malloc(sizeof(struct Stat)); memcpy(sc->stat, stat, sizeof(struct Stat)); }
+
   sc->values = (strings != NULL) ? zkrb_clone_string_vector(strings) : NULL;
 
   ZKH_SETUP_EVENT(queue, event);

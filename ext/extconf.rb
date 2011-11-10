@@ -12,8 +12,8 @@ $CXXFLAGS = " -std=gnu++98 #{$CFLAGS}"
 $CPPFLAGS = $ARCH_FLAG = $DLDFLAGS = ""
 
 if ENV['DEBUG']
-  puts "Setting debug flags."
-  $CFLAGS << " -O0 -ggdb -DHAVE_DEBUG"
+  $stderr.puts "*** Setting debug flags. ***"
+  $CFLAGS << " -O0 -ggdb3 -DHAVE_DEBUG"
   $EXTRA_CONF = " --enable-debug"
   $CFLAGS.gsub!(/ -O[^0] /, ' ')
 end
