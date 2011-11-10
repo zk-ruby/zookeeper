@@ -1,0 +1,27 @@
+
+task :clean do
+  rm_rf %w[bin include lib]
+  sh 'make clean'
+  if File.directory?('c')
+    cd('c') do
+      sh 'make clean'
+    end
+  end
+end
+
+task :clobber => :clean do
+  rm_rf %w[Makefile c]
+end
+
+task :build_zkc do
+  ruby 'extconf.rb'
+end
+
+file 'Makefile' => :build_zkc
+
+task :build => 'Makefile' do
+  sh 'make'
+end
+
+task :default => :build
+
