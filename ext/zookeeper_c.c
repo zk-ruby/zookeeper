@@ -140,17 +140,13 @@ static VALUE method_init(int argc, VALUE* argv, VALUE self) {
     zoo_set_debug_level(0); // no log messages
   } else {
     Check_Type(log_level, T_FIXNUM);
-    zoo_set_debug_level(log_level);
+    zoo_set_debug_level((int)log_level);
   }
 
 
   VALUE data;
   struct zkrb_instance_data *zk_local_ctx;
-  data = Data_Make_Struct(Zookeeper,
-           struct zkrb_instance_data,
-           0,
-           free_zkrb_instance_data,
-           zk_local_ctx);
+  data = Data_Make_Struct(Zookeeper, struct zkrb_instance_data, 0, free_zkrb_instance_data, zk_local_ctx);
   zk_local_ctx->queue = zkrb_queue_alloc();
 
   zoo_deterministic_conn_order(0);
@@ -276,6 +272,7 @@ static VALUE method_exists(VALUE self, VALUE reqid, VALUE path, VALUE async, VAL
   return output;
 }
 
+#warning TODO:(slyphon) add size checks and raise error if data too large 
 static VALUE method_create(VALUE self, VALUE reqid, VALUE path, VALUE data, VALUE async, VALUE acls, VALUE flags) {
   VALUE watch = Qfalse;
   STANDARD_PREAMBLE(self, zk, reqid, path, async, watch, data_ctx, watch_ctx, call_type);
@@ -292,10 +289,11 @@ static VALUE method_create(VALUE self, VALUE reqid, VALUE path, VALUE data, VALU
   int rc;
   switch (call_type) {
     case SYNC:
-      rc = zoo_create(zk->zh, RSTRING_PTR(path), data_ptr, data_len, aclptr, FIX2INT(flags), realpath, sizeof(realpath));
+      // casting data_len to int is OK as you can only store 1MB in zookeeper
+      rc = zoo_create(zk->zh, RSTRING_PTR(path), data_ptr, (int)data_len, aclptr, FIX2INT(flags), realpath, sizeof(realpath));
       break;
     case ASYNC:
-      rc = zoo_acreate(zk->zh, RSTRING_PTR(path), data_ptr, data_len, aclptr, FIX2INT(flags), zkrb_string_callback, data_ctx);
+      rc = zoo_acreate(zk->zh, RSTRING_PTR(path), data_ptr, (int)data_len, aclptr, FIX2INT(flags), zkrb_string_callback, data_ctx);
       break;
     default:
       /* TODO(wickman) raise proper argument error */
@@ -394,10 +392,10 @@ static VALUE method_set(VALUE self, VALUE reqid, VALUE path, VALUE data, VALUE a
   int rc;
   switch (call_type) {
     case SYNC:
-      rc = zoo_set2(zk->zh, RSTRING_PTR(path), data_ptr, data_len, FIX2INT(version), &stat);
+      rc = zoo_set2(zk->zh, RSTRING_PTR(path), data_ptr, (int)data_len, FIX2INT(version), &stat);
       break;
     case ASYNC:
-      rc = zoo_aset(zk->zh, RSTRING_PTR(path), data_ptr, data_len, FIX2INT(version),
+      rc = zoo_aset(zk->zh, RSTRING_PTR(path), data_ptr, (int)data_len, FIX2INT(version),
                             zkrb_stat_callback, data_ctx);
       break;
     default:

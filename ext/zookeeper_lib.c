@@ -522,11 +522,12 @@ VALUE zkrb_acl_to_ruby(struct ACL *acl) {
 }
 
 #warning [wickman] TODO test zkrb_ruby_to_aclvector
+#warning [slyphon] TODO size checking on acl_ary (cast to int)
 struct ACL_vector * zkrb_ruby_to_aclvector(VALUE acl_ary) {
   Check_Type(acl_ary, T_ARRAY);
 
   struct ACL_vector *v = malloc(sizeof(struct ACL_vector));
-  allocate_ACL_vector(v, RARRAY_LEN(acl_ary));
+  allocate_ACL_vector(v, (int)RARRAY_LEN(acl_ary));
 
   int k;
   for (k = 0; k < v->count; ++k) {
