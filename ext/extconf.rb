@@ -51,7 +51,7 @@ Dir.chdir(HERE) do
       safe_sh("make install 2>&1")
     end
 
-#     system("rm -rf #{BUNDLE_PATH}") unless ENV['DEBUG'] or ENV['DEV']
+    system("rm -rf #{BUNDLE_PATH}") unless ENV['DEBUG'] or ENV['DEV']
   end
 end
 
