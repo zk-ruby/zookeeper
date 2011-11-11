@@ -1,10 +1,14 @@
 
 task :clean do
-  sh 'make clean'
+  if File.exists?('Makefile')
+    sh 'make clean'
+  else
+    $stderr.puts "nothing to clean, no Makefile"
+  end
 end
 
 task :clobber => :clean do
-  rm_rf %w[Makefile c]
+  rm_rf %w[Makefile c lib bin include]
 end
 
 task :build_zkc do
