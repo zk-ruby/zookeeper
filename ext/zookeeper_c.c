@@ -272,7 +272,6 @@ static VALUE method_exists(VALUE self, VALUE reqid, VALUE path, VALUE async, VAL
   return output;
 }
 
-#warning TODO:(slyphon) add size checks and raise error if data too large 
 static VALUE method_create(VALUE self, VALUE reqid, VALUE path, VALUE data, VALUE async, VALUE acls, VALUE flags) {
   VALUE watch = Qfalse;
   STANDARD_PREAMBLE(self, zk, reqid, path, async, watch, data_ctx, watch_ctx, call_type);
