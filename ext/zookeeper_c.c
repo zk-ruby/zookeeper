@@ -505,16 +505,8 @@ static VALUE method_get_next_event(VALUE self, VALUE blocking) {
         int fd = zk->queue->pipe_read;
         ssize_t bytes_read = 0;
 
-        fd_set rset;        // a file descriptor set for use w/ select()
-
-        FD_ZERO(&rset);     // FD_ZERO clears the set
-        FD_SET(fd, &rset);  // FD_SET adds fd to the rset
-
-        // first arg is nfds: "the highest-numbered file descriptor in any of the three sets, plus 1"
-        // why? F*** you, that's why!
-
-        if (rb_thread_select(fd + 1, &rset, NULL, NULL, NULL) == -1)
-          rb_raise(rb_eRuntimeError, "select failed: %d", errno);
+        // wait for an fd to become readable, opposite of rb_thread_fd_writable
+        rb_thread_wait_fd(fd);
 
         bytes_read = read(fd, buf, sizeof(buf));
 
