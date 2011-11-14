@@ -57,6 +57,7 @@ module ZookeeperExceptions
     class ConnectionClosed        < ZookeeperException; end
     class NotConnected            < ZookeeperException; end 
     class ShuttingDownException   < ZookeeperException; end
+    class DataTooLargeException   < ZookeeperException; end
     
     def self.by_code(code)
       case code

@@ -56,6 +56,7 @@ class Zookeeper < ZookeeperBase
     assert_open
     assert_supported_keys(options, [:path, :data, :version, :callback, :callback_context])
     assert_required_keys(options, [:path])
+    assert_valid_data_size!(options[:data])
     options[:version] ||= -1
 
     req_id = setup_call(options)
@@ -93,6 +94,7 @@ class Zookeeper < ZookeeperBase
     assert_open
     assert_supported_keys(options, [:path, :data, :acl, :ephemeral, :sequence, :callback, :callback_context])
     assert_required_keys(options, [:path])
+    assert_valid_data_size!(options[:data])
 
     flags = 0
     flags |= ZOO_EPHEMERAL if options[:ephemeral]
@@ -217,6 +219,16 @@ protected
 
   def logger
     Zookeeper.logger
+  end
+
+  def assert_valid_data_size!(data)
+    return if data.nil?
+
+    data = data.to_s
+    if data.length >= 1048576 # one megabyte 
+      raise ZookeeperException::DataTooLargeException, "data must be smaller than 1 MiB, your data starts with: #{data[0..32].inspect}"
+    end
+    nil
   end
 
 private

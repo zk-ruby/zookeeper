@@ -140,17 +140,13 @@ static VALUE method_init(int argc, VALUE* argv, VALUE self) {
     zoo_set_debug_level(0); // no log messages
   } else {
     Check_Type(log_level, T_FIXNUM);
-    zoo_set_debug_level(log_level);
+    zoo_set_debug_level((int)log_level);
   }
 
 
   VALUE data;
   struct zkrb_instance_data *zk_local_ctx;
-  data = Data_Make_Struct(Zookeeper,
-           struct zkrb_instance_data,
-           0,
-           free_zkrb_instance_data,
-           zk_local_ctx);
+  data = Data_Make_Struct(Zookeeper, struct zkrb_instance_data, 0, free_zkrb_instance_data, zk_local_ctx);
   zk_local_ctx->queue = zkrb_queue_alloc();
 
   zoo_deterministic_conn_order(0);
@@ -292,10 +288,11 @@ static VALUE method_create(VALUE self, VALUE reqid, VALUE path, VALUE data, VALU
   int rc;
   switch (call_type) {
     case SYNC:
-      rc = zoo_create(zk->zh, RSTRING_PTR(path), data_ptr, data_len, aclptr, FIX2INT(flags), realpath, sizeof(realpath));
+      // casting data_len to int is OK as you can only store 1MB in zookeeper
+      rc = zoo_create(zk->zh, RSTRING_PTR(path), data_ptr, (int)data_len, aclptr, FIX2INT(flags), realpath, sizeof(realpath));
       break;
     case ASYNC:
-      rc = zoo_acreate(zk->zh, RSTRING_PTR(path), data_ptr, data_len, aclptr, FIX2INT(flags), zkrb_string_callback, data_ctx);
+      rc = zoo_acreate(zk->zh, RSTRING_PTR(path), data_ptr, (int)data_len, aclptr, FIX2INT(flags), zkrb_string_callback, data_ctx);
       break;
     default:
       /* TODO(wickman) raise proper argument error */
@@ -394,10 +391,10 @@ static VALUE method_set(VALUE self, VALUE reqid, VALUE path, VALUE data, VALUE a
   int rc;
   switch (call_type) {
     case SYNC:
-      rc = zoo_set2(zk->zh, RSTRING_PTR(path), data_ptr, data_len, FIX2INT(version), &stat);
+      rc = zoo_set2(zk->zh, RSTRING_PTR(path), data_ptr, (int)data_len, FIX2INT(version), &stat);
       break;
     case ASYNC:
-      rc = zoo_aset(zk->zh, RSTRING_PTR(path), data_ptr, data_len, FIX2INT(version),
+      rc = zoo_aset(zk->zh, RSTRING_PTR(path), data_ptr, (int)data_len, FIX2INT(version),
                             zkrb_stat_callback, data_ctx);
       break;
     default:
@@ -507,16 +504,8 @@ static VALUE method_get_next_event(VALUE self, VALUE blocking) {
         int fd = zk->queue->pipe_read;
         ssize_t bytes_read = 0;
 
-        fd_set rset;        // a file descriptor set for use w/ select()
-
-        FD_ZERO(&rset);     // FD_ZERO clears the set
-        FD_SET(fd, &rset);  // FD_SET adds fd to the rset
-
-        // first arg is nfds: "the highest-numbered file descriptor in any of the three sets, plus 1"
-        // why? F*** you, that's why!
-
-        if (rb_thread_select(fd + 1, &rset, NULL, NULL, NULL) == -1)
-          rb_raise(rb_eRuntimeError, "select failed: %d", errno);
+        // wait for an fd to become readable, opposite of rb_thread_fd_writable
+        rb_thread_wait_fd(fd);
 
         bytes_read = read(fd, buf, sizeof(buf));
 

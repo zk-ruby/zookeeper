@@ -11,6 +11,7 @@ $LDFLAGS = "#{RbConfig::CONFIG['LDFLAGS']} #{$LDFLAGS}".gsub("$(ldflags)", "").g
 $CXXFLAGS = " -std=gnu++98 #{$CFLAGS}"
 $CPPFLAGS = $ARCH_FLAG = $DLDFLAGS = ""
 
+
 if ENV['DEBUG']
   $stderr.puts "*** Setting debug flags. ***"
   $CFLAGS << " -O0 -ggdb3 -DHAVE_DEBUG"
@@ -25,21 +26,29 @@ $LDFLAGS = "#{$libraries} #{$LDFLAGS}"
 $LIBPATH = ["#{HERE}/lib"]
 $DEFLIBPATH = []
 
+def safe_sh(cmd)
+  puts cmd
+  system(cmd)
+  unless $?.exited? and $?.success?
+    raise "command failed! #{cmd}"
+  end
+end
+
 Dir.chdir(HERE) do
   if File.exist?("lib")
     puts "Zkc already built; run 'rake clean' first if you need to rebuild."
   else
     puts "Building zkc."
-    puts(cmd = "tar xzf #{BUNDLE} 2>&1")
-    raise "'#{cmd}' failed" unless system(cmd)
+
+    unless File.exists?('c')
+      puts(cmd = "tar xzf #{BUNDLE} 2>&1")
+      raise "'#{cmd}' failed" unless system(cmd)
+    end
 
     Dir.chdir(BUNDLE_PATH) do        
-      puts(cmd = "env CC=gcc CXX=g++ CFLAGS='-fPIC #{$CFLAGS}' LDFLAGS='-fPIC #{$LDFLAGS}' ./configure --prefix=#{HERE} --without-cppunit --disable-dependency-tracking #{$EXTRA_CONF} 2>&1")
-      raise "'#{cmd}' failed" unless system(cmd)
-      puts(cmd = "make CXXFLAGS='#{$CXXFLAGS}' CFLAGS='-fPIC #{$CFLAGS}' LDFLAGS='-fPIC #{$LDFLAGS}' || true 2>&1")
-      raise "'#{cmd}' failed" unless system(cmd)
-      puts(cmd = "make install || true 2>&1")
-      raise "'#{cmd}' failed" unless system(cmd)
+      safe_sh("./configure --prefix=#{HERE} --with-pic --without-cppunit --disable-dependency-tracking #{$EXTRA_CONF} 2>&1")
+      safe_sh("make  2>&1")
+      safe_sh("make install 2>&1")
     end
 
     system("rm -rf #{BUNDLE_PATH}") unless ENV['DEBUG'] or ENV['DEV']

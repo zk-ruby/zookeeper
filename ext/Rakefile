@@ -1,0 +1,25 @@
+
+task :clean do
+  if File.exists?('Makefile')
+    sh 'make clean'
+  else
+    $stderr.puts "nothing to clean, no Makefile"
+  end
+end
+
+task :clobber => :clean do
+  rm_rf %w[Makefile c lib bin include]
+end
+
+task :build_zkc do
+  ruby 'extconf.rb'
+end
+
+file 'Makefile' => :build_zkc
+
+task :build => 'Makefile' do
+  sh 'make'
+end
+
+task :default => :build
+
