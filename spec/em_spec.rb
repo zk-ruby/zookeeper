@@ -1,7 +1,7 @@
 require File.expand_path('../spec_helper', __FILE__)
 require 'zookeeper/em_client'
 
-gem 'evented-spec', '~> 0.4.1'
+gem 'evented-spec', '~> 0.9.0'
 require 'evented-spec'
 
 

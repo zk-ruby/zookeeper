@@ -203,6 +203,14 @@ describe Zookeeper do
           @rv[:stat].exists.should be_false
         end
       end
+
+      describe 'error' do
+        it %[should barf if the data size is too large], :input_size => true do
+          large_data = '0' * (1024 ** 2)
+
+          lambda { @zk.set(:path => @path, :data => large_data) }.should raise_error(ZookeeperExceptions::ZookeeperException::DataTooLargeException)
+        end
+      end
     end   # sync
 
     describe :async do
@@ -269,8 +277,17 @@ describe Zookeeper do
           @cb.stat.exists.should be_false
         end
       end
-    end
-  end
+
+      describe 'error' do
+        it %[should barf if the data size is too large], :input_size => true do
+          large_data = '0' * (1024 ** 2)
+
+          lambda { @zk.set(:path => @path, :data => large_data, :callback => @cb, :callback_context => @path) }.should raise_error(ZookeeperExceptions::ZookeeperException::DataTooLargeException)
+        end
+      end
+
+    end # async
+  end # set
 
   describe :get_children do
     before do
@@ -538,6 +555,14 @@ describe Zookeeper do
     end
 
     describe :sync do
+      describe 'error' do
+        it %[should barf if the data size is too large], :input_size => true do
+          large_data = '0' * (1024 ** 2)
+
+          lambda { @zk.create(:path => @path, :data => large_data) }.should raise_error(ZookeeperExceptions::ZookeeperException::DataTooLargeException)
+        end
+      end
+
       describe :default_flags do
         it_should_behave_like "all success return values"
 
@@ -655,6 +680,17 @@ describe Zookeeper do
         end
       end
 
+      describe 'error' do
+        it %[should barf if the data size is too large], :input_size => true do
+          large_data = '0' * (1024 ** 2)
+
+          lambda do
+            @zk.create(:path => @path, :data => large_data, :callback => @cb, :callback_context => @path)
+          end.should raise_error(ZookeeperExceptions::ZookeeperException::DataTooLargeException)
+        end
+      end
+
+
       describe :ephemeral do
         it_should_behave_like "all success return values"
 
@@ -736,15 +772,9 @@ describe Zookeeper do
 
           st[:stat].ephemeral_owner.should_not be_zero
         end
-      end
-
-      describe :acl do
-        it %[should work] do
-          pending "need to write acl tests"
-        end
-      end
-    end
-  end
+      end # ephemeral_sequence
+    end # async
+  end # create
 
   describe :delete do
     describe :sync do
@@ -846,7 +876,7 @@ describe Zookeeper do
           @cb.return_code.should == Zookeeper::ZBADVERSION
         end
       end
-    end
+    end # async
   end # delete
 
   describe :get_acl do
