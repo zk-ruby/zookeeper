@@ -9,6 +9,7 @@ Gem::Specification.new do |s|
   s.email       = ["slyphon@gmail.com"]
   s.summary     = %q{twitter's zookeeper client}
   s.description = s.summary
+  s.homepage    = 'https://github.com/slyphon/zookeeper'
 
   s.add_development_dependency "rspec", ">= 2.0.0"
   s.add_development_dependency 'flexmock', '~> 0.8.11'
