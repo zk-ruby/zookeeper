@@ -11,12 +11,14 @@ $LDFLAGS = "#{RbConfig::CONFIG['LDFLAGS']} #{$LDFLAGS}".gsub("$(ldflags)", "").g
 $CXXFLAGS = " -std=gnu++98 #{$CFLAGS}"
 $CPPFLAGS = $ARCH_FLAG = $DLDFLAGS = ""
 
+ZK_DEBUG = (ENV['DEBUG'] or ARGV.any? { |arg| arg == '--debug' })
+DEBUG_CFLAGS = " -O0 -ggdb3 -DHAVE_DEBUG"
 
-if ENV['DEBUG']
+if ZK_DEBUG
   $stderr.puts "*** Setting debug flags. ***"
-  $CFLAGS << " -O0 -ggdb3 -DHAVE_DEBUG"
   $EXTRA_CONF = " --enable-debug"
   $CFLAGS.gsub!(/ -O[^0] /, ' ')
+  $CFLAGS << DEBUG_CFLAGS
 end
 
 $includes = " -I#{HERE}/include"
@@ -46,7 +48,11 @@ Dir.chdir(HERE) do
     end
 
     Dir.chdir(BUNDLE_PATH) do        
-      safe_sh("./configure --prefix=#{HERE} --with-pic --without-cppunit --disable-dependency-tracking #{$EXTRA_CONF} 2>&1")
+      configure = "./configure --prefix=#{HERE} --with-pic --without-cppunit --disable-dependency-tracking #{$EXTRA_CONF} 2>&1"
+      
+      configure = "env CFLAGS='#{DEBUG_CFLAGS}' #{configure}" if ZK_DEBUG
+
+      safe_sh(configure)
       safe_sh("make  2>&1")
       safe_sh("make install 2>&1")
     end
@@ -62,4 +68,6 @@ Dir.chdir("#{HERE}/lib") do
 end
 $LIBS << " -lzookeeper_mt_gem"
 
+
 create_makefile 'zookeeper_c'
+

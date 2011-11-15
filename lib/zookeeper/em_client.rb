@@ -11,6 +11,7 @@ module ZookeeperEM
       @on_close       = EM::DefaultDeferrable.new
       @on_attached    = EM::DefaultDeferrable.new
       @em_connection  = nil
+      logger.debug { "ZookeeperEM::Client obj_id %x: init" % [object_id] }
       super(*a, &b)
     end
 
