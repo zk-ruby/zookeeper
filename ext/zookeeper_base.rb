@@ -28,6 +28,7 @@ class ZookeeperBase < CZookeeper
     end
 
     @start_stop_mutex.synchronize do
+#       $stderr.puts "%s: calling init, self.obj_id: %x" % [self.class, object_id]
       init(@host)
 
       if timeout > 0
