@@ -17,6 +17,7 @@ wickman@twitter.com
 #include <pthread.h>
 #include <unistd.h>
 #include <inttypes.h>
+#include "dbg.h"
 
 #define GET_SYM(str) ID2SYM(rb_intern(str))
 
@@ -29,7 +30,7 @@ pthread_mutex_t zkrb_q_mutex = PTHREAD_MUTEX_INITIALIZER;
  *
  * NOTE: be *very careful* in these functions, calling *ANY* ruby interpreter
  * function when you're not in an interpreter thread can hork ruby, trigger a
- * [BUG], corrupt the stack, kill you dog, knock up your daughter, etc. etc.
+ * [BUG], corrupt the stack, kill your dog, knock up your daughter, etc. etc.
  *
  *********************************************************************************
 */
@@ -53,10 +54,8 @@ void zkrb_enqueue(zkrb_queue_t *q, zkrb_event_t *elt) {
   // this from a ruby thread. Calling into the interpreter from a non-ruby
   // thread is bad, mm'kay?
 
-  if (ZKRBDebugging) {
-    if ((ret == -1)) {
-      fprintf(stderr, "WARNING: write to queue (%p) pipe failed!\n", q);
-    }
+  if ((ret == -1)) {
+    fprintf(stderr, "WARNING: write to queue (%p) pipe failed!\n", q);
   }
 }
 
@@ -93,7 +92,7 @@ void zkrb_signal(zkrb_queue_t *q) {
   ssize_t ret = write(q->pipe_write, "0", 1);   /* Wake up Ruby listener */
   pthread_mutex_unlock(&zkrb_q_mutex);
   if (ret == -1)
-    rb_raise(rb_eRuntimeError, "write to pipe failed: %d", errno);
+    log_err("write to pipe failed");
 }
 
 zkrb_queue_t *zkrb_queue_alloc(void) {

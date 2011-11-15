@@ -22,7 +22,7 @@
 #include <inttypes.h>
 
 #include "zookeeper_lib.h"
-
+#include "dbg.h"
 
 static VALUE Zookeeper = Qnil;
 
@@ -32,6 +32,7 @@ struct zkrb_instance_data {
   zhandle_t            *zh;
   clientid_t          myid;
   zkrb_queue_t      *queue;
+  long              object_id; // the ruby object this instance data is associated with
 };
 
 typedef enum {
@@ -50,14 +51,17 @@ static int destroy_zkrb_instance(struct zkrb_instance_data* ptr) {
   if (ptr->zh) {
     const void *ctx = zoo_get_context(ptr->zh);
     /* Note that after zookeeper_close() returns, ZK handle is invalid */
-    if (ZKRBDebugging) fprintf(stderr, "calling zookeeper_close\n"); 
+    zkrb_debug("obj_id: %lx, calling zookeeper_close", ptr->object_id);
     rv = zookeeper_close(ptr->zh);
-    if (ZKRBDebugging) fprintf(stderr, "zookeeper_close returned %d\n", rv); 
+    zkrb_debug("obj_id: %lx, zookeeper_close returned %d", ptr->object_id, rv); 
     free((void *) ctx);
   }
 
 #warning [wickman] TODO: fire off warning if queue is not empty
-  if (ptr->queue) zkrb_queue_free(ptr->queue);
+  if (ptr->queue) {
+    zkrb_debug("obj_id: %lx, freeing queue pointer: %p", ptr->object_id, ptr->queue);
+    zkrb_queue_free(ptr->queue);
+  }
 
   ptr->zh = NULL;
   ptr->queue = NULL;
@@ -70,10 +74,11 @@ static void free_zkrb_instance_data(struct zkrb_instance_data* ptr) {
 
 static void print_zkrb_instance_data(struct zkrb_instance_data* ptr) {
   fprintf(stderr, "zkrb_instance_data (%p) {\n", ptr);
-  fprintf(stderr, "   zh = %p\n",           ptr->zh);
-  fprintf(stderr, "     { state = %d }\n",  zoo_state(ptr->zh));
-  fprintf(stderr, "   id = %"PRId64"\n",    ptr->myid.client_id);   // PRId64 defined in inttypes.h
-  fprintf(stderr, "    q = %p\n",           ptr->queue);
+  fprintf(stderr, "    zh = %p\n",           ptr->zh);
+  fprintf(stderr, "      { state = %d }\n",  zoo_state(ptr->zh));
+  fprintf(stderr, "    id = %"PRId64"\n",    ptr->myid.client_id);   // PRId64 defined in inttypes.h
+  fprintf(stderr, "     q = %p\n",           ptr->queue);
+  fprintf(stderr, "obj_id = %lx\n",          ptr->object_id);
   fprintf(stderr, "}\n");
 }
 
@@ -154,6 +159,8 @@ static VALUE method_init(int argc, VALUE* argv, VALUE self) {
   zkrb_calling_context *ctx =
     zkrb_calling_context_alloc(ZKRB_GLOBAL_REQ, zk_local_ctx->queue);
 
+  zk_local_ctx->object_id = FIX2LONG(rb_obj_id(self));
+
   zk_local_ctx->zh =
       zookeeper_init(
           RSTRING_PTR(hostPort),
@@ -168,7 +175,7 @@ static VALUE method_init(int argc, VALUE* argv, VALUE self) {
     rb_raise(rb_eRuntimeError, "error connecting to zookeeper: %d", errno);
   }
 
-  rb_iv_set(self, "@data", data);
+  rb_iv_set(self, "@_data", data);
   rb_iv_set(self, "@selectable_io", create_selectable_io(zk_local_ctx->queue));
   rb_iv_set(self, "@_running", Qtrue);
 
@@ -178,7 +185,7 @@ static VALUE method_init(int argc, VALUE* argv, VALUE self) {
 
 #define FETCH_DATA_PTR(x, y)                                            \
   struct zkrb_instance_data * y;                                        \
-  Data_Get_Struct(rb_iv_get(x, "@data"), struct zkrb_instance_data, y); \
+  Data_Get_Struct(rb_iv_get(x, "@_data"), struct zkrb_instance_data, y); \
   if ((y)->zh == NULL)                                                  \
     rb_raise(rb_eRuntimeError, "zookeeper handle is closed")
 
@@ -189,7 +196,7 @@ static VALUE method_init(int argc, VALUE* argv, VALUE self) {
   }                                                                     \
   Check_Type(path, T_STRING);                                           \
   struct zkrb_instance_data * zk;                                       \
-  Data_Get_Struct(rb_iv_get(self, "@data"), struct zkrb_instance_data, zk); \
+  Data_Get_Struct(rb_iv_get(self, "@_data"), struct zkrb_instance_data, zk); \
   if (!zk->zh)                                                          \
     rb_raise(rb_eRuntimeError, "zookeeper handle is closed");           \
   zkrb_calling_context* cb_ctx =                                        \
@@ -489,7 +496,7 @@ static VALUE method_get_next_event(VALUE self, VALUE blocking) {
     // ruby-land semaphore that we can also use in the java extension
     //
     if (is_closed(self) || !is_running(self)) {
-/*      fprintf(stderr, "method_get_next_event: running is false, returning nil\n");*/
+      zkrb_debug_inst(self, "is_closed(self): %d, is_running(self): %d, method_get_next_event is exiting loop", is_closed(self), is_running(self));
       return Qnil;  // this case for shutdown
     }
 
@@ -512,9 +519,8 @@ static VALUE method_get_next_event(VALUE self, VALUE blocking) {
         if (bytes_read == -1) {
           rb_raise(rb_eRuntimeError, "read failed: %d", errno);
         }
-        else if (ZKRBDebugging) {
-          fprintf(stderr, "read %zd bytes from the queue (%p)'s pipe\n", bytes_read, zk->queue);
-        }
+
+        zkrb_debug_inst(self, "read %zd bytes from the queue (%p)'s pipe", bytes_read, zk->queue);
 
         continue;
       }
@@ -545,6 +551,7 @@ static VALUE method_client_id(VALUE self) {
 static VALUE method_wake_event_loop_bang(VALUE self) {
   FETCH_DATA_PTR(self, zk); 
 
+  zkrb_debug_inst(self, "Waking event loop: %p", zk->queue);
   zkrb_signal(zk->queue);
 
   return Qnil;
@@ -563,7 +570,8 @@ static VALUE method_close_handle(VALUE self) {
   FETCH_DATA_PTR(self, zk);
 
   if (ZKRBDebugging) {
-    fprintf(stderr, "CLOSING ZK INSTANCE:");
+/*    fprintf(stderr, "CLOSING ZK INSTANCE: obj_id %lx", FIX2LONG(rb_obj_id(self)));*/
+    zkrb_debug_inst(self, "CLOSING_ZK_INSTANCE");
     print_zkrb_instance_data(zk);
   }
   
@@ -571,14 +579,15 @@ static VALUE method_close_handle(VALUE self) {
   // has been called
   rb_iv_set(self, "@_closed", Qtrue);
 
-  if (ZKRBDebugging) fprintf(stderr, "calling destroy_zkrb_instance\n");
+  zkrb_debug_inst(self, "calling destroy_zkrb_instance");
 
   /* Note that after zookeeper_close() returns, ZK handle is invalid */
   int rc = destroy_zkrb_instance(zk);
 
-  if (ZKRBDebugging) fprintf(stderr, "destroy_zkrb_instance returned: %d\n", rc);
+  zkrb_debug("destroy_zkrb_instance returned: %d", rc);
 
-  return INT2FIX(rc);
+  return Qnil;
+/*  return INT2FIX(rc);*/
 }
 
 static VALUE method_deterministic_conn_order(VALUE self, VALUE yn) {
@@ -657,3 +666,5 @@ void Init_zookeeper_c() {
   Zookeeper = rb_define_class("CZookeeper", rb_cObject);
   zkrb_define_methods();
 }
+
+// vim:ts=2:sw=2:sts=2:et
