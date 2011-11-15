@@ -45,6 +45,7 @@ typedef enum {
 #define IS_SYNC(zkrbcall) ((zkrbcall)==SYNC || (zkrbcall)==SYNC_WATCH)
 #define IS_ASYNC(zkrbcall) ((zkrbcall)==ASYNC || (zkrbcall)==ASYNC_WATCH)
 
+
 static int destroy_zkrb_instance(struct zkrb_instance_data* ptr) {
   int rv = ZOK;
 
@@ -65,6 +66,7 @@ static int destroy_zkrb_instance(struct zkrb_instance_data* ptr) {
 
   ptr->zh = NULL;
   ptr->queue = NULL;
+
   return rv;
 }
 
@@ -74,11 +76,11 @@ static void free_zkrb_instance_data(struct zkrb_instance_data* ptr) {
 
 static void print_zkrb_instance_data(struct zkrb_instance_data* ptr) {
   fprintf(stderr, "zkrb_instance_data (%p) {\n", ptr);
-  fprintf(stderr, "    zh = %p\n",           ptr->zh);
-  fprintf(stderr, "      { state = %d }\n",  zoo_state(ptr->zh));
-  fprintf(stderr, "    id = %"PRId64"\n",    ptr->myid.client_id);   // PRId64 defined in inttypes.h
-  fprintf(stderr, "     q = %p\n",           ptr->queue);
-  fprintf(stderr, "obj_id = %lx\n",          ptr->object_id);
+  fprintf(stderr, "      zh = %p\n",           ptr->zh);
+  fprintf(stderr, "        { state = %d }\n",  zoo_state(ptr->zh));
+  fprintf(stderr, "      id = %"PRId64"\n",    ptr->myid.client_id);   // PRId64 defined in inttypes.h
+  fprintf(stderr, "       q = %p\n",           ptr->queue);
+  fprintf(stderr, "  obj_id = %lx\n",          ptr->object_id);
   fprintf(stderr, "}\n");
 }
 
