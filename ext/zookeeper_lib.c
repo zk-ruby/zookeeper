@@ -141,7 +141,8 @@ void zkrb_event_free(zkrb_event_t *event) {
     case ZKRB_STRINGS: {
       struct zkrb_strings_completion *strings_ctx = event->completion.strings_completion;
       int k;
-      for (k = 0; k < strings_ctx->values->count; ++k) free(strings_ctx->values->data[k]);
+      if (strings_ctx->values)
+        for (k = 0; k < strings_ctx->values->count; ++k) free(strings_ctx->values->data[k]);
       free(strings_ctx->values);
       free(strings_ctx);
       break;
@@ -149,7 +150,8 @@ void zkrb_event_free(zkrb_event_t *event) {
     case ZKRB_STRINGS_STAT: {
       struct zkrb_strings_stat_completion *strings_stat_ctx = event->completion.strings_stat_completion;
       int k;
-      for (k = 0; k < strings_stat_ctx->values->count; ++k) free(strings_stat_ctx->values->data[k]);
+      if (strings_stat_ctx->values)
+        for (k = 0; k < strings_stat_ctx->values->count; ++k) free(strings_stat_ctx->values->data[k]);
       free(strings_stat_ctx->values);
       free(strings_stat_ctx->stat);
       free(strings_stat_ctx);
