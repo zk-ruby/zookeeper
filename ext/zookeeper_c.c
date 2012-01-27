@@ -622,9 +622,7 @@ static VALUE method_client_id(VALUE self) {
   VALUE session_id = LL2NUM(cid->client_id);
   VALUE passwd = rb_str_new2(cid->passwd);
 
-  VALUE argv = rb_ary_new();
-
-  VALUE client_id_obj = rb_class_new_instance(RARRAY_LENINT(argv), RARRAY_PTR(argv), ZookeeperClientId);
+  VALUE client_id_obj = rb_class_new_instance(0, RARRAY_PTR(rb_ary_new()), ZookeeperClientId);
 
   rb_funcall(client_id_obj, rb_intern("session_id="), 1, session_id);
   rb_funcall(client_id_obj, rb_intern("passwd="), 1, passwd);
