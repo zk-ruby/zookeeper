@@ -25,6 +25,7 @@
 #include "dbg.h"
 
 static VALUE Zookeeper = Qnil;
+static VALUE ZookeeperClientId = Qnil;
 
 // slyphon: possibly add a lock to this for synchronizing during get_next_event
 
@@ -542,12 +543,6 @@ static VALUE method_has_events(VALUE self) {
   return rb_event;
 }
 
-static VALUE method_client_id(VALUE self) {
-  FETCH_DATA_PTR(self, zk);
-  const clientid_t *id = zoo_client_id(zk->zh);
-  return UINT2NUM(id->client_id);
-}
-
 
 // wake up the event loop, used when shutting down
 static VALUE method_wake_event_loop_bang(VALUE self) {
@@ -612,6 +607,29 @@ static VALUE method_recv_timeout(VALUE self) {
   return INT2NUM(zoo_recv_timeout(zk->zh));
 }
 
+/*static VALUE method_client_id(VALUE self) {*/
+/*  FETCH_DATA_PTR(self, zk);*/
+/*  const clientid_t *id = zoo_client_id(zk->zh);*/
+/*  return UINT2NUM(id->client_id);*/
+/*}*/
+
+
+// returns a CZookeeper::ClientId object with the values set for session_id and passwd
+static VALUE method_client_id(VALUE self) {
+  FETCH_DATA_PTR(self, zk);
+  const clientid_t *cid = zoo_client_id(zk->zh);
+
+  VALUE session_id = LL2NUM(cid->client_id);
+  VALUE passwd = rb_str_new2(cid->passwd);
+
+  VALUE client_id_obj = rb_class_new_instance(0, RARRAY_PTR(rb_ary_new()), ZookeeperClientId);
+
+  rb_funcall(client_id_obj, rb_intern("session_id="), 1, session_id);
+  rb_funcall(client_id_obj, rb_intern("passwd="), 1, passwd);
+
+  return client_id_obj;
+}
+
 static VALUE klass_method_set_debug_level(VALUE klass, VALUE level) {
   Check_Type(level, T_FIXNUM);
   ZKRBDebugging = (FIX2INT(level) == ZOO_LOG_LEVEL_DEBUG);
@@ -662,11 +680,31 @@ static void zkrb_define_methods(void) {
   rb_define_method(Zookeeper, "wake_event_loop!", method_wake_event_loop_bang, 0);
 }
 
+// class CZookeeper::ClientId
+//   attr_accessor :session_id, :passwd
+//
+//   def initialize(session_id, passwd)
+//     @session_id = session_id
+//     @passwd = passwd
+//   end
+// end
+
+static VALUE zkrb_client_id_method_initialize(VALUE self) {
+  rb_iv_set(self, "@session_id", Qnil);
+  rb_iv_set(self, "@passwd", Qnil);
+  return Qnil;
+}
+
 void Init_zookeeper_c() {
   ZKRBDebugging = 0;
   /* initialize Zookeeper class */
   Zookeeper = rb_define_class("CZookeeper", rb_cObject);
   zkrb_define_methods();
+
+  ZookeeperClientId = rb_define_class_under(Zookeeper, "ClientId", rb_cObject);
+  rb_define_method(ZookeeperClientId, "initialize", zkrb_client_id_method_initialize, 0);
+  rb_define_attr(ZookeeperClientId, "session_id", 1, 1);
+  rb_define_attr(ZookeeperClientId, "passwd", 1, 1);
 }
 
 // vim:ts=2:sw=2:sts=2:et

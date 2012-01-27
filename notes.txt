@@ -1,0 +1,14 @@
+Notes on this fork of http://github.com/twitter/zookeeper
+
+The main purpose of this fork is to provide JRuby compatibility with the MRI driver of the original. We have been using an early fork with an incomplete binding to the C client, and had recently bumped up against a fairly serious bug with handling events. The twitter/zookeeper driver solved this problem but was lacking JRuby support (which is a core piece of our environment).
+
+I've packaged the Java client (and its dependency on log4j) as gems that are installed separately from this codebase to cut down on the size of the zookeeper gem. If this poses a problem (for instance, if the original goal was to have an all-in-one install with no external dependencies), it would be trivial to package those jars along with this code.
+
+In the course of writing the wrapper for JRuby, I've written nearly-complete specs for all of the public API methods: get, set, get_children, stat, create, delete, get_acl, and set_acl. The reason I say they're "nearly" complete is that I have no use for set_acl, and quite honestly, couldn't figure out how to make it work. 
+
+I'm planning on writing a companion gem, 'ZK', that would take some of the higher-level constructs that we'd written around the lower-level driver to implement features like locking and queues, and also to provide a more ruby-like interface.
+
+I'd like to reorganize this codebase in a number of ways, most of all to move all of the various classes and modules under a common "Zookeeper" namespace, however I thought that would be a radical enough change where I'd want to discuss/coordinate with you on how exactly to do it.
+
+
+

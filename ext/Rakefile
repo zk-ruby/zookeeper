@@ -12,7 +12,7 @@ task :clobber => :clean do
 end
 
 task :build_zkc do
-  ruby 'extconf.rb'
+  sh 'ruby extconf.rb'
 end
 
 file 'Makefile' => :build_zkc

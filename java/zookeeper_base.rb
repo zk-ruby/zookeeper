@@ -475,6 +475,14 @@ class ZookeeperBase
     @event_queue.clear_reads_on_pop = false
     @event_queue.selectable_io
   end
+  
+  def session_id
+    @jzk.session_id
+  end
+
+  def session_passwd
+    @jzk.session_passwd.to_s
+  end
 
   def get_next_event(blocking=true)
     @event_queue.pop(!blocking).tap do |event|

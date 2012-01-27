@@ -951,4 +951,16 @@ describe Zookeeper do
       
     end
   end
+
+  describe :session_id do
+    it %[should return the session_id as a Fixnum] do
+      @zk.session_id.should be_kind_of(Fixnum)
+    end
+  end
+
+  describe :session_passwd do
+    it %[should return the session passwd as a String] do
+      @zk.session_passwd.should be_kind_of(String)
+    end
+  end
 end

@@ -6,8 +6,16 @@ HERE = File.expand_path(File.dirname(__FILE__))
 BUNDLE = Dir.glob("zkc-*.tar.gz").first
 BUNDLE_PATH = "c"
 
-$CFLAGS = "#{RbConfig::CONFIG['CFLAGS']} #{$CFLAGS}".gsub("$(cflags)", "").gsub("-arch ppc", "")
-$LDFLAGS = "#{RbConfig::CONFIG['LDFLAGS']} #{$LDFLAGS}".gsub("$(ldflags)", "").gsub("-arch ppc", "")
+$EXTRA_CONF = ''
+
+# CLANG!!!! jeez, if apple would only *stop* "thinking different"
+if cc = RbConfig::CONFIG['CC'] && cc =~ /^gcc/
+  $CC = cc
+  $EXTRA_CONF = "#{$EXTRA_CONF} CC=#{$CC}"
+end
+
+$CFLAGS = "#{$CFLAGS}".gsub("$(cflags)", "").gsub("-arch ppc", "")
+$LDFLAGS = "#{$LDFLAGS}".gsub("$(ldflags)", "").gsub("-arch ppc", "")
 $CXXFLAGS = " -std=gnu++98 #{$CFLAGS}"
 $CPPFLAGS = $ARCH_FLAG = $DLDFLAGS = ""
 
@@ -16,7 +24,7 @@ DEBUG_CFLAGS = " -O0 -ggdb3 -DHAVE_DEBUG"
 
 if ZK_DEBUG
   $stderr.puts "*** Setting debug flags. ***"
-  $EXTRA_CONF = " --enable-debug"
+  $EXTRA_CONF = "#{$EXTRA_CONF} --enable-debug"
   $CFLAGS.gsub!(/ -O[^0] /, ' ')
   $CFLAGS << DEBUG_CFLAGS
 end
