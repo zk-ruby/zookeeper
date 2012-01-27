@@ -4,11 +4,10 @@ end
 
 namespace :mb do
   task :build_gems do
-    sh "gem build slyphon-zookeeper.gemspec"
+    sh "rvm 1.8.7 do gem build slyphon-zookeeper.gemspec"
     ENV['JAVA_GEM'] = '1'
-    sh "gem build slyphon-zookeeper.gemspec"
+    sh "rvm 1.8.7 do gem build slyphon-zookeeper.gemspec"
   end
-
 end
 
 %w[1.8.7 1.9.2 1.9.3 jruby].each do |rvm_ruby|
