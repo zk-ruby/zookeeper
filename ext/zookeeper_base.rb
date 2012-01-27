@@ -134,6 +134,14 @@ class ZookeeperBase < CZookeeper
     super
   end
 
+  def session_id
+    client_id.session_id
+  end
+
+  def session_passwd
+    client_id.passwd
+  end
+
 protected
   def barf_unless_running!
     @start_stop_mutex.synchronize do
