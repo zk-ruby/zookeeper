@@ -8,7 +8,8 @@ BUNDLE_PATH = "c"
 
 $EXTRA_CONF = ''
 
-if cc = RbConfig::CONFIG['CC']
+# CLANG!!!! jeez, if apple would only *stop* "thinking different"
+if cc = RbConfig::CONFIG['CC'] && cc =~ /^gcc/
   $CC = cc
   $EXTRA_CONF = "#{$EXTRA_CONF} CC=#{$CC}"
 end
