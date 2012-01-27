@@ -200,6 +200,16 @@ class Zookeeper < ZookeeperBase
     super
   end
 
+  # return the session id of the current connection as an Fixnum
+  def session_id
+    super
+  end
+
+  # Return the passwd portion of this connection's credentials as a String
+  def session_passwd
+    super
+  end
+
 protected
   # used during shutdown, awaken the event delivery thread if it's blocked
   # waiting for the next event
