@@ -1,7 +1,7 @@
-def gemset_name
-  ENV.fetch('GEM_HOME').split('@').last
-end
-
+# def gemset_name
+#   ENV.fetch('GEM_HOME').split('@').last
+# end
+# 
 namespace :mb do
   task :build_gems do
     sh "rvm 1.8.7 do gem build slyphon-zookeeper.gemspec"
@@ -9,6 +9,8 @@ namespace :mb do
     sh "rvm 1.8.7 do gem build slyphon-zookeeper.gemspec"
   end
 end
+
+gemset_name = 'zookeeper'
 
 %w[1.8.7 1.9.2 1.9.3 jruby].each do |rvm_ruby|
   ruby_with_gemset = "#{rvm_ruby}@#{gemset_name}"
