@@ -1,12 +1,11 @@
 CHANGELOG
-Gemfile
 LICENSE
 Manifest
 README
 Rakefile
 examples/cloud_config.rb
 ext/extconf.rb
-ext/zkc-3.3.3.tar.gz
+ext/zkc-3.3.4.tar.gz
 ext/zookeeper_base.rb
 ext/zookeeper_c.c
 ext/zookeeper_lib.c
