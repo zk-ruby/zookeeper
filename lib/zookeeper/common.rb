@@ -54,9 +54,12 @@ protected
     
     callback_context = is_completion ? get_completion(hash[:req_id]) : get_watcher(hash[:req_id])
 
-    # when connectivity with the server is lost, on reconnection it's possible
-    # to receive duplicate responses. If we've already handled a response for a
-    # given req_id, this value will be nil, and we just ignore it.
+    # When connectivity to the server has been lost (as indicated by SESSION_EVENT)
+    # we want to rerun the callback at a later time when we eventually do have
+    # a valid response.
+    if hash[:type] == ZookeeperConstants::ZOO_SESSION_EVENT
+      is_completion ? setup_completion(hash[:req_id], callback_context) : setup_watcher(hash[:req_id], callback_context)
+    end
     if callback_context
       callback = is_completion ? callback_context[:callback] : callback_context[:watcher]
 
