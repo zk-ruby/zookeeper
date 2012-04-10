@@ -48,6 +48,11 @@ class ZookeeperBase < CZookeeper
     @completion_reqs = {}
     @req_mutex = Monitor.new
     @current_req_id = 1
+    
+    # approximate the java behavior of raising java.lang.IllegalArgumentException if the host
+    # argument ends with '/'
+    raise ArgumentError, "Host argument #{host.inspect} may not end with /" if host.end_with?('/')
+
     @host = host
 
     @start_stop_mutex = Monitor.new
