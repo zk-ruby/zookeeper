@@ -11,25 +11,24 @@ shared_examples_for "all success return values" do
 end
 
 describe Zookeeper do
+  let(:path) { "/_zktest_" }
+  let(:data) { "underpants" } 
+  let(:zk) { Zookeeper.new('localhost:2181') }
+
   before do
-    @path = "/_zktest_"
-    @data = "underpants"
-
-    @zk = Zookeeper.new('localhost:2181')
-
     # uncomment for driver debugging output
-    #@zk.set_debug_level(Zookeeper::ZOO_LOG_LEVEL_DEBUG) unless defined?(::JRUBY_VERSION)
+    #zk.set_debug_level(Zookeeper::ZOO_LOG_LEVEL_DEBUG) unless defined?(::JRUBY_VERSION)
 
-    @zk.create(:path => @path, :data => @data)
+    zk.create(:path => path, :data => data)
   end
 
   after do
-    @zk.delete(:path => @path)
-    @zk.close
+    zk.delete(:path => path)
+    zk.close
 
     wait_until do 
       begin
-        !@zk.connected?
+        !zk.connected?
       rescue RuntimeError
         true
       end
@@ -43,11 +42,11 @@ describe Zookeeper do
       it_should_behave_like "all success return values"
 
       before do
-        @rv = @zk.get(:path => @path)
+        @rv = zk.get(:path => path)
       end
 
       it %[should return the data] do
-        @rv[:data].should == @data
+        @rv[:data].should == data
       end
 
       it %[should return a stat] do
@@ -63,21 +62,21 @@ describe Zookeeper do
         @event = nil
         @watcher = Zookeeper::WatcherCallback.new
 
-        @rv = @zk.get(:path => @path, :watcher => @watcher, :watcher_context => @path) 
+        @rv = zk.get(:path => path, :watcher => @watcher, :watcher_context => path) 
       end
 
       it %[should return the data] do
-        @rv[:data].should == @data
+        @rv[:data].should == data
       end
 
       it %[should set a watcher on the node] do
         # test the watcher by changing node data
-        @zk.set(:path => @path, :data => 'blah')[:rc].should be_zero
+        zk.set(:path => path, :data => 'blah')[:rc].should be_zero
 
         wait_until(1.0) { @watcher.completed? }
 
-        @watcher.path.should == @path
-        @watcher.context.should == @path
+        @watcher.path.should == path
+        @watcher.context.should == path
         @watcher.should be_completed
         @watcher.type.should == Zookeeper::ZOO_CHANGED_EVENT
       end
@@ -89,7 +88,7 @@ describe Zookeeper do
       before do
         @cb = Zookeeper::DataCallback.new
 
-        @rv = @zk.get(:path => @path, :callback => @cb, :callback_context => @path)
+        @rv = zk.get(:path => path, :callback => @cb, :callback_context => path)
         wait_until(1.0) { @cb.completed? }
         @cb.should be_completed
       end
@@ -104,7 +103,7 @@ describe Zookeeper do
       end
 
       it %[should have the data] do
-        @cb.data.should == @data
+        @cb.data.should == data
       end
     end
 
@@ -115,7 +114,7 @@ describe Zookeeper do
         @cb = Zookeeper::DataCallback.new
         @watcher = Zookeeper::WatcherCallback.new
 
-        @rv = @zk.get(:path => @path, :callback => @cb, :callback_context => @path, :watcher => @watcher, :watcher_context => @path)
+        @rv = zk.get(:path => path, :callback => @cb, :callback_context => path, :watcher => @watcher, :watcher_context => path)
         wait_until(1.0) { @cb.completed? }
         @cb.should be_completed
       end
@@ -126,7 +125,7 @@ describe Zookeeper do
       end
 
       it %[should have the data] do
-        @cb.data.should == @data
+        @cb.data.should == data
       end
 
       it %[should have a return code of ZOK] do
@@ -134,20 +133,20 @@ describe Zookeeper do
       end
 
       it %[should set a watcher on the node] do
-        @zk.set(:path => @path, :data => 'blah')[:rc].should be_zero
+        zk.set(:path => path, :data => 'blah')[:rc].should be_zero
 
         wait_until(2) { @watcher.completed? }
 
         @watcher.should be_completed
 
-        @watcher.path.should == @path
-        @watcher.context.should == @path
+        @watcher.path.should == path
+        @watcher.context.should == path
       end
     end
 
     describe 'bad arguments' do
       it %[should barf with a BadArguments error] do
-        lambda { @zk.get(:bad_arg => 'what!?') }.should raise_error(ZookeeperExceptions::ZookeeperException::BadArguments)
+        lambda { zk.get(:bad_arg => 'what!?') }.should raise_error(ZookeeperExceptions::ZookeeperException::BadArguments)
       end
     end
   end   # get
@@ -155,7 +154,7 @@ describe Zookeeper do
   describe :set do
     before do
       @new_data = "Four score and \007 years ago"
-      @stat = @zk.stat(:path => @path)[:stat]
+      @stat = zk.stat(:path => path)[:stat]
     end
 
     describe :sync do
@@ -163,7 +162,7 @@ describe Zookeeper do
         it_should_behave_like "all success return values"
 
         before do
-          @rv = @zk.set(:path => @path, :data => @new_data)
+          @rv = zk.set(:path => path, :data => @new_data)
         end
 
         it %[should return the new stat] do
@@ -177,7 +176,7 @@ describe Zookeeper do
         it_should_behave_like "all success return values"
 
         before do
-          @rv = @zk.set(:path => @path, :data => @new_data, :version => @stat.version)
+          @rv = zk.set(:path => path, :data => @new_data, :version => @stat.version)
         end
 
         it %[should return the new stat] do
@@ -190,9 +189,9 @@ describe Zookeeper do
       describe 'with outdated version' do
         before do
           # need to do a couple of sets to ramp up the version
-          3.times { |n| @stat = @zk.set(:path => @path, :data => "#{@new_data}#{n}")[:stat] }
+          3.times { |n| @stat = zk.set(:path => path, :data => "#{@new_data}#{n}")[:stat] }
 
-          @rv = @zk.set(:path => @path, :data => @new_data, :version => 0)
+          @rv = zk.set(:path => path, :data => @new_data, :version => 0)
         end
 
         it %[should have a return code of ZBADVERSION] do
@@ -208,7 +207,7 @@ describe Zookeeper do
         it %[should barf if the data size is too large], :input_size => true do
           large_data = '0' * (1024 ** 2)
 
-          lambda { @zk.set(:path => @path, :data => large_data) }.should raise_error(ZookeeperExceptions::ZookeeperException::DataTooLargeException)
+          lambda { zk.set(:path => path, :data => large_data) }.should raise_error(ZookeeperExceptions::ZookeeperException::DataTooLargeException)
         end
       end
     end   # sync
@@ -222,7 +221,7 @@ describe Zookeeper do
         it_should_behave_like "all success return values"
 
         before do
-          @rv = @zk.set(:path => @path, :data => @new_data, :callback => @cb, :callback_context => @path)
+          @rv = zk.set(:path => path, :data => @new_data, :callback => @cb, :callback_context => path)
 
           wait_until(2) { @cb.completed? }
           @cb.should be_completed
@@ -242,7 +241,7 @@ describe Zookeeper do
         it_should_behave_like "all success return values"
 
         before do
-          @rv = @zk.set(:path => @path, :data => @new_data, :callback => @cb, :callback_context => @path, :version => @stat.version)
+          @rv = zk.set(:path => path, :data => @new_data, :callback => @cb, :callback_context => path, :version => @stat.version)
 
           wait_until(2) { @cb.completed? }
           @cb.should be_completed
@@ -261,9 +260,9 @@ describe Zookeeper do
       describe 'with outdated version' do
         before do
           # need to do a couple of sets to ramp up the version
-          3.times { |n| @stat = @zk.set(:path => @path, :data => "#{@new_data}#{n}")[:stat] }
+          3.times { |n| @stat = zk.set(:path => path, :data => "#{@new_data}#{n}")[:stat] }
 
-          @rv = @zk.set(:path => @path, :data => @new_data, :callback => @cb, :callback_context => @path, :version => 0)
+          @rv = zk.set(:path => path, :data => @new_data, :callback => @cb, :callback_context => path, :version => 0)
 
           wait_until(2) { @cb.completed? }
           @cb.should be_completed
@@ -282,7 +281,7 @@ describe Zookeeper do
         it %[should barf if the data size is too large], :input_size => true do
           large_data = '0' * (1024 ** 2)
 
-          lambda { @zk.set(:path => @path, :data => large_data, :callback => @cb, :callback_context => @path) }.should raise_error(ZookeeperExceptions::ZookeeperException::DataTooLargeException)
+          lambda { zk.set(:path => path, :data => large_data, :callback => @cb, :callback_context => path) }.should raise_error(ZookeeperExceptions::ZookeeperException::DataTooLargeException)
         end
       end
 
@@ -294,13 +293,13 @@ describe Zookeeper do
       @children = %w[child0 child1 child2]
 
       @children.each do |name|
-        @zk.create(:path => "#{@path}/#{name}", :data => name)
+        zk.create(:path => "#{path}/#{name}", :data => name)
       end
     end
 
     after do
       @children.each do |name|
-        @zk.delete(:path => "#{@path}/#{name}")
+        zk.delete(:path => "#{path}/#{name}")
       end
     end
 
@@ -308,7 +307,7 @@ describe Zookeeper do
       it_should_behave_like "all success return values"
 
       before do
-        @rv = @zk.get_children(:path => @path)
+        @rv = zk.get_children(:path => path)
       end
 
       it %[should have an array of names of the children] do
@@ -334,11 +333,11 @@ describe Zookeeper do
 
         @watcher = Zookeeper::WatcherCallback.new
 
-        @rv = @zk.get_children(:path => @path, :watcher => @watcher, :watcher_context => @path)
+        @rv = zk.get_children(:path => path, :watcher => @watcher, :watcher_context => path)
       end
 
       after do
-        @zk.delete(:path => "#{@path}/#{@addtl_child}")
+        zk.delete(:path => "#{path}/#{@addtl_child}")
       end
 
       it %[should have an array of names of the children] do
@@ -356,13 +355,13 @@ describe Zookeeper do
       it %[should set a watcher for children on the node] do
         @watcher.should_not be_completed
 
-        @zk.create(:path => "#{@path}/#{@addtl_child}", :data => '')[:rc].should == Zookeeper::ZOK
+        zk.create(:path => "#{path}/#{@addtl_child}", :data => '')[:rc].should == Zookeeper::ZOK
 
         wait_until { @watcher.completed? }
         @watcher.should be_completed
 
-        @watcher.path.should == @path
-        @watcher.context.should == @path
+        @watcher.path.should == path
+        @watcher.context.should == path
         @watcher.type.should == Zookeeper::ZOO_CHILD_EVENT
       end
     end
@@ -372,7 +371,7 @@ describe Zookeeper do
 
       before do
         @cb = ZookeeperCallbacks::StringsCallback.new
-        @rv = @zk.get_children(:path => @path, :callback => @cb, :callback_context => @path)
+        @rv = zk.get_children(:path => path, :callback => @cb, :callback_context => path)
 
         wait_until { @cb.completed? }
         @cb.should be_completed
@@ -404,13 +403,13 @@ describe Zookeeper do
         @watcher = Zookeeper::WatcherCallback.new
         @cb = ZookeeperCallbacks::StringsCallback.new
 
-        @rv = @zk.get_children(:path => @path, :watcher => @watcher, :watcher_context => @path, :callback => @cb, :callback_context => @path)
+        @rv = zk.get_children(:path => path, :watcher => @watcher, :watcher_context => path, :callback => @cb, :callback_context => path)
         wait_until { @cb.completed? }
         @cb.should be_completed
       end
 
       after do
-        @zk.delete(:path => "#{@path}/#{@addtl_child}")
+        zk.delete(:path => "#{path}/#{@addtl_child}")
       end
 
       it %[should succeed] do
@@ -432,13 +431,13 @@ describe Zookeeper do
       it %[should set a watcher for children on the node] do
         @watcher.should_not be_completed
 
-        @zk.create(:path => "#{@path}/#{@addtl_child}", :data => '')[:rc].should == Zookeeper::ZOK
+        zk.create(:path => "#{path}/#{@addtl_child}", :data => '')[:rc].should == Zookeeper::ZOK
 
         wait_until { @watcher.completed? }
         @watcher.should be_completed
 
-        @watcher.path.should == @path
-        @watcher.context.should == @path
+        @watcher.path.should == path
+        @watcher.context.should == path
         @watcher.type.should == Zookeeper::ZOO_CHILD_EVENT
       end
     end
@@ -451,7 +450,7 @@ describe Zookeeper do
       it_should_behave_like "all success return values"
 
       before do
-        @rv = @zk.stat(:path => @path)
+        @rv = zk.stat(:path => path)
       end
 
       it %[should have a stat object] do
@@ -465,7 +464,7 @@ describe Zookeeper do
       before do
         @watcher = Zookeeper::WatcherCallback.new
 
-        @rv = @zk.stat(:path => @path, :watcher => @watcher, :watcher_context => @path)
+        @rv = zk.stat(:path => path, :watcher => @watcher, :watcher_context => path)
       end
 
       it %[should have a stat object] do
@@ -475,13 +474,13 @@ describe Zookeeper do
       it %[should set a watcher for data changes on the node] do
         @watcher.should_not be_completed
 
-        @zk.set(:path => @path, :data => 'skunk')[:rc].should == Zookeeper::ZOK
+        zk.set(:path => path, :data => 'skunk')[:rc].should == Zookeeper::ZOK
 
         wait_until { @watcher.completed? }
         @watcher.should be_completed
 
-        @watcher.path.should == @path
-        @watcher.context.should == @path
+        @watcher.path.should == path
+        @watcher.context.should == path
         @watcher.type.should == Zookeeper::ZOO_CHANGED_EVENT
       end
     end
@@ -491,7 +490,7 @@ describe Zookeeper do
 
       before do
         @cb = ZookeeperCallbacks::StatCallback.new
-        @rv = @zk.stat(:path => @path, :callback => @cb, :callback_context => @path)
+        @rv = zk.stat(:path => path, :callback => @cb, :callback_context => path)
 
         wait_until { @cb.completed? }
         @cb.should be_completed
@@ -515,14 +514,14 @@ describe Zookeeper do
         @watcher = Zookeeper::WatcherCallback.new
 
         @cb = ZookeeperCallbacks::StatCallback.new
-        @rv = @zk.stat(:path => @path, :callback => @cb, :callback_context => @path, :watcher => @watcher, :watcher_context => @path)
+        @rv = zk.stat(:path => path, :callback => @cb, :callback_context => path, :watcher => @watcher, :watcher_context => path)
 
         wait_until { @cb.completed? }
         @cb.should be_completed
       end
 
       after do
-        @zk.delete(:path => "#{@path}/#{@addtl_child}")
+        zk.delete(:path => "#{path}/#{@addtl_child}")
       end
 
       it %[should succeed] do
@@ -536,13 +535,13 @@ describe Zookeeper do
       it %[should set a watcher for data changes on the node] do
         @watcher.should_not be_completed
 
-        @zk.set(:path => @path, :data => 'skunk')[:rc].should == Zookeeper::ZOK
+        zk.set(:path => path, :data => 'skunk')[:rc].should == Zookeeper::ZOK
 
         wait_until { @watcher.completed? }
         @watcher.should be_completed
 
-        @watcher.path.should == @path
-        @watcher.context.should == @path
+        @watcher.path.should == path
+        @watcher.context.should == path
         @watcher.type.should == Zookeeper::ZOO_CHANGED_EVENT
       end
     end
@@ -551,7 +550,7 @@ describe Zookeeper do
   describe :create do
     before do
       # remove the path set up by the global 'before' block
-      @zk.delete(:path => @path)
+      zk.delete(:path => path)
     end
 
     describe :sync do
@@ -559,7 +558,7 @@ describe Zookeeper do
         it %[should barf if the data size is too large], :input_size => true do
           large_data = '0' * (1024 ** 2)
 
-          lambda { @zk.create(:path => @path, :data => large_data) }.should raise_error(ZookeeperExceptions::ZookeeperException::DataTooLargeException)
+          lambda { zk.create(:path => path, :data => large_data) }.should raise_error(ZookeeperExceptions::ZookeeperException::DataTooLargeException)
         end
       end
 
@@ -567,15 +566,15 @@ describe Zookeeper do
         it_should_behave_like "all success return values"
 
         before do
-          @rv = @zk.create(:path => @path)
+          @rv = zk.create(:path => path)
         end
 
         it %[should return the path that was set] do
-          @rv[:path].should == @path
+          @rv[:path].should == path
         end
 
         it %[should have created a permanent node] do
-          st = @zk.stat(:path => @path)
+          st = zk.stat(:path => path)
           st[:rc].should == Zookeeper::ZOK
 
           st[:stat].ephemeral_owner.should == 0
@@ -586,15 +585,15 @@ describe Zookeeper do
         it_should_behave_like "all success return values"
 
         before do
-          @rv = @zk.create(:path => @path, :ephemeral => true)
+          @rv = zk.create(:path => path, :ephemeral => true)
         end
 
         it %[should return the path that was set] do
-          @rv[:path].should == @path
+          @rv[:path].should == path
         end
 
         it %[should have created a ephemeral node] do
-          st = @zk.stat(:path => @path)
+          st = zk.stat(:path => path)
           st[:rc].should == Zookeeper::ZOK
 
           st[:stat].ephemeral_owner.should_not be_zero
@@ -605,9 +604,9 @@ describe Zookeeper do
         it_should_behave_like "all success return values"
 
         before do
-          @orig_path  = @path
-          @rv         = @zk.create(:path => @path, :sequence => true)
-          @path       = @rv[:path]    # make sure this gets cleaned up
+          @orig_path  = path
+          @rv         = zk.create(:path => path, :sequence => true)
+          @s_path     = @rv[:path]    # make sure this gets cleaned up
         end
 
         it %[should return the path that was set] do
@@ -615,7 +614,7 @@ describe Zookeeper do
         end
 
         it %[should have created a permanent node] do
-          st = @zk.stat(:path => @path)
+          st = zk.stat(:path => @s_path)
           st[:rc].should == Zookeeper::ZOK
 
           st[:stat].ephemeral_owner.should be_zero
@@ -626,9 +625,9 @@ describe Zookeeper do
         it_should_behave_like "all success return values"
 
         before do
-          @orig_path  = @path
-          @rv         = @zk.create(:path => @path, :sequence => true, :ephemeral => true)
-          @path       = @rv[:path]    # make sure this gets cleaned up
+          @orig_path  = path
+          @rv         = zk.create(:path => path, :sequence => true, :ephemeral => true)
+          path       = @rv[:path]    # make sure this gets cleaned up
         end
 
         it %[should return the path that was set] do
@@ -636,7 +635,7 @@ describe Zookeeper do
         end
 
         it %[should have created an ephemeral node] do
-          st = @zk.stat(:path => @path)
+          st = zk.stat(:path => path)
           st[:rc].should == Zookeeper::ZOK
 
           st[:stat].ephemeral_owner.should_not be_zero
@@ -659,7 +658,7 @@ describe Zookeeper do
         it_should_behave_like "all success return values"
 
         before do
-          @rv = @zk.create(:path => @path, :callback => @cb, :callback_context => @path)
+          @rv = zk.create(:path => path, :callback => @cb, :callback_context => path)
           wait_until(2) { @cb.completed? }
           @cb.should be_completed
         end
@@ -669,11 +668,11 @@ describe Zookeeper do
         end
 
         it %[should return the path that was set] do
-          @cb.path.should == @path
+          @cb.path.should == path
         end
 
         it %[should have created a permanent node] do
-          st = @zk.stat(:path => @path)
+          st = zk.stat(:path => path)
           st[:rc].should == Zookeeper::ZOK
 
           st[:stat].ephemeral_owner.should == 0
@@ -685,7 +684,7 @@ describe Zookeeper do
           large_data = '0' * (1024 ** 2)
 
           lambda do
-            @zk.create(:path => @path, :data => large_data, :callback => @cb, :callback_context => @path)
+            zk.create(:path => path, :data => large_data, :callback => @cb, :callback_context => path)
           end.should raise_error(ZookeeperExceptions::ZookeeperException::DataTooLargeException)
         end
       end
@@ -695,7 +694,7 @@ describe Zookeeper do
         it_should_behave_like "all success return values"
 
         before do
-          @rv = @zk.create(:path => @path, :ephemeral => true, :callback => @cb, :callback_context => @path)
+          @rv = zk.create(:path => path, :ephemeral => true, :callback => @cb, :callback_context => path)
           wait_until(2) { @cb.completed? }
           @cb.should be_completed
         end
@@ -705,11 +704,11 @@ describe Zookeeper do
         end
 
         it %[should return the path that was set] do
-          @cb.path.should == @path
+          @cb.path.should == path
         end
 
         it %[should have created a ephemeral node] do
-          st = @zk.stat(:path => @path)
+          st = zk.stat(:path => path)
           st[:rc].should == Zookeeper::ZOK
 
           st[:stat].ephemeral_owner.should_not be_zero
@@ -720,13 +719,13 @@ describe Zookeeper do
         it_should_behave_like "all success return values"
 
         before do
-          @orig_path  = @path
-          @rv         = @zk.create(:path => @path, :sequence => true, :callback => @cb, :callback_context => @path)
+          @orig_path  = path
+          @rv         = zk.create(:path => path, :sequence => true, :callback => @cb, :callback_context => path)
 
           wait_until(2) { @cb.completed? }
           @cb.should be_completed
 
-          @path = @cb.path
+          path = @cb.path
         end
 
         it %[should have a path] do
@@ -738,7 +737,7 @@ describe Zookeeper do
         end
 
         it %[should have created a permanent node] do
-          st = @zk.stat(:path => @path)
+          st = zk.stat(:path => path)
           st[:rc].should == Zookeeper::ZOK
 
           st[:stat].ephemeral_owner.should be_zero
@@ -749,13 +748,13 @@ describe Zookeeper do
         it_should_behave_like "all success return values"
 
         before do
-          @orig_path  = @path
-          @rv         = @zk.create(:path => @path, :sequence => true, :ephemeral => true, :callback => @cb, :callback_context => @path)
-          @path       = @rv[:path]    # make sure this gets cleaned up
+          @orig_path  = path
+          @rv         = zk.create(:path => path, :sequence => true, :ephemeral => true, :callback => @cb, :callback_context => path)
+          path       = @rv[:path]    # make sure this gets cleaned up
 
           wait_until(2) { @cb.completed? }
           @cb.should be_completed
-          @path = @cb.path
+          path = @cb.path
         end
 
         it %[should have a path] do
@@ -763,11 +762,11 @@ describe Zookeeper do
         end
 
         it %[should return the path that was set] do
-          @path.should_not == @orig_path
+          path.should_not == @orig_path
         end
 
         it %[should have created an ephemeral node] do
-          st = @zk.stat(:path => @path)
+          st = zk.stat(:path => path)
           st[:rc].should == Zookeeper::ZOK
 
           st[:stat].ephemeral_owner.should_not be_zero
@@ -782,12 +781,12 @@ describe Zookeeper do
         it_should_behave_like "all success return values"
 
         before do
-          @zk.create(:path => @path)
-          @rv = @zk.delete(:path => @path)
+          zk.create(:path => path)
+          @rv = zk.delete(:path => path)
         end
 
         it %[should have deleted the node] do
-          @zk.stat(:path => @path)[:stat].exists.should be_false
+          zk.stat(:path => path)[:stat].exists.should be_false
         end
       end
 
@@ -795,24 +794,24 @@ describe Zookeeper do
         it_should_behave_like "all success return values"
 
         before do
-          @zk.create(:path => @path)
+          zk.create(:path => path)
 
-          @stat = @zk.stat(:path => @path)[:stat]
+          @stat = zk.stat(:path => path)[:stat]
           @stat.exists.should be_true
 
-          @rv = @zk.delete(:path => @path, :version => @stat.version)
+          @rv = zk.delete(:path => path, :version => @stat.version)
         end
 
         it %[should have deleted the node] do
-          @zk.stat(:path => @path)[:stat].exists.should be_false
+          zk.stat(:path => path)[:stat].exists.should be_false
         end
       end
 
       describe 'with old version' do
         before do
-          3.times { |n| @stat = @zk.set(:path => @path, :data => n.to_s)[:stat] }
+          3.times { |n| @stat = zk.set(:path => path, :data => n.to_s)[:stat] }
 
-          @rv = @zk.delete(:path => @path, :version => 0)
+          @rv = zk.delete(:path => path, :version => 0)
         end
 
         it %[should have a return code of ZBADVERSION] do
@@ -830,7 +829,7 @@ describe Zookeeper do
         it_should_behave_like "all success return values"
 
         before do
-          @rv = @zk.delete(:path => @path, :callback => @cb, :callback_context => @path)
+          @rv = zk.delete(:path => path, :callback => @cb, :callback_context => path)
           wait_until { @cb.completed? }
           @cb.should be_completed
         end
@@ -840,7 +839,7 @@ describe Zookeeper do
         end
 
         it %[should have deleted the node] do
-          @zk.stat(:path => @path)[:stat].exists.should be_false
+          zk.stat(:path => path)[:stat].exists.should be_false
         end
       end
 
@@ -848,8 +847,8 @@ describe Zookeeper do
         it_should_behave_like "all success return values"
 
         before do
-          @stat = @zk.stat(:path => @path)[:stat]
-          @rv   = @zk.delete(:path => @path, :version => @stat.version, :callback => @cb, :callback_context => @path)
+          @stat = zk.stat(:path => path)[:stat]
+          @rv   = zk.delete(:path => path, :version => @stat.version, :callback => @cb, :callback_context => path)
           wait_until { @cb.completed? }
           @cb.should be_completed
         end
@@ -859,15 +858,15 @@ describe Zookeeper do
         end
 
         it %[should have deleted the node] do
-          @zk.stat(:path => @path)[:stat].exists.should be_false
+          zk.stat(:path => path)[:stat].exists.should be_false
         end
       end
 
       describe 'with old version' do
         before do
-          3.times { |n| @stat = @zk.set(:path => @path, :data => n.to_s)[:stat] }
+          3.times { |n| @stat = zk.set(:path => path, :data => n.to_s)[:stat] }
 
-          @rv = @zk.delete(:path => @path, :version => 0, :callback => @cb, :callback_context => @path)
+          @rv = zk.delete(:path => path, :version => 0, :callback => @cb, :callback_context => path)
           wait_until { @cb.completed? }
           @cb.should be_completed
         end
@@ -884,7 +883,7 @@ describe Zookeeper do
       it_should_behave_like "all success return values"
 
       before do
-        @rv = @zk.get_acl(:path => @path)
+        @rv = zk.get_acl(:path => path)
       end
 
       it %[should return a stat for the path] do
@@ -909,7 +908,7 @@ describe Zookeeper do
 
       before do
         @cb = Zookeeper::ACLCallback.new
-        @rv = @zk.get_acl(:path => @path, :callback => @cb, :callback_context => @path)
+        @rv = zk.get_acl(:path => path, :callback => @cb, :callback_context => path)
 
         wait_until(2) { @cb.completed? }
         @cb.should be_completed
@@ -946,7 +945,7 @@ describe Zookeeper do
       it_should_behave_like "all success return values"
 
       before do
-        @rv = @zk.set_acl(:path => @path, :acl => @new_acl)
+        @rv = zk.set_acl(:path => path, :acl => @new_acl)
       end
       
     end
@@ -954,13 +953,17 @@ describe Zookeeper do
 
   describe :session_id do
     it %[should return the session_id as a Fixnum] do
-      @zk.session_id.should be_kind_of(Fixnum)
+      zk.session_id.should be_kind_of(Fixnum)
     end
   end
 
   describe :session_passwd do
     it %[should return the session passwd as a String] do
-      @zk.session_passwd.should be_kind_of(String)
+      zk.session_passwd.should be_kind_of(String)
     end
+  end
+
+  describe :chrooted_connection do
+
   end
 end
