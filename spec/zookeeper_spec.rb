@@ -1,4 +1,4 @@
-require File.expand_path('../spec_helper', __FILE__) 
+require 'spec_helper'
 
 shared_examples_for "all success return values" do
   it %[should have a return code of Zookeeper::ZOK] do
@@ -10,29 +10,9 @@ shared_examples_for "all success return values" do
   end
 end
 
-describe Zookeeper do
-  let(:path) { "/_zktest_" }
-  let(:data) { "underpants" } 
-  let(:zk) { Zookeeper.new('localhost:2181') }
-
+shared_examples_for "all connection types" do
   before do
-    # uncomment for driver debugging output
-    #zk.set_debug_level(Zookeeper::ZOO_LOG_LEVEL_DEBUG) unless defined?(::JRUBY_VERSION)
-
     zk.create(:path => path, :data => data)
-  end
-
-  after do
-    zk.delete(:path => path)
-    zk.close
-
-    wait_until do 
-      begin
-        !zk.connected?
-      rescue RuntimeError
-        true
-      end
-    end
   end
 
   # unfortunately, we can't test w/o exercising other parts of the driver, so
@@ -609,6 +589,10 @@ describe Zookeeper do
           @s_path     = @rv[:path]    # make sure this gets cleaned up
         end
 
+        after do
+          zk.delete(:path => @s_path)
+        end
+
         it %[should return the path that was set] do
           @rv[:path].should_not == @orig_path
         end
@@ -627,7 +611,11 @@ describe Zookeeper do
         before do
           @orig_path  = path
           @rv         = zk.create(:path => path, :sequence => true, :ephemeral => true)
-          path       = @rv[:path]    # make sure this gets cleaned up
+          @s_path     = @rv[:path]    # make sure this gets cleaned up
+        end
+
+        after do
+          zk.delete(:path => @s_path)
         end
 
         it %[should return the path that was set] do
@@ -635,7 +623,7 @@ describe Zookeeper do
         end
 
         it %[should have created an ephemeral node] do
-          st = zk.stat(:path => path)
+          st = zk.stat(:path => @s_path)
           st[:rc].should == Zookeeper::ZOK
 
           st[:stat].ephemeral_owner.should_not be_zero
@@ -725,7 +713,11 @@ describe Zookeeper do
           wait_until(2) { @cb.completed? }
           @cb.should be_completed
 
-          path = @cb.path
+          @s_path = @cb.path
+        end
+
+        after do
+          zk.delete(:path => @s_path)
         end
 
         it %[should have a path] do
@@ -737,7 +729,7 @@ describe Zookeeper do
         end
 
         it %[should have created a permanent node] do
-          st = zk.stat(:path => path)
+          st = zk.stat(:path => @s_path)
           st[:rc].should == Zookeeper::ZOK
 
           st[:stat].ephemeral_owner.should be_zero
@@ -754,7 +746,11 @@ describe Zookeeper do
 
           wait_until(2) { @cb.completed? }
           @cb.should be_completed
-          path = @cb.path
+          @s_path = @cb.path
+        end
+
+        after do
+          zk.delete(:path => @s_path)
         end
 
         it %[should have a path] do
@@ -762,11 +758,11 @@ describe Zookeeper do
         end
 
         it %[should return the path that was set] do
-          path.should_not == @orig_path
+          @s_path.should_not == @orig_path
         end
 
         it %[should have created an ephemeral node] do
-          st = zk.stat(:path => path)
+          st = zk.stat(:path => @s_path)
           st[:rc].should == Zookeeper::ZOK
 
           st[:stat].ephemeral_owner.should_not be_zero
@@ -934,7 +930,6 @@ describe Zookeeper do
   end
 
   describe :set_acl do
-
     before do
       @perms = 5
       @new_acl = [ZookeeperACLs::ACL.new(:perms => @perms, :id => ZookeeperACLs::ZOO_ANYONE_ID_UNSAFE)]
@@ -947,7 +942,6 @@ describe Zookeeper do
       before do
         @rv = zk.set_acl(:path => path, :acl => @new_acl)
       end
-      
     end
   end
 
@@ -962,8 +956,81 @@ describe Zookeeper do
       zk.session_passwd.should be_kind_of(String)
     end
   end
-
-  describe :chrooted_connection do
-
-  end
 end
+
+
+describe Zookeeper do
+  let(:path) { "/_zktest_" }
+  let(:data) { "underpants" } 
+  let(:zk) { Zookeeper.new('localhost:2181') }
+
+  before do
+    # uncomment for driver debugging output
+    #zk.set_debug_level(Zookeeper::ZOO_LOG_LEVEL_DEBUG) unless defined?(::JRUBY_VERSION)
+  end
+
+  after do
+    zk.delete(:path => path)
+    zk.close
+
+    wait_until do 
+      begin
+        !zk.connected?
+      rescue RuntimeError
+        true
+      end
+    end
+  end
+
+  it_should_behave_like "all connection types"
+end
+
+describe 'Zookeeper chrooted connection' do
+  let(:path) { "/_zkchroottest_" }
+  let(:data) { "underpants" } 
+  let(:chroot_path) { '/slyphon-zookeeper-chroot' }
+
+  let(:zk) { Zookeeper.new("localhost:2181#{chroot_path}") }
+
+  def with_open_zk(host='localhost:2181')
+    z = Zookeeper.new(host)
+    yield z
+  ensure
+    z.close
+
+    wait_until do 
+      begin
+        !z.connected?
+      rescue RuntimeError
+        true
+      end
+    end
+  end
+
+  before do
+    with_open_zk do |z|
+      z.create(:path => chroot_path, :data => '')
+    end
+  end
+
+  after do
+    # close the chrooted connection
+    zk.delete(:path => path)
+    zk.close
+
+    wait_until do 
+      begin
+        !zk.connected?
+      rescue RuntimeError
+        true
+      end
+    end
+
+    with_open_zk do |z|
+      z.delete(:path => chroot_path)
+    end
+  end
+
+  it_should_behave_like "all connection types"
+end
+

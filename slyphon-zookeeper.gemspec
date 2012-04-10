@@ -16,6 +16,7 @@ Gem::Specification.new do |s|
   s.add_development_dependency 'eventmachine', '1.0.0.beta.4'
   s.add_development_dependency 'evented-spec', '~> 0.9.0'
   s.add_development_dependency 'rake', '~> 0.9.0'
+  s.add_development_dependency 'pry'
 
   s.files         = `git ls-files`.split("\n")
   s.require_paths = ["lib"]

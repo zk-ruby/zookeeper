@@ -13,6 +13,7 @@ Zookeeper.logger = Logger.new(File.expand_path('../../test.log', __FILE__)).tap 
   log.level = Logger::DEBUG
 end
 
+Dir[File.expand_path('../support/**/*.rb', __FILE__)].sort.each { |f| require(f) }
 
 # NOTE: this is a useful debugging setup. have our logs and the low-level C
 # logging statements both go to stderr. to use, comment the above and uncomment
