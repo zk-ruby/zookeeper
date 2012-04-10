@@ -94,6 +94,4 @@ protected
             "Required arguments are: #{required.inspect}, but only the arguments #{args.keys.inspect} were supplied."
     end
   end
-
 end
-
