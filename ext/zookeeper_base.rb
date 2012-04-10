@@ -175,5 +175,22 @@ protected
       true
     }
   end
+
+  def chrooted?
+    !chroot_path.empty?
+  end
+
+  def chroot_path
+    if @chroot_path.nil?
+      @chroot_path = 
+        if idx = @host.index('/')
+          @host.slice(idx, @host.length)
+        else
+          ''
+        end
+    end
+
+    @chroot_path
+  end
 end
 
