@@ -10,23 +10,27 @@ module ZookeeperCommon
   end
 
 protected
-  def setup_call(opts)
+  def setup_call(meth_name, opts)
     req_id = nil
     @req_mutex.synchronize {
       req_id = @current_req_id
       @current_req_id += 1
-      setup_completion(req_id, opts) if opts[:callback]
-      setup_watcher(req_id, opts) if opts[:watcher]
+      setup_completion(req_id, meth_name, opts) if opts[:callback]
+      setup_watcher(req_id, opts)    if opts[:watcher]
     }
     req_id
   end
-  
+ 
   def setup_watcher(req_id, call_opts)
     @watcher_reqs[req_id] = { :watcher => call_opts[:watcher],
                               :context => call_opts[:watcher_context] }
   end
 
-  def setup_completion(req_id, call_opts)
+  # as a hack, to provide consistency between the java implementation and the C
+  # implementation when dealing w/ chrooted connections, we override this in
+  # ext/zookeeper_base.rb to wrap the callback in a chroot-path-stripping block.
+  #
+  def setup_completion(req_id, meth_name, call_opts)
     @completion_reqs[req_id] = { :callback => call_opts[:callback],
                                  :context => call_opts[:callback_context] }
   end

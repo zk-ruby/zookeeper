@@ -45,7 +45,7 @@ class Zookeeper < ZookeeperBase
     assert_supported_keys(options, [:path, :watcher, :watcher_context, :callback, :callback_context])
     assert_required_keys(options, [:path])
 
-    req_id = setup_call(options)
+    req_id = setup_call(:get, options)
     rc, value, stat = super(req_id, options[:path], options[:callback], options[:watcher])
 
     rv = { :req_id => req_id, :rc => rc }
@@ -59,7 +59,7 @@ class Zookeeper < ZookeeperBase
     assert_valid_data_size!(options[:data])
     options[:version] ||= -1
 
-    req_id = setup_call(options)
+    req_id = setup_call(:set, options)
     rc, stat = super(req_id, options[:path], options[:data], options[:callback], options[:version])
 
     rv = { :req_id => req_id, :rc => rc }
@@ -71,7 +71,7 @@ class Zookeeper < ZookeeperBase
     assert_supported_keys(options, [:path, :callback, :callback_context, :watcher, :watcher_context])
     assert_required_keys(options, [:path])
 
-    req_id = setup_call(options)
+    req_id = setup_call(:get_children, options)
     rc, children, stat = super(req_id, options[:path], options[:callback], options[:watcher])
 
     rv = { :req_id => req_id, :rc => rc }
@@ -83,7 +83,7 @@ class Zookeeper < ZookeeperBase
     assert_supported_keys(options, [:path, :callback, :callback_context, :watcher, :watcher_context])
     assert_required_keys(options, [:path])
 
-    req_id = setup_call(options)
+    req_id = setup_call(:stat, options)
     rc, stat = exists(req_id, options[:path], options[:callback], options[:watcher])
 
     rv = { :req_id => req_id, :rc => rc }
@@ -102,7 +102,7 @@ class Zookeeper < ZookeeperBase
 
     options[:acl] ||= ZOO_OPEN_ACL_UNSAFE
 
-    req_id = setup_call(options)
+    req_id = setup_call(:create, options)
     rc, newpath = super(req_id, options[:path], options[:data], options[:callback], options[:acl], flags)
 
     rv = { :req_id => req_id, :rc => rc }
@@ -115,7 +115,7 @@ class Zookeeper < ZookeeperBase
     assert_required_keys(options, [:path])
     options[:version] ||= -1
 
-    req_id = setup_call(options)
+    req_id = setup_call(:delete, options)
     rc = super(req_id, options[:path], options[:version], options[:callback])
 
     { :req_id => req_id, :rc => rc }
@@ -127,7 +127,7 @@ class Zookeeper < ZookeeperBase
     assert_required_keys(options, [:path, :acl])
     options[:version] ||= -1
 
-    req_id = setup_call(options)
+    req_id = setup_call(:set_acl, options)
     rc = super(req_id, options[:path], options[:acl], options[:callback], options[:version])
 
     { :req_id => req_id, :rc => rc }
@@ -138,7 +138,7 @@ class Zookeeper < ZookeeperBase
     assert_supported_keys(options, [:path, :callback, :callback_context])
     assert_required_keys(options, [:path])
 
-    req_id = setup_call(options)
+    req_id = setup_call(:get_acl, options)
     rc, acls, stat = super(req_id, options[:path], options[:callback])
 
     rv = { :req_id => req_id, :rc => rc }
@@ -242,22 +242,6 @@ protected
   end
 
 private
-  def setup_call(opts)
-    req_id = nil
-    @req_mutex.synchronize {
-      req_id = @current_req_id
-      @current_req_id += 1
-      setup_completion(req_id, opts) if opts[:callback]
-      setup_watcher(req_id, opts) if opts[:watcher]
-    }
-    req_id
-  end
-
-  def setup_watcher(req_id, call_opts)
-    @watcher_reqs[req_id] = { :watcher => call_opts[:watcher],
-                              :context => call_opts[:watcher_context] }
-  end
-
   # TODO: Sanitize user mistakes by unregistering watchers from ops that
   # don't return ZOK (except wexists)?  Make users clean up after themselves for now.
   def unregister_watcher(req_id)
