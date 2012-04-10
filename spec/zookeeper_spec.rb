@@ -10,7 +10,7 @@ shared_examples_for "all success return values" do
   end
 end
 
-shared_examples_for "all connection types" do
+shared_examples_for "all" do
   before do
     zk.create(:path => path, :data => data)
   end
@@ -982,10 +982,10 @@ describe Zookeeper do
     end
   end
 
-  it_should_behave_like "all connection types"
+  it_should_behave_like "all"
 end
 
-describe 'Zookeeper chrooted connection' do
+describe 'Zookeeper chrooted' do
   let(:path) { "/_zkchroottest_" }
   let(:data) { "underpants" } 
   let(:chroot_path) { '/slyphon-zookeeper-chroot' }
@@ -1031,6 +1031,6 @@ describe 'Zookeeper chrooted connection' do
     end
   end
 
-  it_should_behave_like "all connection types"
+  it_should_behave_like "all"
 end
 
