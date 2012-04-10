@@ -114,6 +114,14 @@ class ZookeeperBase < CZookeeper
     end
   end
 
+  # the C lib doesn't strip the chroot path off of returned path values, which
+  # is pretty damn annoying. this is used to clean things up.
+  def create(*args)
+    # since we don't care about the inputs, just glob args
+    rc, new_path = super(*args)
+    [rc, strip_chroot_from(new_path)]
+  end
+
   def set_debug_level(int)
     warn "DEPRECATION WARNING: #{self.class.name}#set_debug_level, it has moved to the class level and will be removed in a future release"
     self.class.set_debug_level(int)
@@ -149,6 +157,35 @@ class ZookeeperBase < CZookeeper
   end
 
 protected
+  # this is a hack: to provide consistency between the C and Java drivers when
+  # using a chrooted connection, we wrap the callback in a block that will
+  # strip the chroot path from the returned path (important in an async create
+  # sequential call). This is the only place where we can hook *just* the C
+  # version. The non-async manipulation is handled in ZookeeperBase#create.
+  # 
+  def setup_completion(req_id, meth_name, call_opts)
+
+    if (meth_name == :create) and cb = call_opts[:callback]
+      call_opts[:callback] = lambda do |hash|
+        # in this case the string will be the absolute zookeeper path (i.e.
+        # with the chroot still prepended to the path). Here's where we strip it off
+        hash[:string] = strip_chroot_from(hash[:string])
+
+        # call the original callback
+        cb.call(hash)
+      end
+    end
+
+    # pass this along to the ZookeeperCommon implementation
+    super(req_id, meth_name, call_opts)
+  end
+
+  # if we're chrooted, this method will strip the chroot prefix from +path+
+  def strip_chroot_from(path)
+    return path unless (chrooted? and path and path.start_with?(chroot_path))
+    path[chroot_path.length..-1]
+  end
+
   def barf_unless_running!
     @start_stop_mutex.synchronize do
       raise ShuttingDownException unless (@_running and not @_closed)
