@@ -31,6 +31,7 @@ class ZookeeperBase < CZookeeper
 #       $stderr.puts "%s: calling init, self.obj_id: %x" % [self.class, object_id]
       init(@host)
 
+      # XXX: replace this with a callback
       if timeout > 0
         time_to_stop = Time.now + timeout
         until state == Zookeeper::ZOO_CONNECTED_STATE
