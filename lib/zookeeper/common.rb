@@ -16,7 +16,7 @@ protected
       req_id = @current_req_id
       @current_req_id += 1
       setup_completion(req_id, meth_name, opts) if opts[:callback]
-      setup_watcher(req_id, opts)    if opts[:watcher]
+      setup_watcher(req_id, opts) if opts[:watcher]
     }
     req_id
   end
@@ -29,6 +29,8 @@ protected
   # as a hack, to provide consistency between the java implementation and the C
   # implementation when dealing w/ chrooted connections, we override this in
   # ext/zookeeper_base.rb to wrap the callback in a chroot-path-stripping block.
+  #
+  # we don't use meth_name here, but we need it in the C implementation
   #
   def setup_completion(req_id, meth_name, call_opts)
     @completion_reqs[req_id] = { :callback => call_opts[:callback],
