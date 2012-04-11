@@ -37,7 +37,7 @@ protected
   
   def get_watcher(req_id)
     @req_mutex.synchronize {
-      req_id != ZKRB_GLOBAL_CB_REQ ? @watcher_reqs.delete(req_id) : @watcher_reqs[req_id]
+      (req_id == ZKRB_GLOBAL_CB_REQ) ? @watcher_reqs[req_id] : @watcher_reqs.delete(req_id)
     }
   end
   
