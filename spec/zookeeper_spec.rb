@@ -11,8 +11,35 @@ shared_examples_for "all success return values" do
 end
 
 shared_examples_for "all" do
-  before do
-    zk.create(:path => path, :data => data)
+  def ensure_node(path, data)
+    if zk.stat(:path => path)[:stat].exists?
+      zk.set(:path => path, :data => data)
+    else
+      zk.create(:path => path, :data => data)
+    end
+  end
+
+  before :each do
+    ensure_node(path, data)
+  end
+
+  after :each do
+    ensure_node(path, data)
+  end
+
+  after :all do
+    Zookeeper.logger.warn "running shared examples after :all"
+    # close the chrooted connection
+    zk.delete(:path => path)
+    zk.close
+
+    wait_until do 
+      begin
+        !zk.connected?
+      rescue RuntimeError
+        true
+      end
+    end
   end
 
   # unfortunately, we can't test w/o exercising other parts of the driver, so
@@ -63,8 +90,6 @@ shared_examples_for "all" do
     end
 
     describe :async do
-      it_should_behave_like "all success return values"
-
       before do
         @cb = Zookeeper::DataCallback.new
 
@@ -72,6 +97,8 @@ shared_examples_for "all" do
         wait_until(1.0) { @cb.completed? }
         @cb.should be_completed
       end
+
+      it_should_behave_like "all success return values"
 
       it %[should have a return code of ZOK] do
         @cb.return_code.should == Zookeeper::ZOK
@@ -958,39 +985,33 @@ shared_examples_for "all" do
   end
 end
 
-
-describe Zookeeper do
+describe 'Zookeeper' do
   let(:path) { "/_zktest_" }
   let(:data) { "underpants" } 
-  let(:zk) { Zookeeper.new('localhost:2181') }
+  let(:zk_host) { 'localhost:2181' }
 
-  before do
-    # uncomment for driver debugging output
-    #zk.set_debug_level(Zookeeper::ZOO_LOG_LEVEL_DEBUG) unless defined?(::JRUBY_VERSION)
-  end
-
-  after do
-    zk.delete(:path => path)
-    zk.close
-
-    wait_until do 
-      begin
-        !zk.connected?
-      rescue RuntimeError
-        true
-      end
-    end
+  let(:zk) do
+    Zookeeper.logger.debug { "creating root instance" }
+    Zookeeper.new(zk_host)
   end
 
   it_should_behave_like "all"
 end
+
 
 describe 'Zookeeper chrooted' do
   let(:path) { "/_zkchroottest_" }
   let(:data) { "underpants" } 
   let(:chroot_path) { '/slyphon-zookeeper-chroot' }
 
-  let(:zk) { Zookeeper.new("localhost:2181#{chroot_path}") }
+  # Ok, i can't explain this, but when you run these tests, the zk instance
+  # gets set up *once* and re-used, which is different from above, where it's
+  # set up new each time
+  #
+  let(:zk) do
+    Zookeeper.logger.debug { "creating chrooted zk instance" }
+    Zookeeper.new("localhost:2181#{chroot_path}")
+  end
 
   def with_open_zk(host='localhost:2181')
     z = Zookeeper.new(host)
@@ -1007,25 +1028,15 @@ describe 'Zookeeper chrooted' do
     end
   end
 
-  before do
+  before :all do
+    Zookeeper.logger.warn "running before :all"
+
     with_open_zk do |z|
       z.create(:path => chroot_path, :data => '')
     end
   end
 
-  after do
-    # close the chrooted connection
-    zk.delete(:path => path)
-    zk.close
-
-    wait_until do 
-      begin
-        !zk.connected?
-      rescue RuntimeError
-        true
-      end
-    end
-
+  after :all do
     with_open_zk do |z|
       z.delete(:path => chroot_path)
     end
@@ -1033,4 +1044,6 @@ describe 'Zookeeper chrooted' do
 
   it_should_behave_like "all"
 end
+
+
 
