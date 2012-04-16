@@ -973,6 +973,26 @@ shared_examples_for "connection" do
       zk.session_passwd.should be_kind_of(String)
     end
   end
+
+  describe :sync do
+    describe :success do
+      it_should_behave_like "all success return values"
+
+      before do
+        @cb = Zookeeper::StringCallback.new
+        @rv = zk.sync(:path => path, :callback => @cb)
+
+        wait_until(2) { @cb.completed }
+        @cb.should be_completed
+      end
+    end
+
+    describe :errors do
+      it %[should barf with BadArguments if :callback is not given] do
+        lambda { zk.sync(:path => path) }.should raise_error(ZookeeperExceptions::ZookeeperException::BadArguments)
+      end
+    end
+  end
 end
 
 

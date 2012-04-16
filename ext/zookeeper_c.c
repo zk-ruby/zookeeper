@@ -282,6 +282,19 @@ static VALUE method_exists(VALUE self, VALUE reqid, VALUE path, VALUE async, VAL
   return output;
 }
 
+// this method is *only* called asynchronously
+static VALUE method_sync(VALUE self, VALUE reqid, VALUE path) {
+  VALUE async = Qtrue;
+  VALUE watch = Qfalse;
+  int rc;
+
+  STANDARD_PREAMBLE(self, zk, reqid, path, async, watch, data_ctx, watch_ctx, call_type);
+
+  rc = zoo_async(zk->zh, RSTRING_PTR(path), zkrb_string_callback, data_ctx);
+
+  return INT2FIX(rc);
+}
+
 static VALUE method_create(VALUE self, VALUE reqid, VALUE path, VALUE data, VALUE async, VALUE acls, VALUE flags) {
   VALUE watch = Qfalse;
   STANDARD_PREAMBLE(self, zk, reqid, path, async, watch, data_ctx, watch_ctx, call_type);
@@ -647,6 +660,7 @@ static void zkrb_define_methods(void) {
 #define DEFINE_CLASS_METHOD(method, args) { \
     rb_define_singleton_method(Zookeeper, #method, method_ ## method, args); }
 
+  // the number after the method name should be actual arity of C function - 1
   DEFINE_METHOD(init, -1);
   DEFINE_METHOD(get_children, 4);
   DEFINE_METHOD(exists, 4);
@@ -662,9 +676,10 @@ static void zkrb_define_methods(void) {
   DEFINE_METHOD(is_unrecoverable, 0);
   DEFINE_METHOD(recv_timeout, 1);
   DEFINE_METHOD(state, 0);
+  DEFINE_METHOD(sync, 2);
+
   // TODO
   // DEFINE_METHOD(add_auth, 3);
-  // DEFINE_METHOD(async, 1);
 
   // methods for the ruby-side event manager
   DEFINE_METHOD(get_next_event, 1);

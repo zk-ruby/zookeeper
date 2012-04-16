@@ -121,6 +121,19 @@ class Zookeeper < ZookeeperBase
     { :req_id => req_id, :rc => rc }
   end
 
+  # this method is *only* asynchronous
+  def sync(options = {})
+    assert_open
+    assert_supported_keys(options, [:path, :callback, :callback_context])
+    assert_required_keys(options, [:path, :callback])
+
+    req_id = setup_call(:sync, options)
+
+    rc = super(req_id, options[:path]) # we don't pass options[:callback] here as this method is *always* async
+
+    { :req_id => req_id, :rc => rc }
+  end
+
   def set_acl(options = {})
     assert_open
     assert_supported_keys(options, [:path, :acl, :version, :callback, :callback_context])
