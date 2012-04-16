@@ -357,6 +357,13 @@ class ZookeeperBase
     end
   end
 
+  def sync(req_id, path)
+    handle_keeper_exception do
+      @jzk.sync(path, JavaCB::VoidCallback.new(req_id), @event_queue)
+      Code::Ok
+    end
+  end
+
   def delete(req_id, path, version, callback)
     handle_keeper_exception do
       if callback

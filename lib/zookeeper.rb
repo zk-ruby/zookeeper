@@ -122,6 +122,11 @@ class Zookeeper < ZookeeperBase
   end
 
   # this method is *only* asynchronous
+  #
+  # @note There is a discrepancy between the zkc and java versions. zkc takes
+  #   a string_callback_t, java takes a VoidCallback. You should most likely use
+  #   the ZookeeperCallbacks::VoidCallback and not rely on the string value.
+  #
   def sync(options = {})
     assert_open
     assert_supported_keys(options, [:path, :callback, :callback_context])
