@@ -17,15 +17,23 @@ class ZookeeperBase < CZookeeper
   ZOO_LOG_LEVEL_INFO   = 3
   ZOO_LOG_LEVEL_DEBUG  = 4
 
- 
+
   def reopen(timeout = 10, watcher=nil)
-    watcher ||= @default_watcher
+    warn "WARN: ZookeeperBase#reopen watcher argument is now ignored" if watcher
+
+    if watcher and (watcher != @default_watcher)
+      raise "You cannot set the watcher to a different value this way anymore!"
+    end
+    
+#     @default_watcher ||= watcher
 
     @req_mutex.synchronize do
       # flushes all outstanding watcher reqs.
-      @watcher_req = {}
-      set_default_global_watcher(&watcher)
+      @watcher_reqs.clear
+      set_default_global_watcher
     end
+
+    close
 
     @start_stop_mutex.synchronize do
 #       $stderr.puts "%s: calling init, self.obj_id: %x" % [self.class, object_id]
@@ -41,6 +49,7 @@ class ZookeeperBase < CZookeeper
       end
     end
 
+    setup_dispatch_thread!
     state
   end
 
@@ -58,16 +67,25 @@ class ZookeeperBase < CZookeeper
 
     @start_stop_mutex = Monitor.new
 
-    watcher ||= get_default_global_watcher
+    @default_watcher = (watcher or get_default_global_watcher)
 
-    @_running = nil   # used by the C layer
+    # used by the C layer. CZookeeper sets this to true when the init method
+    # has completed. we set this value to false to signal to the C code
+    # (especially the event delivery loop) that we're ready for shutdown
+    #
+    # you should grab the @start_stop_mutex before messing with this flag
+    @_running = nil
+
+    # This is set to true after destroy_zkrb_instance has been called and all
+    # CZookeeper state has been cleaned up
     @_closed = false  # also used by the C layer
+
+    # the actual C data is stashed in this ivar. never *ever* touch this
+    @_data = nil
 
     yield self if block_given?
 
-    reopen(timeout, watcher)
-    return nil unless connected?
-    setup_dispatch_thread!
+    reopen(timeout)
   end
   
   # if either of these happen, the user will need to renegotiate a connection via reopen
@@ -89,29 +107,16 @@ class ZookeeperBase < CZookeeper
   end
 
   def close
-    @start_stop_mutex.synchronize do
-      @_running = false if @_running
-    end
-
-    if @dispatcher
-      unless @_closed
-        wake_event_loop! 
-      end
-      @dispatcher.join 
-    end
+    stop_running!
+    stop_dispatch_thread!
 
     @start_stop_mutex.synchronize do
-      unless @_closed
+      if !@_closed and @_data
         close_handle
       end
     end
-        
-    # this is set up in the C init method, but it's easier to 
-    # do the teardown here
-    begin
-      @selectable_io.close if @selectable_io
-    rescue IOError
-    end
+
+    close_selectable_io!
   end
 
   # the C lib doesn't strip the chroot path off of returned path values, which
@@ -128,9 +133,11 @@ class ZookeeperBase < CZookeeper
   end
 
   # set the watcher object/proc that will receive all global events (such as session/state events)
-  def set_default_global_watcher(&block)
+  def set_default_global_watcher
+    warn "DEPRECATION WARNING: #{self.class}#set_default_global_watcher ignores block" if block_given?
+
     @req_mutex.synchronize do
-      @default_watcher = block # save this here for reopen() to use
+#       @default_watcher = block # save this here for reopen() to use
       @watcher_reqs[ZKRB_GLOBAL_CB_REQ] = { :watcher => @default_watcher, :watcher_context => nil }
     end
   end
@@ -157,6 +164,45 @@ class ZookeeperBase < CZookeeper
   end
 
 protected
+  # use this method to set the @_running flag to false
+  def stop_running!
+    logger.debug { "#{self.class}##{__method__}" }
+
+    @start_stop_mutex.synchronize do
+      @_running = false if @_running
+    end
+  end
+
+  # this method is part of the reopen/close code, and is responsible for
+  # shutting down the dispatch thread. 
+  #
+  # @dispatch will be nil when this method exits
+  #
+  def stop_dispatch_thread!
+    logger.debug { "#{self.class}##{__method__}" }
+
+    if @dispatcher
+      unless @_closed
+        wake_event_loop! # this is a C method
+      end
+      @dispatcher.join 
+      @dispatcher = nil
+    end
+  end
+
+  def close_selectable_io!
+    logger.debug { "#{self.class}##{__method__}" }
+    
+    # this is set up in the C init method, but it's easier to 
+    # do the teardown here, as this is our half of a pipe. The
+    # write half is controlled by the C code and will be closed properly 
+    # when close_handle is called
+    begin
+      @selectable_io.close if @selectable_io
+    rescue IOError
+    end
+  end
+
   # this is a hack: to provide consistency between the C and Java drivers when
   # using a chrooted connection, we wrap the callback in a block that will
   # strip the chroot path from the returned path (important in an async create
@@ -164,7 +210,6 @@ protected
   # version. The non-async manipulation is handled in ZookeeperBase#create.
   # 
   def setup_completion(req_id, meth_name, call_opts)
-
     if (meth_name == :create) and cb = call_opts[:callback]
       call_opts[:callback] = lambda do |hash|
         # in this case the string will be the absolute zookeeper path (i.e.
@@ -198,10 +243,12 @@ protected
       while running?
         begin                     # calling user code, so protect ourselves
           dispatch_next_callback
+#         rescue Errno::EBADF # don't print this one, may happen when shutting down
         rescue Exception => e
           $stderr.puts "Error in dispatch thread, #{e.class}: #{e.message}\n" << e.backtrace.map{|n| "\t#{n}"}.join("\n")
         end
       end
+      logger.debug { "dispatch thread exiting!" }
     end
   end
 
@@ -228,6 +275,13 @@ protected
     end
 
     @chroot_path
+  end
+
+  # This method is the hook into the C code, and is responsible for setting up
+  # all the state in the zkc library.
+  # 
+  def init(host)
+    super
   end
 end
 
