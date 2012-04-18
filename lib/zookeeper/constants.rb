@@ -18,6 +18,28 @@ module ZookeeperConstants
   ZOO_CHILD_EVENT        = 4
   ZOO_SESSION_EVENT      = -1
   ZOO_NOTWATCHING_EVENT  = -2
+
+  # used to find the name for a numeric event
+  # @private
+  EVENT_TYPE_NAMES = {
+    1   => :created,
+    2   => :deleted,
+    3   => :changed,
+    4   => :child,
+    -1  => :session,
+    -2  => :notwatching,
+  }
+
+  # used to pretty print the state name
+  # @private
+  STATE_NAMES = {
+    -112 => :expired_session,
+    -113 => :auth_failed,
+    0    => :closed,
+    1    => :connecting,
+    2    => :associating,
+    3    => :connected,
+  }
               
   def print_events
     puts "ZK events:"

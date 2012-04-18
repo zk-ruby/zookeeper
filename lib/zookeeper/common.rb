@@ -49,9 +49,10 @@ protected
 
   def dispatch_next_callback(blocking=true)
     hash = get_next_event(blocking)
-#     Zookeeper.logger.debug { "get_next_event returned: #{hash.inspect}" }
 
     return nil unless hash
+
+    Zookeeper.logger.debug { "get_next_event returned: #{prettify_event(hash).inspect}" }
     
     is_completion = hash.has_key?(:rc)
     
@@ -94,6 +95,16 @@ protected
     unless (required - args.keys).empty?
       raise ZookeeperExceptions::ZookeeperException::BadArguments,
             "Required arguments are: #{required.inspect}, but only the arguments #{args.keys.inspect} were supplied."
+    end
+  end
+
+private
+  def prettify_event(hash)
+    hash.dup.tap do |h|
+      # pretty up the event display
+      h[:type]    = ZookeeperConstants::EVENT_TYPE_NAMES.fetch(h[:type]) if h[:type]
+      h[:state]   = ZookeeperConstants::STATE_NAMES.fetch(h[:state]) if h[:state]
+      h[:req_id]  = :global_session if h[:req_id] == -1
     end
   end
 end
