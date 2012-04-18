@@ -41,9 +41,7 @@ module ZookeeperEM
       logger.debug { "#{self.class.name}: close called, closed? #{closed?} running? #{running?}" }
 
       if @_running
-        @start_stop_mutex.synchronize do
-          @_running = false
-        end
+        stop_running!
 
         if @em_connection
           EM.next_tick do
