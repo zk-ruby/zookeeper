@@ -67,7 +67,10 @@ class ZookeeperBase
   def initialize(host, timeout = 10, watcher=nil)
     @watcher_reqs = {}
     @completion_reqs = {}
+
     @mutex = Monitor.new
+    @dispatch_shutdown_cond = @mutex.new_cond
+
     @current_req_id = 0
     @event_queue = QueueWithPipe.new
     @czk = nil
