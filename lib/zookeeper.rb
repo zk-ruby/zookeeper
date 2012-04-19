@@ -263,8 +263,10 @@ protected
 private
   # TODO: Sanitize user mistakes by unregistering watchers from ops that
   # don't return ZOK (except wexists)?  Make users clean up after themselves for now.
+  #
+  # XXX: is this dead code?
   def unregister_watcher(req_id)
-    @req_mutex.synchronize {
+    @mutex.synchronize {
       @watcher_reqs.delete(req_id)
     }
   end

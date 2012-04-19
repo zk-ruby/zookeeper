@@ -172,7 +172,7 @@ class ZookeeperBase
   def reopen(timeout=10, watcher=nil)
     watcher ||= @default_watcher
 
-    @req_mutex.synchronize do
+    @mutex.synchronize do
       # flushes all outstanding watcher reqs.
       @watcher_req = {}
       set_default_global_watcher(&watcher)
@@ -197,7 +197,7 @@ class ZookeeperBase
     @host = host
     @event_queue = QueueWithPipe.new
     @current_req_id = 0
-    @req_mutex = Monitor.new
+    @mutex = Monitor.new
     @watcher_reqs = {}
     @completion_reqs = {}
     @_running = nil
@@ -389,7 +389,7 @@ class ZookeeperBase
   end
 
   def close
-    @req_mutex.synchronize do
+    @mutex.synchronize do
       @_running = false if @_running
     end
         
@@ -422,7 +422,7 @@ class ZookeeperBase
   # it's called from the initializer, and because of the C impl. we can't have
   # the two decend from a common base, and a module wouldn't work
   def set_default_global_watcher(&block)
-    @req_mutex.synchronize do
+    @mutex.synchronize do
       @default_watcher = block
       @watcher_reqs[ZKRB_GLOBAL_CB_REQ] = { :watcher => @default_watcher, :watcher_context => nil }
     end

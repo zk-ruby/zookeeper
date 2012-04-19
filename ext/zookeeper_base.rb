@@ -36,7 +36,7 @@ class ZookeeperBase
     syms.each do |sym|
       class_eval(<<-EOM, __FILE__, __LINE__+1)
         def #{sym}
-          @czk_client_mutex.synchronize { @czk.#{sym} }
+          @mutex.synchronize { @czk and @czk.#{sym} }
         end
       EOM
     end
@@ -51,13 +51,10 @@ class ZookeeperBase
       raise "You cannot set the watcher to a different value this way anymore!"
     end
     
-    @czk_client_mutex.synchronize do
-      # XXX: deadlock danger?
-      @req_mutex.synchronize do
-        # flushes all outstanding watcher reqs.
-        @watcher_reqs.clear
-        set_default_global_watcher
-      end
+    @mutex.synchronize do
+      # flushes all outstanding watcher reqs.
+      @watcher_reqs.clear
+      set_default_global_watcher
 
       @czk = CZookeeper.new(@host, @event_queue)
       @czk.wait_until_connected(timeout)
@@ -70,7 +67,7 @@ class ZookeeperBase
   def initialize(host, timeout = 10, watcher=nil)
     @watcher_reqs = {}
     @completion_reqs = {}
-    @req_mutex = Monitor.new
+    @mutex = Monitor.new
     @current_req_id = 0
     @event_queue = QueueWithPipe.new
     @czk = nil
@@ -81,7 +78,6 @@ class ZookeeperBase
 
     @host = host
 
-    @czk_client_mutex = Monitor.new
     @default_watcher = (watcher or get_default_global_watcher)
 
     yield self if block_given?
@@ -100,7 +96,7 @@ class ZookeeperBase
   # synchronized accessor to the @czk instance
   # @private
   def czk
-    @czk_client_mutex.synchronize { @czk }
+    @mutex.synchronize { @czk }
   end
   
   # if either of these happen, the user will need to renegotiate a connection via reopen
@@ -112,7 +108,7 @@ class ZookeeperBase
   def close
     stop_dispatch_thread!
 
-    @czk_client_mutex.synchronize do
+    @mutex.synchronize do
       @czk.close
     end
   end
@@ -134,7 +130,7 @@ class ZookeeperBase
   def set_default_global_watcher
     warn "DEPRECATION WARNING: #{self.class}#set_default_global_watcher ignores block" if block_given?
 
-    @req_mutex.synchronize do
+    @mutex.synchronize do
 #       @default_watcher = block # save this here for reopen() to use
       @watcher_reqs[ZKRB_GLOBAL_CB_REQ] = { :watcher => @default_watcher, :watcher_context => nil }
     end
@@ -155,7 +151,7 @@ class ZookeeperBase
 
   # we are closed if there is no @czk instance or @czk.closed?
   def closed?
-    @czk_client_mutex.synchronize { !@czk or @czk.closed? } 
+    @mutex.synchronize { !@czk or @czk.closed? } 
   end
  
 protected

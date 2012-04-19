@@ -12,7 +12,7 @@ module ZookeeperCommon
 protected
   def setup_call(meth_name, opts)
     req_id = nil
-    @req_mutex.synchronize {
+    @mutex.synchronize {
       req_id = @current_req_id
       @current_req_id += 1
       setup_completion(req_id, meth_name, opts) if opts[:callback]
@@ -38,13 +38,13 @@ protected
   end
   
   def get_watcher(req_id)
-    @req_mutex.synchronize {
+    @mutex.synchronize {
       (req_id == ZKRB_GLOBAL_CB_REQ) ? @watcher_reqs[req_id] : @watcher_reqs.delete(req_id)
     }
   end
   
   def get_completion(req_id)
-    @req_mutex.synchronize { @completion_reqs.delete(req_id) }
+    @mutex.synchronize { @completion_reqs.delete(req_id) }
   end
 
   def dispatch_next_callback(blocking=true)
