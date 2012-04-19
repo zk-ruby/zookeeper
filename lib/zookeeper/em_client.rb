@@ -42,6 +42,6 @@ module ZookeeperEM
         d.succeed
       end
     end
-
-end
+  end # Client
+end # ZookeeperEM
 
