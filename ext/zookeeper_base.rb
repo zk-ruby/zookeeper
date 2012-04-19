@@ -27,7 +27,7 @@ class ZookeeperBase
   ZOO_LOG_LEVEL_DEBUG  = 4
 
   def_delegators :czk, 
-    :get_children, :exists, :delete, :get, :set, :set_acl, :get_acl, :client_id, :sync
+    :get_children, :exists, :delete, :get, :set, :set_acl, :get_acl, :client_id, :sync, :selectable_io
 
   # some state methods need to be more paranoid about locking to ensure the correct
   # state is returned
