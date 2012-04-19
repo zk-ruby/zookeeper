@@ -50,6 +50,21 @@ protected
     @mutex.synchronize { @completion_reqs.delete(req_id) }
   end
 
+  def setup_dispatch_thread!
+    logger.debug {  "starting dispatch thread" }
+    @dispatcher ||= Thread.new do
+      while true
+        begin
+          dispatch_next_callback(get_next_event(true))
+        rescue QueueWithPipe::ShutdownException
+          logger.info { "dispatch thread exiting, got shutdown exception" }
+          break
+        rescue Exception => e
+          $stderr.puts ["#{e.class}: #{e.message}", e.backtrace.map { |n| "\t#{n}" }.join("\n")].join("\n")
+        end
+      end
+    end
+  end
   def dispatch_next_callback(hash)
     return nil unless hash
 

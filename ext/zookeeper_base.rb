@@ -188,20 +188,6 @@ protected
     path[chroot_path.length..-1]
   end
 
-  def setup_dispatch_thread!
-    @dispatcher ||= Thread.new do
-      while true
-        begin                     # calling user code, so protect ourselves
-          dispatch_next_callback(get_next_event(true))
-        rescue QueueWithPipe::ShutdownException
-          break
-        rescue Exception => e
-          $stderr.puts "Error in dispatch thread, #{e.class}: #{e.message}\n" << e.backtrace.map{|n| "\t#{n}"}.join("\n")
-        end
-      end
-      logger.debug { "dispatch thread exiting!" }
-    end
-  end
   
   # this method is part of the reopen/close code, and is responsible for
   # shutting down the dispatch thread. 
