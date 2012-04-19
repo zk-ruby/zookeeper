@@ -200,7 +200,7 @@ protected
     @dispatcher ||= Thread.new do
       while true
         begin                     # calling user code, so protect ourselves
-          dispatch_next_callback
+          dispatch_next_callback(get_next_event(true))
         rescue QueueWithPipe::ShutdownException
           break
         rescue Exception => e

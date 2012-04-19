@@ -62,32 +62,6 @@ describe 'ZookeeperEM' do
       end
     end
 
-    describe 'em_connection' do
-      before do
-        @zk = ZookeeperEM::Client.new('localhost:2181')
-      end
-
-      it %[should be nil before the reactor is started] do
-        @zk.em_connection.should be_nil
-
-        em do
-          teardown_and_done
-        end
-      end
-
-      it %[should fire off the on_attached callbacks once the reactor is managing us] do
-        @zk.on_attached do |*|
-          @zk.em_connection.should_not be_nil
-          @zk.em_connection.should be_instance_of(ZookeeperEM::ZKConnection)
-          teardown_and_done
-        end
-
-        em do
-          EM.reactor_running?.should be_true
-        end
-      end
-    end
-
     describe 'callbacks' do
       it %[should be called on the reactor thread] do
         cb = lambda do |h|
@@ -105,7 +79,6 @@ describe 'ZookeeperEM' do
         end
       end
     end
-
   end
 end
 

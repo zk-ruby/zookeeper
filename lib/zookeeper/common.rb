@@ -47,9 +47,7 @@ protected
     @mutex.synchronize { @completion_reqs.delete(req_id) }
   end
 
-  def dispatch_next_callback(blocking=true)
-    hash = get_next_event(blocking)
-
+  def dispatch_next_callback(hash)
     return nil unless hash
 
     Zookeeper.logger.debug { "get_next_event returned: #{prettify_event(hash).inspect}" }
