@@ -1,5 +1,7 @@
 require File.expand_path('../zookeeper_c', __FILE__)
 
+# TODO: see if we can get the destructor to handle thread/event queue teardown
+#       when we're garbage collected
 class CZookeeper
   include ZookeeperCommon
   include ZookeeperConstants
