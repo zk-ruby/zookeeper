@@ -169,43 +169,51 @@ class ZookeeperBase
     end
   end
 
+  attr_reader :event_queue
+
   def reopen(timeout=10, watcher=nil)
-    watcher ||= @default_watcher
+#     watcher ||= @default_watcher
 
     @mutex.synchronize do
       # flushes all outstanding watcher reqs.
-      @watcher_req = {}
-      set_default_global_watcher(&watcher)
-    end
+      @watcher_reqs = {}
+      set_default_global_watcher
 
-    @start_stop_mutex.synchronize do
-      @jzk = JZK::ZooKeeper.new(@host, DEFAULT_SESSION_TIMEOUT, JavaCB::WatcherCallback.new(@event_queue))
+      # XXX: BUG: CLOSE EXISTING @jzk IF THERE IS ONE!!
 
-      if timeout > 0
-        time_to_stop = Time.now + timeout
-        until connected?
-          break if Time.now > time_to_stop
-          sleep 0.1
-        end
-      end
+      @jzk = JZK::ZooKeeper.new(@host, DEFAULT_SESSION_TIMEOUT, JavaCB::WatcherCallback.new(event_queue))
+
+      wait_until_connected
     end
 
     state
+  end
+
+  def wait_until_connected(timeout=10)
+    time_to_stop = timeout ? (Time.now + timeout) : nil
+
+    until connected? or (time_to_stop and Time.now > time_to_stop)
+      Thread.pass
+    end
+
+    connected?
   end
 
   def initialize(host, timeout=10, watcher=nil, options={})
     @host = host
     @event_queue = QueueWithPipe.new
     @current_req_id = 0
+
     @mutex = Monitor.new
+    @dispatch_shutdown_cond = @mutex.new_cond
+
     @watcher_reqs = {}
     @completion_reqs = {}
     @_running = nil
     @_closed  = false
     @options = {}
-    @start_stop_mutex = Mutex.new
 
-    watcher ||= get_default_global_watcher
+    @default_watcher = (watcher || get_default_global_watcher)
 
     # allows connected-state handlers to be registered before 
     yield self if block_given?
@@ -216,8 +224,19 @@ class ZookeeperBase
     setup_dispatch_thread!
   end
 
+  def close
+    @mutex.synchronize do
+      return if @_closed
+      @_closed = true    # these are probably unnecessary
+      @_running = false
+
+      stop_dispatch_thread!
+      @jzk.close if @jzk
+    end
+  end
+
   def state
-    @jzk.state
+    @mutex.synchronize { @jzk.state }
   end
 
   def connected?
@@ -253,11 +272,11 @@ class ZookeeperBase
       watch_cb = watcher ? create_watcher(req_id, path) : false
 
       if callback
-        @jzk.getData(path, watch_cb, JavaCB::DataCallback.new(req_id), @event_queue)
+        jzk.getData(path, watch_cb, JavaCB::DataCallback.new(req_id), event_queue)
         [Code::Ok, nil, nil]    # the 'nil, nil' isn't strictly necessary here
       else # sync
         stat = JZKD::Stat.new
-        data = String.from_java_bytes(@jzk.getData(path, watch_cb, stat))
+        data = String.from_java_bytes(jzk.getData(path, watch_cb, stat))
 
         [Code::Ok, data, stat.to_hash]
       end
@@ -269,10 +288,10 @@ class ZookeeperBase
       version ||= ANY_VERSION
 
       if callback
-        @jzk.setData(path, data.to_java_bytes, version, JavaCB::StatCallback.new(req_id), @event_queue)
+        jzk.setData(path, data.to_java_bytes, version, JavaCB::StatCallback.new(req_id), event_queue)
         [Code::Ok, nil]
       else
-        stat = @jzk.setData(path, data.to_java_bytes, version).to_hash
+        stat = jzk.setData(path, data.to_java_bytes, version).to_hash
         [Code::Ok, stat]
       end
     end
@@ -283,11 +302,11 @@ class ZookeeperBase
       watch_cb = watcher ? create_watcher(req_id, path) : false
 
       if callback
-        @jzk.getChildren(path, watch_cb, JavaCB::Children2Callback.new(req_id), @event_queue)
+        jzk.getChildren(path, watch_cb, JavaCB::Children2Callback.new(req_id), event_queue)
         [Code::Ok, nil, nil]
       else
         stat = JZKD::Stat.new
-        children = @jzk.getChildren(path, watch_cb, stat)
+        children = jzk.getChildren(path, watch_cb, stat)
         [Code::Ok, children.to_a, stat.to_hash]
       end
     end
@@ -301,10 +320,10 @@ class ZookeeperBase
       data ||= ''
 
       if callback
-        @jzk.create(path, data.to_java_bytes, acl, mode, JavaCB::StringCallback.new(req_id), @event_queue)
+        jzk.create(path, data.to_java_bytes, acl, mode, JavaCB::StringCallback.new(req_id), event_queue)
         [Code::Ok, nil]
       else
-        new_path = @jzk.create(path, data.to_java_bytes, acl, mode)
+        new_path = jzk.create(path, data.to_java_bytes, acl, mode)
         [Code::Ok, new_path]
       end
     end
@@ -312,7 +331,7 @@ class ZookeeperBase
 
   def sync(req_id, path)
     handle_keeper_exception do
-      @jzk.sync(path, JavaCB::VoidCallback.new(req_id), @event_queue)
+      jzk.sync(path, JavaCB::VoidCallback.new(req_id), event_queue)
       Code::Ok
     end
   end
@@ -320,9 +339,9 @@ class ZookeeperBase
   def delete(req_id, path, version, callback)
     handle_keeper_exception do
       if callback
-        @jzk.delete(path, version, JavaCB::VoidCallback.new(req_id), @event_queue)
+        jzk.delete(path, version, JavaCB::VoidCallback.new(req_id), event_queue)
       else
-        @jzk.delete(path, version)
+        jzk.delete(path, version)
       end
 
       Code::Ok
@@ -336,9 +355,9 @@ class ZookeeperBase
       logger.debug { "set_acl: converted #{acl.inspect}" }
 
       if callback
-        @jzk.setACL(path, acl, version, JavaCB::ACLCallback.new(req_id), @event_queue)
+        jzk.setACL(path, acl, version, JavaCB::ACLCallback.new(req_id), event_queue)
       else
-        @jzk.setACL(path, acl, version)
+        jzk.setACL(path, acl, version)
       end
 
       Code::Ok
@@ -350,10 +369,10 @@ class ZookeeperBase
       watch_cb = watcher ? create_watcher(req_id, path) : false
 
       if callback
-        @jzk.exists(path, watch_cb, JavaCB::StatCallback.new(req_id), @event_queue)
+        jzk.exists(path, watch_cb, JavaCB::StatCallback.new(req_id), event_queue)
         [Code::Ok, nil, nil]
       else
-        stat = @jzk.exists(path, watch_cb)
+        stat = jzk.exists(path, watch_cb)
         [Code::Ok, (stat and stat.to_hash)]
       end
     end
@@ -365,10 +384,10 @@ class ZookeeperBase
 
       if callback
         logger.debug { "calling getACL, path: #{path.inspect}, stat: #{stat.inspect}" } 
-        @jzk.getACL(path, stat, JavaCB::ACLCallback.new(req_id), @event_queue)
+        jzk.getACL(path, stat, JavaCB::ACLCallback.new(req_id), event_queue)
         [Code::Ok, nil, nil]
       else
-        acls = @jzk.getACL(path, stat).map { |a| a.to_hash }
+        acls = jzk.getACL(path, stat).map { |a| a.to_hash }
         
         [Code::Ok, Array(acls).map{|m| m.to_hash}, stat.to_hash]
       end
@@ -380,50 +399,14 @@ class ZookeeperBase
     raise ZookeeperException::NotConnected unless connected?
   end
 
-  KILL_TOKEN = :__kill_token__
-
-  class DispatchShutdownException < StandardError; end
-
-  def wake_event_loop!
-    @event_queue.push(KILL_TOKEN)    # ignored by dispatch_next_callback
-  end
-
-  def close
-    @mutex.synchronize do
-      @_running = false if @_running
-    end
-        
-    # XXX: why is wake_event_loop! here?
-    if @dispatcher 
-      wake_event_loop!
-      @dispatcher.join 
-    end
-
-    unless @_closed
-      @start_stop_mutex.synchronize do
-        @_closed = true
-        close_handle
-      end
-
-      @event_queue.close
-    end
-  end
-
-  def close_handle
-    if @jzk
-      @jzk.close
-      wait_until { !connected? }
-    end
-  end
-
   # set the watcher object/proc that will receive all global events (such as session/state events)
   #---
   # XXX: this code needs to be duplicated from ext/zookeeper_base.rb because
   # it's called from the initializer, and because of the C impl. we can't have
   # the two decend from a common base, and a module wouldn't work
-  def set_default_global_watcher(&block)
+  def set_default_global_watcher
     @mutex.synchronize do
-      @default_watcher = block
+#       @default_watcher = block
       @watcher_reqs[ZKRB_GLOBAL_CB_REQ] = { :watcher => @default_watcher, :watcher_context => nil }
     end
   end
@@ -431,29 +414,24 @@ class ZookeeperBase
   # by accessing this selectable_io you indicate that you intend to clear it
   # when you have delivered an event by reading one byte per event.
   #
-  def selectable_io
-    @event_queue.clear_reads_on_pop = false
-    @event_queue.selectable_io
-  end
+#   def selectable_io
+#     event_queue.clear_reads_on_pop = false
+#     event_queue.selectable_io
+#   end
   
   def session_id
-    @jzk.session_id
+    jzk.session_id
   end
 
   def session_passwd
-    @jzk.session_passwd.to_s
+    jzk.session_passwd.to_s
   end
 
-  def get_next_event(blocking=true)
-    @event_queue.pop(!blocking).tap do |event|
-      logger.debug { "get_next_event delivering event: #{event.inspect}" }
-      raise DispatchShutdownException if event == KILL_TOKEN
-    end
-  rescue ThreadError
-    nil
-  end
- 
   protected
+    def jzk
+      @mutex.synchronize { @jzk }
+    end
+
     def handle_keeper_exception
       yield
     rescue JZK::KeeperException => e
@@ -473,7 +451,7 @@ class ZookeeperBase
       lambda do |event|
         logger.debug { "watcher for req_id #{req_id}, path: #{path} called back" }
         h = { :req_id => req_id, :type => event.type.int_value, :state => event.state.int_value, :path => path }
-        @event_queue.push(h)
+        event_queue.push(h)
       end
     end
 
@@ -492,22 +470,6 @@ class ZookeeperBase
         logger.debug { "Ruby ZK Global CB called type=#{event_by_value(args[:type])} state=#{state_by_value(args[:state])}" }
         true
       }
-    end
-
-    def setup_dispatch_thread!
-      logger.debug {  "starting dispatch thread" }
-      @dispatcher = Thread.new do
-        while running?
-          begin
-            dispatch_next_callback 
-          rescue DispatchShutdownException
-            logger.info { "dispatch thread exiting, got shutdown exception" }
-            break
-          rescue Exception => e
-            $stderr.puts ["#{e.class}: #{e.message}", e.backtrace.map { |n| "\t#{n}" }.join("\n")].join("\n")
-          end
-        end
-      end
     end
 end
 
