@@ -1,7 +1,9 @@
 module ZookeeperCommon
   # Ceci n'est pas une pipe
   class QueueWithPipe
-    attr_writer :clear_reads_on_pop
+    extend Forwardable
+
+    def_delegators :@queue, :clear
     
     # raised when close has been called, and pop() is performed
     # 
@@ -11,13 +13,13 @@ module ZookeeperCommon
     KILL_TOKEN = Object.new unless defined?(KILL_TOKEN)
 
     def initialize
-      r, w = IO.pipe
-      @pipe = { :read => r, :write => w }
+#       r, w = IO.pipe
+#       @pipe = { :read => r, :write => w }
       @queue = Queue.new
 
       # with the EventMachine client, we want to let EM handle clearing the
       # event pipe, so we set this to false
-      @clear_reads_on_pop = true
+#       @clear_reads_on_pop = true
 
       @mutex = Mutex.new
       @closed = false
@@ -25,15 +27,8 @@ module ZookeeperCommon
     end
 
     def push(obj)
-      rv = @queue.push(obj)
-      begin
-        if pw = @pipe[:write] 
-          pw.write('0')
-        end
-      rescue IOError
-        # this may happen when shutting down (going to get rid of this stupid IO anyway..)
-      end
-      rv
+      logger.debug { "#{self.class}##{__method__} obj: #{obj.inspect}, kill_token? #{obj == KILL_TOKEN}" }
+      @queue.push(obj)
     end
 
     def pop(non_blocking=false)
@@ -46,10 +41,6 @@ module ZookeeperCommon
         raise ShutdownException
       end
 
-      # if non_blocking is true and an exception is raised, this won't get called
-      # (by design)
-      @pipe[:read].read(1)
-
       rv
     end
 
@@ -57,28 +48,18 @@ module ZookeeperCommon
     def graceful_close!
       @mutex.synchronize do
         return if @graceful or @closed
+        logger.debug { "#{self.class}##{__method__} gracefully closing" }
         @graceful = true
-        clear
         push(KILL_TOKEN)
       end
       nil
-    end
-
-    def clear
-      @queue.clear
     end
 
     def close
       @mutex.synchronize do
         return if @closed
         @closed = true
-        @pipe.values.each { |io| io.close unless io.closed? }
-        @pipe.clear
       end
-    end
-
-    def selectable_io
-      @pipe[:read]
     end
 
     def closed?
