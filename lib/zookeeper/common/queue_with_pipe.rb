@@ -21,6 +21,7 @@ module ZookeeperCommon
 
       @mutex = Mutex.new
       @closed = false
+      @graceful = false
     end
 
     def push(obj)
@@ -54,8 +55,12 @@ module ZookeeperCommon
 
     # close the queue and causes ShutdownException to be raised on waiting threads
     def graceful_close!
-      clear
-      push(KILL_TOKEN)
+      @mutex.synchronize do
+        return if @graceful or @closed
+        @graceful = true
+        clear
+        push(KILL_TOKEN)
+      end
       nil
     end
 
@@ -66,9 +71,9 @@ module ZookeeperCommon
     def close
       @mutex.synchronize do
         return if @closed
+        @closed = true
         @pipe.values.each { |io| io.close unless io.closed? }
         @pipe.clear
-        @closed = true
       end
     end
 
