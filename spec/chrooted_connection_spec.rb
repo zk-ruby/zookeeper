@@ -8,13 +8,17 @@ describe 'Zookeeper chrooted' do
 
   let(:connection_string) { "localhost:2181#{chroot_path}" }
 
-  # Ok, i can't explain this, but when you run these tests, the zk instance
-  # gets set up *once* and re-used, which is different from above, where it's
-  # set up new each time
-  #
-  let(:zk) do
-    Zookeeper.logger.debug { "creating chrooted zk instance using connection string: #{connection_string.inspect}" }
-    Zookeeper.new(connection_string)
+  before do
+    @zk = Zookeeper.new(connection_string)
+  end
+
+  after do
+    @zk and @zk.close
+  end
+
+
+  def zk
+    @zk
   end
 
   def with_open_zk(host='localhost:2181')
@@ -109,7 +113,6 @@ describe 'Zookeeper chrooted' do
         rm_rf(z, chroot_path)
       end
     end
-
 
     it_should_behave_like "connection"
   end

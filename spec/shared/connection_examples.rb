@@ -19,7 +19,7 @@ shared_examples_for "connection" do
 
   after :all do
     Zookeeper.logger.warn "running shared examples after :all"
-    z = Zookeeper.new(zk_host)
+    z = Zookeeper.new("localhost:2181")
     z.delete(:path => path)
     z.close
   end
