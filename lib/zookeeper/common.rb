@@ -4,12 +4,15 @@ module ZookeeperCommon
   # sigh, i guess define this here?
   ZKRB_GLOBAL_CB_REQ   = -1
 
+protected
   def get_next_event(blocking=true)
-    return nil if closed? # protect against this happening in a callback after close
-    super(blocking) 
+    @event_queue.pop(!blocking).tap do |event|
+      logger.debug { "#{self.class}##{__method__} delivering event #{event.inspect}" }
+    end
+  rescue ThreadError
+    nil
   end
 
-protected
   def setup_call(meth_name, opts)
     req_id = nil
     @mutex.synchronize {

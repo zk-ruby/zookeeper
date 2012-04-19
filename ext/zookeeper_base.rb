@@ -85,14 +85,6 @@ class ZookeeperBase
     reopen(timeout)
   end
 
-  def get_next_event(blocking=true)
-    @event_queue.pop(!blocking).tap do |event|
-      logger.debug { "#{self.class}##{__method__} delivering event #{event.inspect}" }
-    end
-  rescue ThreadError
-    nil
-  end
-
   # synchronized accessor to the @czk instance
   # @private
   def czk
