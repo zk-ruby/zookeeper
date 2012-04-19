@@ -14,7 +14,6 @@ if defined?(::JRUBY_VERSION)
   $LOAD_PATH.unshift(File.expand_path('../java', File.dirname(__FILE__))).uniq!
 else
   $LOAD_PATH.unshift(File.expand_path('../ext', File.dirname(__FILE__))).uniq!
-  require 'zookeeper_c'
 end
 
 require 'zookeeper_base'
@@ -188,7 +187,9 @@ class Zookeeper < ZookeeperBase
   # effect in java
   #
   def self.set_debug_level(val)
-    super
+    if defined?(::CZookeeper)
+      CZookeeper.set_debug_level(val.to_i)
+    end
   end
 
   # DEPRECATED: use the class-level method instead

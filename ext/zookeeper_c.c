@@ -180,8 +180,8 @@ static VALUE method_init(int argc, VALUE* argv, VALUE self) {
 
   rb_iv_set(self, "@_data", data);
   rb_iv_set(self, "@selectable_io", create_selectable_io(zk_local_ctx->queue));
-  rb_iv_set(self, "@_running", Qtrue);
 
+  rb_funcall(self, rb_intern("zkc_set_running_and_notify!"), 0);
 
   return Qnil;
 }
@@ -500,36 +500,42 @@ static int is_closed(VALUE self) {
   return RTEST(rval);
 }
 
+static int is_shutting_down(VALUE self) {
+  VALUE rval = rb_iv_get(self, "@_shutting_down");
+  return RTEST(rval);
+}
+
 /* slyphon: NEED TO PROTECT THIS AGAINST SHUTDOWN */
 
 static VALUE method_get_next_event(VALUE self, VALUE blocking) {
+  // dbg.h 
+  check_debug(!is_closed(self), "we are closed, not trying to get event");
+
   char buf[64];
   FETCH_DATA_PTR(self, zk);
 
   for (;;) {
-
-    // we use the is_running(self) method here because it allows us to have a
-    // ruby-land semaphore that we can also use in the java extension
-    //
-    if (is_closed(self) || !is_running(self)) {
-      zkrb_debug_inst(self, "is_closed(self): %d, is_running(self): %d, method_get_next_event is exiting loop", is_closed(self), is_running(self));
-      return Qnil;  // this case for shutdown
-    }
+    check_debug(!is_closed(self), "we're closed in the middle of method_get_next_event, bailing");
 
     zkrb_event_t *event = zkrb_dequeue(zk->queue, 1);
 
     /* Wait for an event using rb_thread_select() on the queue's pipe */
     if (event == NULL) {
       if (NIL_P(blocking) || (blocking == Qfalse)) { 
-        return Qnil; // no event for us
+        goto error;
       } 
       else {
+        // if we're shutting down, don't enter this section, we don't want to block
+        check_debug(!is_shutting_down(self), "method_get_next_event, we're shutting down, don't enter blocking section");
+
         int fd = zk->queue->pipe_read;
         ssize_t bytes_read = 0;
 
         // wait for an fd to become readable, opposite of rb_thread_fd_writable
         rb_thread_wait_fd(fd);
 
+        // clear all bytes here, we'll catch all the events on subsequent calls
+        // (until we run out of events)
         bytes_read = read(fd, buf, sizeof(buf));
 
         if (bytes_read == -1) {
@@ -546,6 +552,9 @@ static VALUE method_get_next_event(VALUE self, VALUE blocking) {
     zkrb_event_free(event);
     return hash;
   }
+
+  error: 
+    return Qnil;
 }
 
 static VALUE method_has_events(VALUE self) {
@@ -610,7 +619,7 @@ static VALUE method_is_unrecoverable(VALUE self) {
   return is_unrecoverable(zk->zh) == ZINVALIDSTATE ? Qtrue : Qfalse;
 }
 
-static VALUE method_state(VALUE self) {
+static VALUE method_zkc_state(VALUE self) {
   FETCH_DATA_PTR(self, zk);
   return INT2NUM(zoo_state(zk->zh));
 }
@@ -675,7 +684,7 @@ static void zkrb_define_methods(void) {
   DEFINE_METHOD(deterministic_conn_order, 1);
   DEFINE_METHOD(is_unrecoverable, 0);
   DEFINE_METHOD(recv_timeout, 1);
-  DEFINE_METHOD(state, 0);
+  DEFINE_METHOD(zkc_state, 0);
   DEFINE_METHOD(sync, 2);
 
   // TODO

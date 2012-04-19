@@ -1,6 +1,10 @@
+require File.expand_path('../c_zookeeper', __FILE__)
+require 'forwardable'
+
 # The low-level wrapper-specific methods for the C lib
 # subclassed by the top-level Zookeeper class
-class ZookeeperBase < CZookeeper
+class ZookeeperBase
+  extend Forwardable
   include ZookeeperCommon
   include ZookeeperCallbacks
   include ZookeeperConstants
@@ -17,6 +21,7 @@ class ZookeeperBase < CZookeeper
   ZOO_LOG_LEVEL_INFO   = 3
   ZOO_LOG_LEVEL_DEBUG  = 4
 
+  def_delegators :@czk, :state, :closed?, :running?
 
   def reopen(timeout = 10, watcher=nil)
     warn "WARN: ZookeeperBase#reopen watcher argument is now ignored" if watcher
@@ -33,11 +38,9 @@ class ZookeeperBase < CZookeeper
       set_default_global_watcher
     end
 
-    close
-
     @start_stop_mutex.synchronize do
 #       $stderr.puts "%s: calling init, self.obj_id: %x" % [self.class, object_id]
-      init(@host)
+      @czk = CZookeeper.new(@host, @event_queue)
 
       # XXX: replace this with a callback
       if timeout > 0
@@ -57,7 +60,9 @@ class ZookeeperBase < CZookeeper
     @watcher_reqs = {}
     @completion_reqs = {}
     @req_mutex = Monitor.new
-    @current_req_id = 1
+    @current_req_id = 0
+    @event_queue = QueueWithPipe.new
+    @czk = nil
     
     # approximate the java behavior of raising java.lang.IllegalArgumentException if the host
     # argument ends with '/'
@@ -66,22 +71,7 @@ class ZookeeperBase < CZookeeper
     @host = host
 
     @start_stop_mutex = Monitor.new
-
     @default_watcher = (watcher or get_default_global_watcher)
-
-    # used by the C layer. CZookeeper sets this to true when the init method
-    # has completed. we set this value to false to signal to the C code
-    # (especially the event delivery loop) that we're ready for shutdown
-    #
-    # you should grab the @start_stop_mutex before messing with this flag
-    @_running = nil
-
-    # This is set to true after destroy_zkrb_instance has been called and all
-    # CZookeeper state has been cleaned up
-    @_closed = false  # also used by the C layer
-
-    # the actual C data is stashed in this ivar. never *ever* touch this
-    @_data = nil
 
     yield self if block_given?
 
@@ -142,15 +132,9 @@ class ZookeeperBase < CZookeeper
     end
   end
 
-  def closed?
-    @start_stop_mutex.synchronize { false|@_closed }
-  end
-
-  def running?
-    @start_stop_mutex.synchronize { false|@_running }
-  end
 
   def state
+
     return ZOO_CLOSED_STATE if closed?
     super
   end
@@ -277,11 +261,5 @@ protected
     @chroot_path
   end
 
-  # This method is the hook into the C code, and is responsible for setting up
-  # all the state in the zkc library.
-  # 
-  def init(host)
-    super
-  end
 end
 
