@@ -2,6 +2,7 @@
  * Phillip Pearson <pp@myelin.co.nz>
  * Eric Maland <eric@twitter.com>
  * Brian Wickman <wickman@twitter.com>
+ * Jonathan D. Simms <slyphon@gmail.com>
  *
  * This fork is a 90% rewrite of the original.  It takes a more evented
  * approach to isolate the ZK state machine from the ruby interpreter via an
@@ -130,7 +131,7 @@ static VALUE create_selectable_io(zkrb_queue_t *q) {
 
 #define session_timeout_msec(self) rb_iv_get(self, "@_session_timeout_msec")
 
-static VALUE method_init(int argc, VALUE* argv, VALUE self) {
+static VALUE method_zkrb_init(int argc, VALUE* argv, VALUE self) {
   VALUE hostPort;
   VALUE options;
 
@@ -650,7 +651,7 @@ static void zkrb_define_methods(void) {
     rb_define_singleton_method(Zookeeper, #method, method_ ## method, args); }
 
   // the number after the method name should be actual arity of C function - 1
-  DEFINE_METHOD(init, -1);
+  DEFINE_METHOD(zkrb_init, -1);
   DEFINE_METHOD(get_children, 4);
   DEFINE_METHOD(exists, 4);
   DEFINE_METHOD(create, 6);

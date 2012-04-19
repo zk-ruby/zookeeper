@@ -42,7 +42,7 @@ class CZookeeper
 
     setup_event_thread!
 
-    init(@host)
+    zkrb_init(@host)
 
     logger.debug { "init returned!" }
   end
