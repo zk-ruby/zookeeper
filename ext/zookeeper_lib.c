@@ -38,25 +38,24 @@ pthread_mutex_t zkrb_q_mutex = PTHREAD_MUTEX_INITIALIZER;
 /* push/pop is a misnomer, this is a queue */
 void zkrb_enqueue(zkrb_queue_t *q, zkrb_event_t *elt) {
   pthread_mutex_lock(&zkrb_q_mutex);
-  if (q == NULL || q->tail == NULL) {
-    pthread_mutex_unlock(&zkrb_q_mutex);
-    return;
-  }
+
+  check_debug(q != NULL && q->tail != NULL,  "zkrb_enqueue: queue ptr or tail was NULL\n");
+
   q->tail->event = elt;
   q->tail->next = (struct zkrb_event_ll_t *) malloc(sizeof(struct zkrb_event_ll_t));
   q->tail = q->tail->next;
   q->tail->event = NULL;
   q->tail->next = NULL;
   ssize_t ret = write(q->pipe_write, "0", 1);   /* Wake up Ruby listener */
-  pthread_mutex_unlock(&zkrb_q_mutex);
 
   // XXX(slyphon): can't raise a ruby exception here as we may not be calling
   // this from a ruby thread. Calling into the interpreter from a non-ruby
   // thread is bad, mm'kay?
 
-  if (ret == -1) {
-    fprintf(stderr, "WARNING: write to queue (%p) pipe failed!\n", q);
-  }
+  check(ret != -1, "write to queue (%p) pipe failed!\n", q);
+
+error:
+  pthread_mutex_unlock(&zkrb_q_mutex);
 }
 
 zkrb_event_t * zkrb_peek(zkrb_queue_t *q) {
