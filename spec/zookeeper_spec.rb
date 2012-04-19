@@ -7,9 +7,16 @@ describe 'Zookeeper' do
   let(:data) { "underpants" } 
   let(:zk_host) { 'localhost:2181' }
 
-  let(:zk) do
-    Zookeeper.logger.debug { "creating root instance" }
-    Zookeeper.new(zk_host)
+  before do
+    @zk = Zookeeper.new(zk_host)
+  end
+
+  after do
+    @zk and @zk.close
+  end
+
+  def zk
+    @zk
   end
 
   it_should_behave_like "connection"

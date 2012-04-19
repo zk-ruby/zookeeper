@@ -12,6 +12,11 @@ class ZookeeperBase
   include ZookeeperACLs
   include ZookeeperStat
 
+  # @private
+  class ClientShutdownException < StandardError; end
+
+  # @private
+  KILL_TOKEN = Object.new unless defined?(KILL_TOKEN)
 
   ZKRB_GLOBAL_CB_REQ   = -1
 
@@ -21,8 +26,24 @@ class ZookeeperBase
   ZOO_LOG_LEVEL_INFO   = 3
   ZOO_LOG_LEVEL_DEBUG  = 4
 
-  def_delegators :@czk, :state, :closed?, :running?
+  def_delegators :czk, 
+    :get_children, :exists, :delete, :get, :set, :set_acl, :get_acl, :client_id, :sync
 
+  # some state methods need to be more paranoid about locking to ensure the correct
+  # state is returned
+  # 
+  def self.threadsafe_inquisitor(*syms)
+    syms.each do |sym|
+      class_eval(<<-EOM, __FILE__, __LINE__+1)
+        def #{sym}
+          @czk_client_mutex.synchronize { @czk.#{sym} }
+        end
+      EOM
+    end
+  end
+
+  threadsafe_inquisitor :connected?, :connecting?, :associating?, :running?
+ 
   def reopen(timeout = 10, watcher=nil)
     warn "WARN: ZookeeperBase#reopen watcher argument is now ignored" if watcher
 
@@ -30,26 +51,16 @@ class ZookeeperBase
       raise "You cannot set the watcher to a different value this way anymore!"
     end
     
-#     @default_watcher ||= watcher
-
-    @req_mutex.synchronize do
-      # flushes all outstanding watcher reqs.
-      @watcher_reqs.clear
-      set_default_global_watcher
-    end
-
-    @start_stop_mutex.synchronize do
-#       $stderr.puts "%s: calling init, self.obj_id: %x" % [self.class, object_id]
-      @czk = CZookeeper.new(@host, @event_queue)
-
-      # XXX: replace this with a callback
-      if timeout > 0
-        time_to_stop = Time.now + timeout
-        until state == Zookeeper::ZOO_CONNECTED_STATE
-          break if Time.now > time_to_stop
-          sleep 0.1
-        end
+    @czk_client_mutex.synchronize do
+      # XXX: deadlock danger?
+      @req_mutex.synchronize do
+        # flushes all outstanding watcher reqs.
+        @watcher_reqs.clear
+        set_default_global_watcher
       end
+
+      @czk = CZookeeper.new(@host, @event_queue)
+      @czk.wait_until_connected(timeout)
     end
 
     setup_dispatch_thread!
@@ -70,12 +81,26 @@ class ZookeeperBase
 
     @host = host
 
-    @start_stop_mutex = Monitor.new
+    @czk_client_mutex = Monitor.new
     @default_watcher = (watcher or get_default_global_watcher)
 
     yield self if block_given?
 
     reopen(timeout)
+  end
+
+  def get_next_event(blocking=true)
+    @event_queue.pop(!blocking).tap do |event|
+      logger.debug { "#{self.class}##{__method__} delivering event #{event.inspect}" }
+    end
+  rescue ThreadError
+    nil
+  end
+
+  # synchronized accessor to the @czk instance
+  # @private
+  def czk
+    @czk_client_mutex.synchronize { @czk }
   end
   
   # if either of these happen, the user will need to renegotiate a connection via reopen
@@ -84,36 +109,19 @@ class ZookeeperBase
     raise ZookeeperException::NotConnected   unless connected?
   end
 
-  def connected?
-    state == ZOO_CONNECTED_STATE
-  end
-
-  def connecting?
-    state == ZOO_CONNECTING_STATE
-  end
-
-  def associating?
-    state == ZOO_ASSOCIATING_STATE
-  end
-
   def close
-    stop_running!
     stop_dispatch_thread!
 
-    @start_stop_mutex.synchronize do
-      if !@_closed and @_data
-        close_handle
-      end
+    @czk_client_mutex.synchronize do
+      @czk.close
     end
-
-    close_selectable_io!
   end
 
   # the C lib doesn't strip the chroot path off of returned path values, which
   # is pretty damn annoying. this is used to clean things up.
   def create(*args)
     # since we don't care about the inputs, just glob args
-    rc, new_path = super(*args)
+    rc, new_path = czk.create(*args)
     [rc, strip_chroot_from(new_path)]
   end
 
@@ -132,48 +140,25 @@ class ZookeeperBase
     end
   end
 
-
   def state
-
     return ZOO_CLOSED_STATE if closed?
-    super
+    czk.state
   end
 
   def session_id
-    client_id.session_id
+    cid = client_id and cid.session_id
   end
 
   def session_passwd
-    client_id.passwd
+    cid = client_id and cid.passwd
   end
 
+  # we are closed if there is no @czk instance or @czk.closed?
+  def closed?
+    @czk_client_mutex.synchronize { !@czk or @czk.closed? } 
+  end
+ 
 protected
-  # use this method to set the @_running flag to false
-  def stop_running!
-    logger.debug { "#{self.class}##{__method__}" }
-
-    @start_stop_mutex.synchronize do
-      @_running = false if @_running
-    end
-  end
-
-  # this method is part of the reopen/close code, and is responsible for
-  # shutting down the dispatch thread. 
-  #
-  # @dispatch will be nil when this method exits
-  #
-  def stop_dispatch_thread!
-    logger.debug { "#{self.class}##{__method__}" }
-
-    if @dispatcher
-      unless @_closed
-        wake_event_loop! # this is a C method
-      end
-      @dispatcher.join 
-      @dispatcher = nil
-    end
-  end
-
   def close_selectable_io!
     logger.debug { "#{self.class}##{__method__}" }
     
@@ -215,19 +200,13 @@ protected
     path[chroot_path.length..-1]
   end
 
-  def barf_unless_running!
-    @start_stop_mutex.synchronize do
-      raise ShuttingDownException unless (@_running and not @_closed)
-      yield
-    end
-  end
-
   def setup_dispatch_thread!
-    @dispatcher = Thread.new do
-      while running?
+    @dispatcher ||= Thread.new do
+      while true
         begin                     # calling user code, so protect ourselves
           dispatch_next_callback
-#         rescue Errno::EBADF # don't print this one, may happen when shutting down
+        rescue QueueWithPipe::ShutdownException
+          break
         rescue Exception => e
           $stderr.puts "Error in dispatch thread, #{e.class}: #{e.message}\n" << e.backtrace.map{|n| "\t#{n}"}.join("\n")
         end
@@ -235,8 +214,22 @@ protected
       logger.debug { "dispatch thread exiting!" }
     end
   end
+  
+  # this method is part of the reopen/close code, and is responsible for
+  # shutting down the dispatch thread. 
+  #
+  # @dispatch will be nil when this method exits
+  #
+  def stop_dispatch_thread!
+    logger.debug { "#{self.class}##{__method__}" }
 
-  # TODO: Make all global puts configurable
+    if @dispatcher
+      @event_queue.graceful_close!
+      @dispatcher.join 
+      @dispatcher = nil
+    end
+  end
+
   def get_default_global_watcher
     Proc.new { |args|
       logger.debug { "Ruby ZK Global CB called type=#{event_by_value(args[:type])} state=#{state_by_value(args[:state])}" }
@@ -260,6 +253,5 @@ protected
 
     @chroot_path
   end
-
 end
 

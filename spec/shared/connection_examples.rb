@@ -19,17 +19,9 @@ shared_examples_for "connection" do
 
   after :all do
     Zookeeper.logger.warn "running shared examples after :all"
-    # close the chrooted connection
-    zk.delete(:path => path)
-    zk.close
-
-    wait_until do 
-      begin
-        !zk.connected?
-      rescue RuntimeError
-        true
-      end
-    end
+    z = Zookeeper.new(zk_host)
+    z.delete(:path => path)
+    z.close
   end
 
   # unfortunately, we can't test w/o exercising other parts of the driver, so

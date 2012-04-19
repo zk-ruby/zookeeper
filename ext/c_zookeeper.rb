@@ -3,6 +3,7 @@ require File.expand_path('../zookeeper_c', __FILE__)
 class CZookeeper
   include ZookeeperCommon
   include ZookeeperConstants
+  include ZookeeperExceptions
 
   DEFAULT_SESSION_TIMEOUT_MSEC = 10000
 
@@ -56,6 +57,18 @@ class CZookeeper
     @start_stop_mutex.synchronize { !!@_shutting_down }
   end
 
+  def connected?
+    state == ZOO_CONNECTED_STATE
+  end
+
+  def connecting?
+    state == ZOO_CONNECTING_STATE
+  end
+
+  def associating?
+    state == ZOO_ASSOCIATING_STATE
+  end
+
   def close
     return if closed?
 
@@ -77,7 +90,38 @@ class CZookeeper
     zkrb_state
   end
 
+  # this implementation is gross, but i don't really see another way of doing it
+  # without more grossness
+  #
+  # returns true if we're connected, false if we're not
+  #
+  # if timeout is nil, we never time out, and wait forever for CONNECTED state
+  #
+  def wait_until_connected(timeout=10)
+    return false unless wait_until_running(timeout)
+
+    time_to_stop = timeout ? (Time.now + timeout) : nil
+
+    until connected? or (time_to_stop and Time.now > time_to_stop)
+      Thread.pass
+    end
+
+    connected?
+  end
+
   private
+    # will wait until the client has entered the running? state
+    # or until timeout seconds have passed.
+    #
+    # returns true if we're running, false if we timed out
+    def wait_until_running(timeout=5)
+      @start_stop_mutex.synchronize do
+        return true if @_running
+        @running_cond.wait(timeout)
+        !!@_running
+      end
+    end
+
     def setup_event_thread!
       @event_thread ||= Thread.new do
         Thread.current.abort_on_exception = true   # remove this once this is confirmed to work
