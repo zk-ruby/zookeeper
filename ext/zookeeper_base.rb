@@ -188,22 +188,7 @@ protected
     path[chroot_path.length..-1]
   end
 
-  
-  # this method is part of the reopen/close code, and is responsible for
-  # shutting down the dispatch thread. 
-  #
-  # @dispatch will be nil when this method exits
-  #
-  def stop_dispatch_thread!
-    logger.debug { "#{self.class}##{__method__}" }
-
-    if @dispatcher
-      @event_queue.graceful_close!
-      @dispatcher.join 
-      @dispatcher = nil
-    end
-  end
-
+ 
   def get_default_global_watcher
     Proc.new { |args|
       logger.debug { "Ruby ZK Global CB called type=#{event_by_value(args[:type])} state=#{state_by_value(args[:state])}" }
