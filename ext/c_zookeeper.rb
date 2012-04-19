@@ -74,7 +74,7 @@ class CZookeeper
 
   def state
     return ZOO_CLOSED_STATE if closed?
-    zkc_state
+    zkrb_state
   end
 
   private

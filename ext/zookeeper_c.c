@@ -621,7 +621,7 @@ static VALUE method_is_unrecoverable(VALUE self) {
   return is_unrecoverable(zk->zh) == ZINVALIDSTATE ? Qtrue : Qfalse;
 }
 
-static VALUE method_zkc_state(VALUE self) {
+static VALUE method_zkrb_state(VALUE self) {
   FETCH_DATA_PTR(self, zk);
   return INT2NUM(zoo_state(zk->zh));
 }
@@ -686,7 +686,7 @@ static void zkrb_define_methods(void) {
   DEFINE_METHOD(deterministic_conn_order, 1);
   DEFINE_METHOD(is_unrecoverable, 0);
   DEFINE_METHOD(recv_timeout, 1);
-  DEFINE_METHOD(zkc_state, 0);
+  DEFINE_METHOD(zkrb_state, 0);
   DEFINE_METHOD(sync, 2);
 
   // TODO
