@@ -492,22 +492,9 @@ static VALUE method_get_acl(VALUE self, VALUE reqid, VALUE path, VALUE async) {
   return output;
 }
 
-static int is_running(VALUE self) {
-  VALUE rval = rb_iv_get(self, "@_running");
-  return RTEST(rval);
-}
-
-static int is_closed(VALUE self) {
-  VALUE rval = rb_iv_get(self, "@_closed");
-  return RTEST(rval);
-}
-
-static int is_shutting_down(VALUE self) {
-  VALUE rval = rb_iv_get(self, "@_shutting_down");
-  return RTEST(rval);
-}
-
-/* slyphon: NEED TO PROTECT THIS AGAINST SHUTDOWN */
+#define is_running(self) RTEST(rb_iv_get(self, "@_running"))
+#define is_closed(self) RTEST(rb_iv_get(self, "@_closed"))
+#define is_shutting_down(self) RTEST(rb_iv_get(self, "@_shutting_down"))
 
 static VALUE method_get_next_event(VALUE self, VALUE blocking) {
   // dbg.h 
