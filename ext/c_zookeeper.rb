@@ -4,15 +4,16 @@ class CZookeeper
   include ZookeeperCommon
   include ZookeeperConstants
 
+  DEFAULT_SESSION_TIMEOUT_MSEC = 10000
+
   class GotNilEventException < StandardError; end
 
-  def initialize(host, event_queue)
+  def initialize(host, event_queue, opts={})
     @host = host
     @event_queue = event_queue
     
     # used by the C layer. CZookeeper sets this to true when the init method
-    # has completed. we set this value to false to signal to the C code
-    # (especially the event delivery loop) that we're ready for shutdown
+    # has completed. once this is set to true, it stays true.
     #
     # you should grab the @start_stop_mutex before messing with this flag
     @_running = nil
@@ -26,6 +27,8 @@ class CZookeeper
 
     # the actual C data is stashed in this ivar. never *ever* touch this
     @_data = nil
+
+    @_session_timeout_msec = DEFAULT_SESSION_TIMEOUT_MSEC
 
     @start_stop_mutex = Monitor.new
     

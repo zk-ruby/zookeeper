@@ -128,6 +128,8 @@ static VALUE create_selectable_io(zkrb_queue_t *q) {
   return reader;
 }
 
+#define session_timeout_msec(self) rb_iv_get(self, "@_session_timeout_msec")
+
 static VALUE method_init(int argc, VALUE* argv, VALUE self) {
   VALUE hostPort;
   VALUE options;
@@ -168,7 +170,7 @@ static VALUE method_init(int argc, VALUE* argv, VALUE self) {
       zookeeper_init(
           RSTRING_PTR(hostPort),
           zkrb_state_callback,
-          10000,
+          session_timeout_msec(self),
           &zk_local_ctx->myid,
           ctx,
           0);
