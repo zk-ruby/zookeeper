@@ -43,6 +43,8 @@ class ZookeeperBase
   end
 
   threadsafe_inquisitor :connected?, :connecting?, :associating?, :running?
+
+  attr_reader :event_queue
  
   def reopen(timeout = 10, watcher=nil)
     warn "WARN: ZookeeperBase#reopen watcher argument is now ignored" if watcher
