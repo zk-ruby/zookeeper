@@ -50,23 +50,6 @@ protected
     @mutex.synchronize { @completion_reqs.delete(req_id) }
   end
 
-  # this method is part of the reopen/close code, and is responsible for
-  # shutting down the dispatch thread. 
-  #
-  # @dispatch will be nil when this method exits
-  #
-  def stop_dispatch_thread!
-    logger.debug { "#{self.class}##{__method__}" }
-
-    if @dispatcher
-      @mutex.synchronize do
-        event_queue.graceful_close!
-        @dispatch_shutdown_cond.wait_until { @dispatcher.join(0.1) }
-        @dispatcher = nil
-      end
-    end
-  end
-
   def setup_dispatch_thread!
     logger.debug {  "starting dispatch thread" }
     @dispatcher ||= Thread.new do
@@ -81,6 +64,28 @@ protected
         end
       end
       signal_dispatch_thread_exit!
+    end
+  end
+  
+  # this method is part of the reopen/close code, and is responsible for
+  # shutting down the dispatch thread. 
+  #
+  # @dispatcher will be nil when this method exits
+  #
+  def stop_dispatch_thread!
+    logger.debug { "#{self.class}##{__method__}" }
+
+    if @dispatcher
+      @mutex.synchronize do
+        event_queue.graceful_close!
+
+        # we now release the mutex so that dispatch_next_callback can grab it
+        # to do what it needs to do while delivering events
+        @dispatch_shutdown_cond.wait
+
+        @dispatcher.join
+        @dispatcher = nil
+      end
     end
   end
 

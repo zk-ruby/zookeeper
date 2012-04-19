@@ -210,13 +210,7 @@ class Zookeeper < ZookeeperBase
   # returns an IO object that will be readable when an event is ready for dispatching
   # (for internal use only)
   def selectable_io
-    super
-  end
-
-  # closes the underlying connection object
-  # (for internal use only)
-  def close_handle
-    super
+#     super
   end
 
   # return the session id of the current connection as an Fixnum

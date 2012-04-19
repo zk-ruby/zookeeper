@@ -103,9 +103,8 @@ class ZookeeperBase
   end
 
   def close
-    stop_dispatch_thread!
-
     @mutex.synchronize do
+      stop_dispatch_thread!
       @czk.close
     end
   end
