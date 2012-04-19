@@ -578,15 +578,6 @@ static VALUE method_wake_event_loop_bang(VALUE self) {
   return Qnil;
 };
 
-// static VALUE method_signal_pending_close(VALUE self) {
-//   FETCH_DATA_PTR(self, zk);
-// 
-//   zk->pending_close = 1;
-//   zkrb_signal(zk->queue);
-// 
-//   return Qnil;
-// }
-
 static VALUE method_close_handle(VALUE self) {
   FETCH_DATA_PTR(self, zk);
 
