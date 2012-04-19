@@ -108,3 +108,5 @@ private
     end
   end
 end
+
+require 'zookeeper/common/queue_with_pipe'
