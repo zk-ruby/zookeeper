@@ -54,7 +54,7 @@ void zkrb_enqueue(zkrb_queue_t *q, zkrb_event_t *elt) {
   // this from a ruby thread. Calling into the interpreter from a non-ruby
   // thread is bad, mm'kay?
 
-  if ((ret == -1)) {
+  if (ret == -1) {
     fprintf(stderr, "WARNING: write to queue (%p) pipe failed!\n", q);
   }
 }
