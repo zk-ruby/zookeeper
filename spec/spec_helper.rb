@@ -21,22 +21,41 @@ Dir[File.expand_path('../support/**/*.rb', __FILE__)].sort.each { |f| require(f)
 
 # Zookeeper.logger = Logger.new($stderr).tap { |l| l.level = Logger::DEBUG }
 # Zookeeper.set_debug_level(4)
+module ZookeeperSpecHeleprs
+  class TimeoutError < StandardError; end
 
-def logger
-  Zookeeper.logger
+  def logger
+    Zookeeper.logger
+  end
+
+  # method to wait until block passed returns true or timeout (default is 10 seconds) is reached 
+  # raises TiemoutError on timeout
+  def wait_until(timeout=10)
+    time_to_stop = Time.now + timeout
+    while true
+      rval = yield
+      return rval if rval
+      raise TimeoutError, "timeout of #{timeout}s exceeded" if Time.now > time_to_stop
+      Thread.pass
+    end
+  end
+
+  # inverse of wait_until
+  def wait_while(timeout=10)
+    time_to_stop = Time.now + timeout
+    while true
+      rval = yield
+      return rval unless rval
+      raise TimeoutError, "timeout of #{timeout}s exceeded" if Time.now > time_to_stop
+      Thread.pass
+    end
+  end
 end
 
 RSpec.configure do |config|
   config.mock_with :flexmock
+  config.include ZookeeperSpecHeleprs
+  config.extend ZookeeperSpecHeleprs
 end
 
-
-# method to wait until block passed returns true or timeout (default is 10 seconds) is reached 
-def wait_until(timeout=10, &block)
-  time_to_stop = Time.now + timeout
-  until yield do 
-    break if Time.now > time_to_stop
-    sleep 0.3
-  end
-end
 
