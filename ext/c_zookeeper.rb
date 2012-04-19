@@ -42,15 +42,15 @@ class CZookeeper
   end
 
   def closed?
-    @start_stop_mutex.synchronize { false|@_closed }
+    @start_stop_mutex.synchronize { !!@_closed }
   end
 
   def running?
-    @start_stop_mutex.synchronize { false|@_running }
+    @start_stop_mutex.synchronize { !!@_running }
   end
 
   def shutting_down?
-    @start_stop_mutex.synchronize { false|@_shutting_down }
+    @start_stop_mutex.synchronize { !!@_shutting_down }
   end
 
   def close
