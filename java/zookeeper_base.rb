@@ -179,10 +179,7 @@ class ZookeeperBase
       @watcher_reqs = {}
       set_default_global_watcher
 
-      # XXX: BUG: CLOSE EXISTING @jzk IF THERE IS ONE!!
-
-      @jzk = JZK::ZooKeeper.new(@host, DEFAULT_SESSION_TIMEOUT, JavaCB::WatcherCallback.new(event_queue))
-
+      replace_jzk!
       wait_until_connected
     end
 
@@ -470,6 +467,14 @@ class ZookeeperBase
         logger.debug { "Ruby ZK Global CB called type=#{event_by_value(args[:type])} state=#{state_by_value(args[:state])}" }
         true
       }
+    end
+
+  private
+    def replace_jzk!
+      orig_jzk = @jzk
+      @jzk = JZK::ZooKeeper.new(@host, DEFAULT_SESSION_TIMEOUT, JavaCB::WatcherCallback.new(event_queue))
+    ensure
+      orig_jzk.close if orig_jzk
     end
 end
 
