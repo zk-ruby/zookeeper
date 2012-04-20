@@ -20,6 +20,11 @@ else
   end
 end
 
+if ENV['ZKRB_NOLOG']
+  Zookeeper.logger.level = Logger::FATAL
+  Zookeeper.set_debug_level(0)
+end
+
 module ZookeeperSpecHeleprs
   class TimeoutError < StandardError; end
 
