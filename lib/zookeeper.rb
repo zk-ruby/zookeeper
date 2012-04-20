@@ -32,6 +32,7 @@ class Zookeeper < ZookeeperBase
   end
 
   def reopen(timeout=10, watcher=nil)
+    warn "WARN: ZookeeperBase#reopen watcher argument is now ignored" if watcher
     super
   end
 

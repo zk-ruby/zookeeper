@@ -47,8 +47,6 @@ class ZookeeperBase
   attr_reader :event_queue
  
   def reopen(timeout = 10, watcher=nil)
-    warn "WARN: ZookeeperBase#reopen watcher argument is now ignored" if watcher
-
     if watcher and (watcher != @default_watcher)
       raise "You cannot set the watcher to a different value this way anymore!"
     end
@@ -179,7 +177,6 @@ protected
     path[chroot_path.length..-1]
   end
 
- 
   def get_default_global_watcher
     Proc.new { |args|
       logger.debug { "Ruby ZK Global CB called type=#{event_by_value(args[:type])} state=#{state_by_value(args[:state])}" }

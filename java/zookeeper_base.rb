@@ -403,19 +403,10 @@ class ZookeeperBase
   # the two decend from a common base, and a module wouldn't work
   def set_default_global_watcher
     @mutex.synchronize do
-#       @default_watcher = block
       @watcher_reqs[ZKRB_GLOBAL_CB_REQ] = { :watcher => @default_watcher, :watcher_context => nil }
     end
   end
 
-  # by accessing this selectable_io you indicate that you intend to clear it
-  # when you have delivered an event by reading one byte per event.
-  #
-#   def selectable_io
-#     event_queue.clear_reads_on_pop = false
-#     event_queue.selectable_io
-#   end
-  
   def session_id
     jzk.session_id
   end
