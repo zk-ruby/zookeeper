@@ -6,6 +6,17 @@ This file contains three sets of helpers:
   - functions for translating between Ruby and C versions of ZK datatypes
 
 wickman@twitter.com
+
+*********************************************************************************
+*
+* NOTE: be *very careful* in these functions, calling *ANY* ruby interpreter
+* function when you're not in an interpreter thread can hork ruby, trigger a
+* [BUG], corrupt the stack, kill your dog, knock up your daughter, etc. etc.
+*
+*********************************************************************************
+
+slyphon@gmail.com
+
 */
 
 #include "ruby.h"
@@ -38,14 +49,6 @@ pthread_mutex_t zkrb_q_mutex = PTHREAD_MUTEX_INITIALIZER;
   LOG_PTHREAD_ERR(!pthread_mutex_unlock(&zkrb_q_mutex), F);  \
   zkrb_debug(F ": global_mutex unlocked") 
 
-/********************************************************************************
- *
- * NOTE: be *very careful* in these functions, calling *ANY* ruby interpreter
- * function when you're not in an interpreter thread can hork ruby, trigger a
- * [BUG], corrupt the stack, kill your dog, knock up your daughter, etc. etc.
- *
- *********************************************************************************
-*/
 
 /* push/pop is a misnomer, this is a queue */
 void zkrb_enqueue(zkrb_queue_t *q, zkrb_event_t *elt) {
