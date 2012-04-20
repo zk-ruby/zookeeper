@@ -109,6 +109,7 @@ static int zkrb_dup(int orig) {
     return fd;
 }
 
+#if 0
 static VALUE create_selectable_io(zkrb_queue_t *q) {
   // rb_cIO is the ruby IO class?
 
@@ -128,6 +129,7 @@ static VALUE create_selectable_io(zkrb_queue_t *q) {
 
   return reader;
 }
+#endif
 
 #define session_timeout_msec(self) rb_iv_get(self, "@_session_timeout_msec")
 
@@ -182,7 +184,7 @@ static VALUE method_zkrb_init(int argc, VALUE* argv, VALUE self) {
   }
 
   rb_iv_set(self, "@_data", data);
-  rb_iv_set(self, "@selectable_io", create_selectable_io(zk_local_ctx->queue));
+/*  rb_iv_set(self, "@selectable_io", create_selectable_io(zk_local_ctx->queue));*/
 
   rb_funcall(self, rb_intern("zkc_set_running_and_notify!"), 0);
 
