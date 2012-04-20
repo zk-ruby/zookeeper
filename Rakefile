@@ -15,10 +15,15 @@ gemset_name = 'zookeeper'
 %w[1.8.7 1.9.2 1.9.3 jruby].each do |rvm_ruby|
   ruby_with_gemset = "#{rvm_ruby}@#{gemset_name}"
 
-  clobber_task_name = "mb:#{rvm_ruby}:clobber"
-  build_task_name   = "mb:#{rvm_ruby}:build"
-  bundle_task_name  = "mb:#{rvm_ruby}:bundle_install"
-  rspec_task_name   = "mb:#{rvm_ruby}:run_rspec"
+  create_gemset_name  = "mb:#{rvm_ruby}:create_gemset"
+  clobber_task_name   = "mb:#{rvm_ruby}:clobber"
+  build_task_name     = "mb:#{rvm_ruby}:build"
+  bundle_task_name    = "mb:#{rvm_ruby}:bundle_install"
+  rspec_task_name     = "mb:#{rvm_ruby}:run_rspec"
+
+  task create_gemset_name do
+    sh "rvm #{rvm_ruby} do rvm gemset create #{gemset_name}"
+  end
 
   task clobber_task_name do
     unless rvm_ruby == 'jruby'
@@ -28,7 +33,7 @@ gemset_name = 'zookeeper'
     end
   end
 
-  task build_task_name => clobber_task_name do
+  task build_task_name => [create_gemset_name, clobber_task_name] do
     unless rvm_ruby == 'jruby'
       cd 'ext' do
         sh "rvm #{ruby_with_gemset} do rake build"
