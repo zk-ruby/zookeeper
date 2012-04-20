@@ -83,7 +83,6 @@ class CZookeeper
       end
     end
 
-    close_selectable_io!
     nil
   end
 
