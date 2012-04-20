@@ -110,23 +110,32 @@ void zkrb_signal(zkrb_queue_t *q) {
 }
 
 zkrb_queue_t *zkrb_queue_alloc(void) {
+  // some of the locking is a little coarse, but it 
+  // eases the logic of releasing in case of error.
+  GLOBAL_MUTEX_LOCK("zkrb_queue_alloc"); 
+
   int pfd[2];
+  zkrb_queue_t *rq = NULL;
+ 
+  check(pipe(pfd) == 0, "creating the signal pipe failed");
 
-  // XXX(slyphon): close-on-exec settings?
+  rq = malloc(sizeof(zkrb_queue_t));
+  check_mem(rq);
 
-  if (pipe(pfd) == -1)
-    rb_raise(rb_eRuntimeError, "create of pipe failed: %d", errno);
-
-  pthread_mutex_lock(&zkrb_q_mutex);
-  zkrb_queue_t *rq = malloc(sizeof(zkrb_queue_t));
   rq->head = malloc(sizeof(struct zkrb_event_ll_t));
+  check_mem(rq->head);
+
   rq->head->event = NULL; rq->head->next = NULL;
   rq->tail = rq->head;
   rq->pipe_read = pfd[0];
   rq->pipe_write = pfd[1];
-  pthread_mutex_unlock(&zkrb_q_mutex);
 
+  GLOBAL_MUTEX_UNLOCK("zkrb_queue_alloc");
   return rq;
+
+error:
+  GLOBAL_MUTEX_UNLOCK("zkrb_queue_alloc");
+  return NULL;
 }
 
 void zkrb_queue_free(zkrb_queue_t *queue) {

@@ -162,6 +162,9 @@ static VALUE method_zkrb_init(int argc, VALUE* argv, VALUE self) {
   data = Data_Make_Struct(Zookeeper, struct zkrb_instance_data, 0, free_zkrb_instance_data, zk_local_ctx);
   zk_local_ctx->queue = zkrb_queue_alloc();
 
+  if (zk_local_ctx->queue == NULL)
+    rb_raise(rb_eRuntimeError, "could not allocate zkrb queue!");
+
   zoo_deterministic_conn_order(0);
 
   zkrb_calling_context *ctx =
