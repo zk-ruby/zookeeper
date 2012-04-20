@@ -83,22 +83,25 @@ zkrb_event_t * zkrb_peek(zkrb_queue_t *q) {
   return event;
 }
 
+#define ZKRB_QUEUE_EMPTY(q) (q == NULL || q->head == NULL || q->head->event == NULL)
+
 zkrb_event_t* zkrb_dequeue(zkrb_queue_t *q, int need_lock) {
+  zkrb_event_t *rv = NULL;
+
   if (need_lock)
     GLOBAL_MUTEX_LOCK("zkrb_dequeue");
-  if (q == NULL || q->head == NULL || q->head->event == NULL) {
-    if (need_lock)
-      GLOBAL_MUTEX_UNLOCK("zkrb_dequeue");
-    return NULL;
-  } else {
+
+  if (!ZKRB_QUEUE_EMPTY(q)) {
     struct zkrb_event_ll_t *old_root = q->head;
     q->head = q->head->next;
-    zkrb_event_t *rv = old_root->event;
+    rv = old_root->event;
     free(old_root);
-    if (need_lock)
-      GLOBAL_MUTEX_UNLOCK("zkrb_dequeue");
-    return rv;
   }
+
+  if (need_lock)
+    GLOBAL_MUTEX_UNLOCK("zkrb_dequeue");
+
+  return rv;
 }
 
 void zkrb_signal(zkrb_queue_t *q) {
