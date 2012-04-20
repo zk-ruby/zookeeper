@@ -48,4 +48,9 @@ gemset_name = 'zookeeper'
   task "mb:test_all_rubies" => rspec_task_name
 end
 
+task :build do
+  cd 'ext' do
+    sh "rake"
+  end
+end
 
