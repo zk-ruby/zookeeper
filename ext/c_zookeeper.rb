@@ -19,7 +19,7 @@ class CZookeeper
 
   def self.set_debug_level(value)
     @debug_level = value
-    set_zkrb_debug_level(value)
+    zkrb_set_debug_level(value)
   end
 
   def initialize(host, event_queue, opts={})
