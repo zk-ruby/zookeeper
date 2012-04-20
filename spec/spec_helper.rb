@@ -9,18 +9,17 @@ gem 'flexmock', '~> 0.8.11'
 require 'flexmock'
 require 'zookeeper'
 
-Zookeeper.logger = Logger.new(File.expand_path('../../test.log', __FILE__)).tap do |log|
-  log.level = Logger::DEBUG
-end
-
 Dir[File.expand_path('../support/**/*.rb', __FILE__)].sort.each { |f| require(f) }
 
-# NOTE: this is a useful debugging setup. have our logs and the low-level C
-# logging statements both go to stderr. to use, comment the above and uncomment
-# below
+if ENV['ZKRB_DEBUG']
+  Zookeeper.logger = Logger.new($stderr).tap { |l| l.level = Logger::DEBUG }
+  Zookeeper.set_debug_level(4)
+else
+  Zookeeper.logger = Logger.new(File.expand_path('../../test.log', __FILE__)).tap do |log|
+    log.level = Logger::DEBUG
+  end
+end
 
-# Zookeeper.logger = Logger.new($stderr).tap { |l| l.level = Logger::DEBUG }
-# Zookeeper.set_debug_level(4)
 module ZookeeperSpecHeleprs
   class TimeoutError < StandardError; end
 
