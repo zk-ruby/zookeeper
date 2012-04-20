@@ -106,10 +106,11 @@ zkrb_event_t* zkrb_dequeue(zkrb_queue_t *q, int need_lock) {
 
 void zkrb_signal(zkrb_queue_t *q) {
   GLOBAL_MUTEX_LOCK("zkrb_signal");
-  ssize_t ret = write(q->pipe_write, "0", 1);   /* Wake up Ruby listener */
-  GLOBAL_MUTEX_UNLOCK("zkrb_signal");
-  if (ret == -1)
+
+  if (!write(q->pipe_write, "0", 1))      /* Wake up Ruby listener */
     log_err("zkrb_signal: write to pipe failed, could not wake");
+
+  GLOBAL_MUTEX_UNLOCK("zkrb_signal");
 }
 
 zkrb_queue_t *zkrb_queue_alloc(void) {
