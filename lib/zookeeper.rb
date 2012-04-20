@@ -187,10 +187,26 @@ class Zookeeper < ZookeeperBase
   # for expert use only. set the underlying debug level for the C layer, has no
   # effect in java
   #
+  # @private
   def self.set_debug_level(val)
     if defined?(::CZookeeper)
       CZookeeper.set_debug_level(val.to_i)
     end
+  end
+
+  # @private
+  def self.get_debug_level
+    if defined?(::CZookeeper)
+      CZookeeper.get_debug_level
+    end
+  end
+
+  class << self
+    # @private
+    alias :debug_level= :set_debug_level
+    
+    # @private
+    alias :debug_level :get_debug_level
   end
 
   # DEPRECATED: use the class-level method instead

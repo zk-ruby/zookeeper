@@ -1,3 +1,4 @@
+require 'zookeeper/constants'
 require File.expand_path('../zookeeper_c', __FILE__)
 
 # TODO: see if we can get the destructor to handle thread/event queue teardown
@@ -10,6 +11,16 @@ class CZookeeper
   DEFAULT_SESSION_TIMEOUT_MSEC = 10000
 
   class GotNilEventException < StandardError; end
+
+  # assume we're at debug level
+  def self.get_debug_level
+    @debug_level ||= ZOO_LOG_LEVEL_INFO
+  end
+
+  def self.set_debug_level(value)
+    @debug_level = value
+    set_zkrb_debug_level(value)
+  end
 
   def initialize(host, event_queue, opts={})
     @host = host

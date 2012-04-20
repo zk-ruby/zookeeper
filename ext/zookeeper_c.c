@@ -27,6 +27,7 @@
 
 static VALUE Zookeeper = Qnil;
 static VALUE ZookeeperClientId = Qnil;
+static VALUE ZookeeperConstants = Qnil;
 
 // slyphon: possibly add a lock to this for synchronizing during get_next_event
 
@@ -637,7 +638,7 @@ static VALUE method_client_id(VALUE self) {
   return client_id_obj;
 }
 
-static VALUE klass_method_set_debug_level(VALUE klass, VALUE level) {
+static VALUE klass_method_zkrb_set_debug_level(VALUE klass, VALUE level) {
   Check_Type(level, T_FIXNUM);
   ZKRBDebugging = (FIX2INT(level) == ZOO_LOG_LEVEL_DEBUG);
   zoo_set_debug_level(FIX2INT(level));
@@ -682,11 +683,11 @@ static void zkrb_define_methods(void) {
   // Make these class methods?
   DEFINE_METHOD(zerror, 1);
 
-  rb_define_singleton_method(Zookeeper, "set_debug_level", klass_method_set_debug_level, 1);
+  rb_define_singleton_method(Zookeeper, "set_zkrb_debug_level", klass_method_zkrb_set_debug_level, 1);
 
   rb_attr(Zookeeper, rb_intern("selectable_io"), 1, 0, Qtrue);
-
   rb_define_method(Zookeeper, "wake_event_loop!", method_wake_event_loop_bang, 0);
+
 }
 
 // class CZookeeper::ClientId
@@ -704,8 +705,12 @@ static VALUE zkrb_client_id_method_initialize(VALUE self) {
   return Qnil;
 }
 
+
 void Init_zookeeper_c() {
   ZKRBDebugging = 0;
+
+  ZookeeperConstants = rb_define_module("ZookeeperConstants");
+
   /* initialize Zookeeper class */
   Zookeeper = rb_define_class("CZookeeper", rb_cObject);
   zkrb_define_methods();

@@ -19,6 +19,12 @@ module ZookeeperConstants
   ZOO_SESSION_EVENT      = -1
   ZOO_NOTWATCHING_EVENT  = -2
 
+  # only used by the C extension
+  ZOO_LOG_LEVEL_ERROR = 1
+  ZOO_LOG_LEVEL_WARN  = 2
+  ZOO_LOG_LEVEL_INFO  = 3
+  ZOO_LOG_LEVEL_DEBUG = 4
+
   # used to find the name for a numeric event
   # @private
   EVENT_TYPE_NAMES = {
