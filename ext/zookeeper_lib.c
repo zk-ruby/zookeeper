@@ -654,3 +654,5 @@ struct String_vector * zkrb_clone_string_vector(const struct String_vector * src
   }
   return dst;
 }
+
+// vim:sts=2:sw=2:et
