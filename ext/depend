@@ -1,4 +1,3 @@
-zookeeper_c.c:	zookeeper_lib.c dbg.h
-
 zookeeper_lib.c:	zookeeper_lib.h
+zookeeper_c.c:	zookeeper_lib.c zookeeper_lib.h dbg.h
 
