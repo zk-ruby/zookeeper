@@ -27,7 +27,6 @@
 
 static VALUE Zookeeper = Qnil;
 static VALUE ZookeeperClientId = Qnil;
-static VALUE ZookeeperConstants = Qnil;
 
 // slyphon: possibly add a lock to this for synchronizing during get_next_event
 
@@ -708,8 +707,6 @@ static VALUE zkrb_client_id_method_initialize(VALUE self) {
 
 void Init_zookeeper_c() {
   ZKRBDebugging = 0;
-
-  ZookeeperConstants = rb_define_module("ZookeeperConstants");
 
   /* initialize Zookeeper class */
   Zookeeper = rb_define_class("CZookeeper", rb_cObject);
