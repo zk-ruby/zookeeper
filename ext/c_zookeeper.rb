@@ -187,19 +187,6 @@ class CZookeeper
       end
     end
 
-    def close_selectable_io!
-      logger.debug { "#{self.class}##{__method__}" }
-      
-      # this is set up in the C init method, but it's easier to 
-      # do the teardown here, as this is our half of a pipe. The
-      # write half is controlled by the C code and will be closed properly 
-      # when close_handle is called
-      begin
-        @selectable_io.close if @selectable_io
-      rescue IOError
-      end
-    end
-
     def logger
       Zookeeper.logger
     end
