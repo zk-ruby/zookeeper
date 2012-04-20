@@ -43,10 +43,8 @@ pthread_mutex_t zkrb_q_mutex = PTHREAD_MUTEX_INITIALIZER;
 #define GLOBAL_MUTEX_UNLOCK(F) LOG_PTHREAD_ERR(pthread_mutex_unlock(&zkrb_q_mutex), F)
 
 
-
-/* push/pop is a misnomer, this is a queue */
 void zkrb_enqueue(zkrb_queue_t *q, zkrb_event_t *elt) {
-  pthread_mutex_lock(&zkrb_q_mutex);
+  GLOBAL_MUTEX_LOCK("zkrb_enqueue");
 
   check_debug(q != NULL && q->tail != NULL,  "zkrb_enqueue: queue ptr or tail was NULL\n");
 
@@ -64,25 +62,33 @@ void zkrb_enqueue(zkrb_queue_t *q, zkrb_event_t *elt) {
   check(ret != -1, "write to queue (%p) pipe failed!\n", q);
 
 error:
-  pthread_mutex_unlock(&zkrb_q_mutex);
+  GLOBAL_MUTEX_UNLOCK("zkrb_enqueue");
 }
 
+// NOTE: the zkrb_event_t* returned *is* the same pointer that's part of the
+// queue, the only place this is used is in method_has_events, and it is simply
+// tested for null-ness. it's probably better to make the null-test here and
+// not return the pointer
+//
 zkrb_event_t * zkrb_peek(zkrb_queue_t *q) {
-  pthread_mutex_lock(&zkrb_q_mutex);
   zkrb_event_t *event = NULL;
+
+  GLOBAL_MUTEX_LOCK("zkrb_peek");
+
   if (q != NULL && q->head != NULL && q->head->event != NULL) {
     event = q->head->event;
   }
-  pthread_mutex_unlock(&zkrb_q_mutex);
+
+  GLOBAL_MUTEX_UNLOCK("zkrb_peek");
   return event;
 }
 
 zkrb_event_t* zkrb_dequeue(zkrb_queue_t *q, int need_lock) {
   if (need_lock)
-    pthread_mutex_lock(&zkrb_q_mutex);
+    GLOBAL_MUTEX_LOCK("zkrb_dequeue");
   if (q == NULL || q->head == NULL || q->head->event == NULL) {
     if (need_lock)
-      pthread_mutex_unlock(&zkrb_q_mutex);
+      GLOBAL_MUTEX_UNLOCK("zkrb_dequeue");
     return NULL;
   } else {
     struct zkrb_event_ll_t *old_root = q->head;
@@ -90,17 +96,17 @@ zkrb_event_t* zkrb_dequeue(zkrb_queue_t *q, int need_lock) {
     zkrb_event_t *rv = old_root->event;
     free(old_root);
     if (need_lock)
-      pthread_mutex_unlock(&zkrb_q_mutex);
+      GLOBAL_MUTEX_UNLOCK("zkrb_dequeue");
     return rv;
   }
 }
 
 void zkrb_signal(zkrb_queue_t *q) {
-  pthread_mutex_lock(&zkrb_q_mutex);
+  GLOBAL_MUTEX_LOCK("zkrb_signal");
   ssize_t ret = write(q->pipe_write, "0", 1);   /* Wake up Ruby listener */
-  pthread_mutex_unlock(&zkrb_q_mutex);
+  GLOBAL_MUTEX_UNLOCK("zkrb_signal");
   if (ret == -1)
-    log_err("write to pipe failed");
+    log_err("zkrb_signal: write to pipe failed, could not wake");
 }
 
 zkrb_queue_t *zkrb_queue_alloc(void) {
@@ -133,11 +139,8 @@ error:
 }
 
 void zkrb_queue_free(zkrb_queue_t *queue) {
-  pthread_mutex_lock(&zkrb_q_mutex);
-  if (queue == NULL) {
-    pthread_mutex_unlock(&zkrb_q_mutex);
-    return;
-  }
+  GLOBAL_MUTEX_LOCK("zkrb_queue_free");
+  check_debug(queue != NULL, "zkrb_queue_free: queue was NULL");
 
   zkrb_event_t *elt;
   while ((elt = zkrb_dequeue(queue, 0)) != NULL) {
@@ -147,7 +150,9 @@ void zkrb_queue_free(zkrb_queue_t *queue) {
   close(queue->pipe_read);
   close(queue->pipe_write);
   free(queue);
-  pthread_mutex_unlock(&zkrb_q_mutex);
+
+error:
+  GLOBAL_MUTEX_UNLOCK("zkrb_queue_free");
 }
 
 zkrb_event_t *zkrb_event_alloc(void) {
