@@ -187,10 +187,9 @@ static VALUE method_zkrb_init(int argc, VALUE* argv, VALUE self) {
   }
 
   rb_iv_set(self, "@_data", data);
-/*  rb_iv_set(self, "@selectable_io", create_selectable_io(zk_local_ctx->queue));*/
-
   rb_funcall(self, rb_intern("zkc_set_running_and_notify!"), 0);
 
+error:
   return Qnil;
 }
 
