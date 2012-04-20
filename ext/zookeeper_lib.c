@@ -323,12 +323,10 @@ void zkrb_print_calling_context(zkrb_calling_context *ctx) {
 
 void zkrb_state_callback(
     zhandle_t *zh, int type, int state, const char *path, void *calling_ctx) {
-  /* logging */
-  if (ZKRBDebugging) {
-    fprintf(stderr, "ZOOKEEPER_C_STATE WATCHER "
+
+  zkrb_debug("ZOOKEEPER_C_STATE WATCHER "
                     "type = %d, state = %d, path = %p, value = %s\n",
       type, state, (void *) path, path ? path : "NULL");
-  }
 
   /* save callback context */
   struct zkrb_watcher_completion *wc = malloc(sizeof(struct zkrb_watcher_completion));
@@ -357,11 +355,10 @@ void zkrb_state_callback(
 
 void zkrb_data_callback(
     int rc, const char *value, int value_len, const struct Stat *stat, const void *calling_ctx) {
-  if (ZKRBDebugging) {
-    fprintf(stderr, "ZOOKEEPER_C_DATA WATCHER "
-                    "rc = %d (%s), value = %s, len = %d\n",
-      rc, zerror(rc), value ? value : "NULL", value_len);
-  }
+
+  zkrb_debug("ZOOKEEPER_C_DATA WATCHER "
+                "rc = %d (%s), value = %s, len = %d\n",
+                rc, zerror(rc), value ? value : "NULL", value_len);
 
   /* copy data completion */
   struct zkrb_data_completion *dc = malloc(sizeof(struct zkrb_data_completion));
@@ -387,10 +384,8 @@ void zkrb_data_callback(
 
 void zkrb_stat_callback(
     int rc, const struct Stat *stat, const void *calling_ctx) {
-  if (ZKRBDebugging) {
-    fprintf(stderr, "ZOOKEEPER_C_STAT WATCHER "
+  zkrb_debug("ZOOKEEPER_C_STAT WATCHER "
                     "rc = %d (%s)\n", rc, zerror(rc));
-  }
 
   struct zkrb_stat_completion *sc = malloc(sizeof(struct zkrb_stat_completion));
   sc->stat = NULL;
@@ -406,10 +401,9 @@ void zkrb_stat_callback(
 
 void zkrb_string_callback(
     int rc, const char *string, const void *calling_ctx) {
-  if (ZKRBDebugging) {
-    fprintf(stderr, "ZOOKEEPER_C_STRING WATCHER "
+
+  zkrb_debug("ZOOKEEPER_C_STRING WATCHER "
                     "rc = %d (%s)\n", rc, zerror(rc));
-  }
 
   struct zkrb_string_completion *sc = malloc(sizeof(struct zkrb_string_completion));
   sc->value = NULL;
@@ -426,10 +420,8 @@ void zkrb_string_callback(
 
 void zkrb_strings_callback(
     int rc, const struct String_vector *strings, const void *calling_ctx) {
-  if (ZKRBDebugging) {
-    fprintf(stderr, "ZOOKEEPER_C_STRINGS WATCHER "
+  zkrb_debug("ZOOKEEPER_C_STRINGS WATCHER "
                     "rc = %d (%s), calling_ctx = %p\n", rc, zerror(rc), calling_ctx);
-  }
 
   /* copy string vector */
   struct zkrb_strings_completion *sc = malloc(sizeof(struct zkrb_strings_completion));
@@ -445,10 +437,8 @@ void zkrb_strings_callback(
 
 void zkrb_strings_stat_callback(
     int rc, const struct String_vector *strings, const struct Stat *stat, const void *calling_ctx) {
-  if (ZKRBDebugging) {
-    fprintf(stderr, "ZOOKEEPER_C_STRINGS_STAT WATCHER "
+  zkrb_debug("ZOOKEEPER_C_STRINGS_STAT WATCHER "
                     "rc = %d (%s), calling_ctx = %p\n", rc, zerror(rc), calling_ctx);
-  }
 
   struct zkrb_strings_stat_completion *sc = malloc(sizeof(struct zkrb_strings_stat_completion));
   sc->stat = NULL;
@@ -464,12 +454,9 @@ void zkrb_strings_stat_callback(
   zkrb_enqueue(queue, event);
 }
 
-void zkrb_void_callback(
-    int rc, const void *calling_ctx) {
-  if (ZKRBDebugging) {
-    fprintf(stderr, "ZOOKEEPER_C_VOID WATCHER "
+void zkrb_void_callback(int rc, const void *calling_ctx) {
+  zkrb_debug("ZOOKEEPER_C_VOID WATCHER "
                     "rc = %d (%s)\n", rc, zerror(rc));
-  }
 
   ZKH_SETUP_EVENT(queue, event);
   event->rc = rc;
@@ -481,10 +468,7 @@ void zkrb_void_callback(
 
 void zkrb_acl_callback(
     int rc, struct ACL_vector *acls, struct Stat *stat, const void *calling_ctx) {
-  if (ZKRBDebugging) {
-    fprintf(stderr, "ZOOKEEPER_C_ACL WATCHER "
-                    "rc = %d (%s)\n", rc, zerror(rc));
-  }
+  zkrb_debug("ZOOKEEPER_C_ACL WATCHER rc = %d (%s)\n", rc, zerror(rc));
 
   struct zkrb_acl_completion *ac = malloc(sizeof(struct zkrb_acl_completion));
   ac->acl = NULL;
