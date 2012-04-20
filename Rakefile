@@ -48,6 +48,16 @@ gemset_name = 'zookeeper'
   task "mb:test_all_rubies" => rspec_task_name
 end
 
+namespace :build do
+  task :clean do
+    cd 'ext' do
+      sh 'rake clean'
+    end
+
+    Rake::Task['build'].invoke
+  end
+end
+
 task :build do
   cd 'ext' do
     sh "rake"
