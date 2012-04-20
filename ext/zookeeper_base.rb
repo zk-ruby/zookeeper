@@ -36,7 +36,7 @@ class ZookeeperBase
     syms.each do |sym|
       class_eval(<<-EOM, __FILE__, __LINE__+1)
         def #{sym}
-          @mutex.synchronize { @czk and @czk.#{sym} }
+          false|@mutex.synchronize { @czk and @czk.#{sym} }
         end
       EOM
     end
