@@ -37,17 +37,11 @@ int ZKRBDebugging;
 // XXX(slyphon): need to check these for error, but what to do if they fail?
 pthread_mutex_t zkrb_q_mutex = PTHREAD_MUTEX_INITIALIZER;
 
-#define LOG_PTHREAD_ERR(A, M, ...) if(!(A)) { log_err(M, ##__VA_ARGS__); errno=0; }
+#define LOG_PTHREAD_ERR(A, M, ...) if (A) { log_err(M, ##__VA_ARGS__); errno=0; }
 
-#define GLOBAL_MUTEX_LOCK(F)                                \
-  zkrb_debug(F ": locking global_mutex");                   \
-  LOG_PTHREAD_ERR(!pthread_mutex_lock(&zkrb_q_mutex), F);    \
-  zkrb_debug(F ": global_mutex locked")
+#define GLOBAL_MUTEX_LOCK(F)   LOG_PTHREAD_ERR(pthread_mutex_lock(&zkrb_q_mutex), F)
+#define GLOBAL_MUTEX_UNLOCK(F) LOG_PTHREAD_ERR(pthread_mutex_unlock(&zkrb_q_mutex), F)
 
-#define GLOBAL_MUTEX_UNLOCK(F)                              \
-  zkrb_debug(F ": unlocking global_mutex");                 \
-  LOG_PTHREAD_ERR(!pthread_mutex_unlock(&zkrb_q_mutex), F);  \
-  zkrb_debug(F ": global_mutex unlocked") 
 
 
 /* push/pop is a misnomer, this is a queue */
