@@ -27,7 +27,7 @@ module ZookeeperExceptions
   ZNOTHING                  = -117
   ZSESSIONMOVED             = -118
 
-  class ZookeeperException < Exception
+  class ZookeeperException < StandardError
     class EverythingOk            < ZookeeperException; end
     class SystemError             < ZookeeperException; end
     class RunTimeInconsistency    < ZookeeperException; end
