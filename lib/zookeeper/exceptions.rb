@@ -58,6 +58,9 @@ module ZookeeperExceptions
     class NotConnected            < ZookeeperException; end 
     class ShuttingDownException   < ZookeeperException; end
     class DataTooLargeException   < ZookeeperException; end
+
+    # yes, make an alias, this is the way zookeeper refers to it
+    ExpiredSession = SessionExpired
     
     def self.by_code(code)
       case code
