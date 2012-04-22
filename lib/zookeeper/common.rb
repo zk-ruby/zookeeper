@@ -4,6 +4,10 @@ module ZookeeperCommon
   # sigh, i guess define this here?
   ZKRB_GLOBAL_CB_REQ   = -1
 
+  def event_dispatch_thread?
+    @dispatcher && (@dispatcher == Thread.current)
+  end
+
 protected
   def get_next_event(blocking=true)
     @event_queue.pop(!blocking).tap do |event|

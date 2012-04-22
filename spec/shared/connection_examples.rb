@@ -985,6 +985,24 @@ shared_examples_for "connection" do
       end
     end
   end
+
+  describe :event_dispatch_thread? do
+    it %[should return true when called on the event dispatching thread] do
+      @result = nil
+
+      cb = lambda do |hash|
+        @result = zk.event_dispatch_thread?
+      end
+
+      @rv = zk.sync(:path => path, :callback => cb)
+
+      wait_until(2) { @result == true }.should be_true
+    end
+
+    it %[should return false when not on the event dispatching thread] do
+      zk.event_dispatch_thread?.should_not be_true
+    end
+  end
 end
 
 

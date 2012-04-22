@@ -183,6 +183,16 @@ class Zookeeper < ZookeeperBase
   def associating?
     super
   end
+  
+  # There are some operations that are dangerous in the context of the event
+  # dispatch thread (because they would block further event delivery). This
+  # method allows clients to know if they're currently executing in the context of an
+  # event.
+  #
+  # @returns [true,false] true if the current thread is the event dispatch thread
+  def event_dispatch_thread?
+    super
+  end
 
   # for expert use only. set the underlying debug level for the C layer, has no
   # effect in java

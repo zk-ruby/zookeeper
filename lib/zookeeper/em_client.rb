@@ -42,6 +42,12 @@ module ZookeeperEM
         d.succeed
       end
     end
+
+    # Because eventmachine is single-threaded, and events are dispatched on the
+    # reactor thread we just delegate this to EM.reactor_thread?
+    def event_dispatch_thread?
+      EM.reactor_thread?
+    end
   end # Client
 end # ZookeeperEM
 
