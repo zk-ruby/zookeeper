@@ -1005,4 +1005,3 @@ shared_examples_for "connection" do
   end
 end
 
-
