@@ -1,3 +1,36 @@
+v0.8.0 Refactor C implementaion, EventMachine client
+
+  * separated CZookeeper and ZookeeperBase implementation
+  
+    This solves issues with reopen not working properly, makes for a much
+    cleaner event delivery implementation. ZookeeperBase controls the lifecycle
+    of the event dispatch thread now, rather than it being tied to CZookeeper.
+  
+  * added support for the 'sync' API call
+  
+  * Refactored zookeeper_c.c and zookeeper_lib.c
+  
+    More error checking in zookeeper_lib.c and restructure some things to make
+    logic easier to follow
+  
+    Fix bug in method_get_next_event that made the shutdown case so complicated
+  
+  * Massively simplified EMClient implementation
+
+    Rather than trying to hook the IO used by zookeeper_lib to notify zookeeper_c
+    about event availabiltiy directly into EventMachine, use the same event delivery
+    thread, but wrap the dispatch call in EM.schedule.
+
+  * Improve implementation of spin-lock-esque code that waits for the connection to be
+    established before returning.
+
+    This cut the test runtime down from 1m 20s to 2s.
+
+  * Java client refactoring, similar correctness changes
+
+  * Change ZookeeperException base class to StandardError instead of Exception
+
+
 v0.4.5 Upgrade to ZooKeeper 3.3.3
 
 v0.4.4 Fix race condition on close, possible data corruption on async get.
@@ -24,3 +57,4 @@ v0.2. Bundle C dependencies, like memcached.gem.
 
 v0.1. First release.
 
+# vim:ft=text:ts=2:sw=2:et
