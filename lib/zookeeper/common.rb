@@ -80,6 +80,11 @@ protected
     logger.debug { "#{self.class}##{__method__}" }
 
     if @dispatcher
+      if @dispatcher.join(0)
+        @dispatcher = nil
+        return
+      end
+
       @mutex.synchronize do
         event_queue.graceful_close!
 
