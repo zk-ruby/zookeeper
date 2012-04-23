@@ -176,7 +176,7 @@ class ZookeeperBase
 
     @mutex.synchronize do
       # flushes all outstanding watcher reqs.
-      @watcher_reqs = {}
+      @watcher_reqs.clear
       set_default_global_watcher
 
       replace_jzk!
