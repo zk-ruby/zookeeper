@@ -1,3 +1,10 @@
+v0.8.2 fix close after a fork()
+
+  * The dispatch thread will be dead in this situation, so we need to 
+    check to see if it's already dead before waiting on it to exit.
+
+v0.8.1 Java client fix, silence warnings
+
 v0.8.0 Refactor C implementaion, EventMachine client
 
   * separated CZookeeper and ZookeeperBase implementation
