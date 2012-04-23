@@ -31,7 +31,12 @@ module ZookeeperEM
     end
 
     def dispatch_next_callback(hash)
-      EM.schedule { super(hash) }
+      EM.schedule do
+        if running? and not closed?
+          logger.debug { "#{self.class}##{__method__} dispatch_next_callback: #{hash.inspect}: reactor_thread? #{EM.reactor_thread?}, running? #{running?}, closed? #{closed?}" }
+          super(hash) 
+        end
+      end
     end
 
     # this is synchronous, but since the API still allows attaching to on_close, 
