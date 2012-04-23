@@ -56,7 +56,10 @@ class ZookeeperBase
       @watcher_reqs.clear
       set_default_global_watcher
 
-      @czk = CZookeeper.new(@host, @event_queue)
+      orig_czk, @czk = @czk, CZookeeper.new(@host, @event_queue)
+
+      orig_czk.close if orig_czk
+      
       @czk.wait_until_connected(timeout)
     end
 
