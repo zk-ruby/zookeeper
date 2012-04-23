@@ -39,13 +39,10 @@ module ZookeeperEM
       end
     end
 
-    # this is synchronous, but since the API still allows attaching to on_close, 
-    # we just fake it here
     def close(&block)
-      on_close(&block).tap do |d|
-        super()
-        d.succeed
-      end
+      on_close(&block)
+      super()
+      on_close.succeed
     end
 
     # Because eventmachine is single-threaded, and events are dispatched on the
