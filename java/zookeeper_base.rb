@@ -215,7 +215,7 @@ class ZookeeperBase
     # allows connected-state handlers to be registered before 
     yield self if block_given?
 
-    reopen(timeout, watcher)
+    reopen(timeout)
     return nil unless connected?
     @_running = true
     setup_dispatch_thread!
