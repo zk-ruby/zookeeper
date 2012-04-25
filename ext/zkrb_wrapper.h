@@ -8,6 +8,7 @@
 
 #include "ruby.h"
 #include "c-client-src/zookeeper.h"
+#include "zkrb_wrapper_compat.h"
 #include "dbg.h"
 
 #define ZKRB_FAIL -1

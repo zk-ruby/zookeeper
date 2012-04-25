@@ -176,7 +176,7 @@ class CallingFunction
   end
 
   def rb_thread_blocking_region_call
-    "  rb_thread_blocking_region(#{wrapper_fn.name}, (void *)ptr, RUBY_UBF_IO, 0);"
+    "  zkrb_thread_blocking_region(#{wrapper_fn.name}, (void *)ptr, RUBY_UBF_IO, 0);"
   end
 
   def bottom
@@ -248,6 +248,7 @@ def render_header_file(code)
 
 #include "ruby.h"
 #include "c-client-src/zookeeper.h"
+#include "zkrb_wrapper_compat.h"
 #include "dbg.h"
 
 #define ZKRB_FAIL -1
