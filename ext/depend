@@ -1,3 +1,4 @@
 zookeeper_lib.c:	zookeeper_lib.h
-zookeeper_c.c:	zookeeper_lib.c zookeeper_lib.h dbg.h
+zkrb_wrapper.c:		zkrb_wrapper.h
+zookeeper_c.c:	zookeeper_lib.c zookeeper_lib.h zkrb_wrapper.c zkrb_wrapper.h dbg.h
 
