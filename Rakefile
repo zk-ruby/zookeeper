@@ -12,7 +12,8 @@ end
 
 gemset_name = 'zookeeper'
 
-%w[1.8.7 1.9.2 1.9.3 jruby].each do |rvm_ruby|
+
+%w[1.8.7 1.9.2 1.9.3 jruby rbx-2.0.testing].each do |rvm_ruby|
   ruby_with_gemset = "#{rvm_ruby}@#{gemset_name}"
 
   create_gemset_name  = "mb:#{rvm_ruby}:create_gemset"
