@@ -1,3 +1,16 @@
+v0.8.3 fix NonLocalJump exception in event delivery thread shutdown code
+
+  * hit a corner case where we're waiting for the zkc handle setup
+    and the user decides to shutdown, but before we've had a chance
+    to enter the delivery loop.
+
+  * Cleaned up some nasty code in ZookeeperConstants
+
+  * removed ZookeeperConstants#print_events and ZookeeperConstants#print_states
+
+  * changed EVENT_TYPE_NAMES and EVENT_STATE_NAMES in ZookeeperConstants
+    to use string values instead of symbols
+
 v0.8.2 fix close after a fork()
 
   * The dispatch thread will be dead in this situation, so we need to 
