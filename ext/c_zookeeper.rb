@@ -135,32 +135,30 @@ class CZookeeper
     end
 
     def setup_event_thread!
-      @event_thread ||= Thread.new do
-        Thread.current.abort_on_exception = true   # remove this once this is confirmed to work
+      @event_thread ||= Thread.new(&method(:_event_thread_body))
+    end
 
-        logger.debug { "event_thread waiting until running: #{@_running}" }
+    def _event_thread_body
+      logger.debug { "event_thread waiting until running: #{@_running}" }
 
-        @start_stop_mutex.synchronize do
-          @running_cond.wait_until { @_running }
+      @start_stop_mutex.synchronize do
+        @running_cond.wait_until { @_running }
 
-          if @_shutting_down
-            logger.error { "event thread saw @_shutting_down, bailing without entering loop" }
-            return
-          end
+        if @_shutting_down
+          logger.error { "event thread saw @_shutting_down, bailing without entering loop" }
+          return
         end
+      end
 
-        logger.debug { "event_thread running: #{@_running}" }
+      logger.debug { "event_thread running: #{@_running}" }
 
-        while true
-          begin
-            _iterate_event_delivery
-          rescue GotNilEventException
-            logger.debug { "#{self.class}##{__method__}: event delivery thread is exiting" }
-            break
-          end
+      while true
+        begin
+          _iterate_event_delivery
+        rescue GotNilEventException
+          logger.debug { "#{self.class}##{__method__}: event delivery thread is exiting" }
+          break
         end
-
-        # TODO: should we try iterating events after this point? to see if any are left?
       end
     end
 
