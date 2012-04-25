@@ -23,6 +23,7 @@
 #include <inttypes.h>
 
 #include "zookeeper_lib.h"
+#include "zkrb_wrapper.h"
 #include "dbg.h"
 
 static VALUE Zookeeper = Qnil;
@@ -302,75 +303,6 @@ static VALUE method_sync(VALUE self, VALUE reqid, VALUE path) {
   return INT2FIX(rc);
 }
 
-typedef struct {
-  zhandle_t *zh;
-  const char *path;
-  const char *data_ptr;
-  int data_len;
-  const struct ACL_vector *aclptr;
-  int flags;
-  char *realpath;
-  int realpath_len;
-  int rc;
-} zkrb_zoo_create_args_t;
-
-static VALUE gvl_unlocked_zoo_create(void *data) {
-  zkrb_zoo_create_args_t *a = (zkrb_zoo_create_args_t *)data;
-  
-  a->rc = zoo_create(a->zh, a->path, a->data_ptr, a->data_len, a->aclptr, a->flags, a->realpath, a->realpath_len);
-
-  return Qnil;
-}
-
-typedef struct {
-  zhandle_t *zh;
-  const char *path;
-  const char *value;
-  int valuelen;
-  const struct ACL_vector *acl;
-  int flags;
-  string_completion_t completion;
-  const void *data;
-  int rc;
-} zkrb_zoo_acreate_args_t;
-
-static VALUE zkrb_gvl_zoo_acreate(void *data) {
-  zkrb_zoo_acreate_args_t *a = (zkrb_zoo_acreate_args_t *)data;
-  
-  a->rc = zoo_acreate(a->zh, a->path, a->value, a->valuelen, a->acl, a->flags, a->completion, a->data);
-
-  return Qnil;
-}
-
-static int zkrb_call_zoo_acreate(zhandle_t *zh, const char *path, const char *value, int valuelen, 
-    const struct ACL_vector *acl, int flags, string_completion_t completion, const void *data) {
-
-  int rc;
-  zkrb_zoo_acreate_args_t *ptr = malloc(sizeof(zkrb_zoo_acreate_args_t)); 
-  check_mem(ptr);
-
-  ptr->rc = 0; 
-  ptr->zh = zh; 
-  ptr->path = path; 
-  ptr->value = value;
-  ptr->valuelen = valuelen;
-  ptr->acl = acl;
-  ptr->flags = flags;
-  ptr->completion = completion;
-  ptr->data = data; 
-
-  rb_thread_blocking_region(zkrb_gvl_zoo_acreate, (void *)ptr, RUBY_UBF_IO, 0);
-
-  rc = ptr->rc;
-  free(ptr);
-  return rc;
-
-error:
-  free(ptr); 
-  return -1;
-}
-  
-
 static VALUE method_create(VALUE self, VALUE reqid, VALUE path, VALUE data, VALUE async, VALUE acls, VALUE flags) {
   VALUE watch = Qfalse;
   STANDARD_PREAMBLE(self, zk, reqid, path, async, watch, data_ctx, watch_ctx, call_type);
@@ -384,33 +316,11 @@ static VALUE method_create(VALUE self, VALUE reqid, VALUE path, VALUE data, VALU
   if (acls != Qnil) { aclptr = zkrb_ruby_to_aclvector(acls); }
   char realpath[16384];
 
-  zkrb_zoo_create_args_t *carg = NULL;
-  zkrb_zoo_acreate_args_t *acarg = NULL;
-
   int rc;
   switch (call_type) {
     case SYNC:
       // casting data_len to int is OK as you can only store 1MB in zookeeper
-/*      rc = zoo_create(zk->zh, RSTRING_PTR(path), data_ptr, (int)data_len, aclptr, FIX2INT(flags), realpath, sizeof(realpath));*/
-
-      carg = malloc(sizeof(zkrb_zoo_create_args_t));
-
-      carg->rc = 0;
-
-      carg->zh = zk->zh;
-      carg->path = RSTRING_PTR(path);
-      carg->data_ptr = data_ptr;
-      carg->data_len = (int)data_len;
-      carg->aclptr = aclptr;
-      carg->flags = FIX2INT(flags);
-      carg->realpath = realpath;
-      carg->realpath_len = sizeof(realpath);
-
-      rb_thread_blocking_region(gvl_unlocked_zoo_create, (void *)carg, RUBY_UBF_IO, 0);
-
-      rc = carg->rc;
-
-      free(carg);
+      rc = zkrb_call_zoo_create(zk->zh, RSTRING_PTR(path), data_ptr, (int)data_len, aclptr, FIX2INT(flags), realpath, sizeof(realpath));
 
       break;
     case ASYNC:
