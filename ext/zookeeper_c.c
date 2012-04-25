@@ -233,19 +233,19 @@ static VALUE method_get_children(VALUE self, VALUE reqid, VALUE path, VALUE asyn
   int rc;
   switch (call_type) {
     case SYNC:
-      rc = zoo_get_children2(zk->zh, RSTRING_PTR(path), 0, &strings, &stat);
+      rc = zkrb_call_zoo_get_children2(zk->zh, RSTRING_PTR(path), 0, &strings, &stat);
       break;
 
     case SYNC_WATCH:
-      rc = zoo_wget_children2(zk->zh, RSTRING_PTR(path), zkrb_state_callback, watch_ctx, &strings, &stat);
+      rc = zkrb_call_zoo_wget_children2(zk->zh, RSTRING_PTR(path), zkrb_state_callback, watch_ctx, &strings, &stat);
       break;
 
     case ASYNC:
-      rc = zoo_aget_children2(zk->zh, RSTRING_PTR(path), 0, zkrb_strings_stat_callback, data_ctx);
+      rc = zkrb_call_zoo_aget_children2(zk->zh, RSTRING_PTR(path), 0, zkrb_strings_stat_callback, data_ctx);
       break;
 
     case ASYNC_WATCH:
-      rc = zoo_awget_children2(zk->zh, RSTRING_PTR(path), zkrb_state_callback, watch_ctx, zkrb_strings_stat_callback, data_ctx);
+      rc = zkrb_call_zoo_awget_children2(zk->zh, RSTRING_PTR(path), zkrb_state_callback, watch_ctx, zkrb_strings_stat_callback, data_ctx);
       break;
   }
 
@@ -266,19 +266,19 @@ static VALUE method_exists(VALUE self, VALUE reqid, VALUE path, VALUE async, VAL
   int rc;
   switch (call_type) {
     case SYNC:
-      rc = zoo_exists(zk->zh, RSTRING_PTR(path), 0, &stat);
+      rc = zkrb_call_zoo_exists(zk->zh, RSTRING_PTR(path), 0, &stat);
       break;
 
     case SYNC_WATCH:
-      rc = zoo_wexists(zk->zh, RSTRING_PTR(path), zkrb_state_callback, watch_ctx, &stat);
+      rc = zkrb_call_zoo_wexists(zk->zh, RSTRING_PTR(path), zkrb_state_callback, watch_ctx, &stat);
       break;
 
     case ASYNC:
-      rc = zoo_aexists(zk->zh, RSTRING_PTR(path), 0, zkrb_stat_callback, data_ctx);
+      rc = zkrb_call_zoo_aexists(zk->zh, RSTRING_PTR(path), 0, zkrb_stat_callback, data_ctx);
       break;
 
     case ASYNC_WATCH:
-      rc = zoo_awexists(zk->zh, RSTRING_PTR(path), zkrb_state_callback, watch_ctx, zkrb_stat_callback, data_ctx);
+      rc = zkrb_call_zoo_awexists(zk->zh, RSTRING_PTR(path), zkrb_state_callback, watch_ctx, zkrb_stat_callback, data_ctx);
       break;
   }
 
@@ -298,7 +298,7 @@ static VALUE method_sync(VALUE self, VALUE reqid, VALUE path) {
 
   STANDARD_PREAMBLE(self, zk, reqid, path, async, watch, data_ctx, watch_ctx, call_type);
 
-  rc = zoo_async(zk->zh, RSTRING_PTR(path), zkrb_string_callback, data_ctx);
+  rc = zkrb_call_zoo_async(zk->zh, RSTRING_PTR(path), zkrb_string_callback, data_ctx);
 
   return INT2FIX(rc);
 }
@@ -355,10 +355,10 @@ static VALUE method_delete(VALUE self, VALUE reqid, VALUE path, VALUE version, V
   int rc = 0;
   switch (call_type) {
     case SYNC:
-      rc = zoo_delete(zk->zh, RSTRING_PTR(path), FIX2INT(version));
+      rc = zkrb_call_zoo_delete(zk->zh, RSTRING_PTR(path), FIX2INT(version));
       break;
     case ASYNC:
-      rc = zoo_adelete(zk->zh, RSTRING_PTR(path), FIX2INT(version), zkrb_void_callback, data_ctx);
+      rc = zkrb_call_zoo_adelete(zk->zh, RSTRING_PTR(path), FIX2INT(version), zkrb_void_callback, data_ctx);
       break;
     default:
       /* TODO(wickman) raise proper argument error */
@@ -383,19 +383,19 @@ static VALUE method_get(VALUE self, VALUE reqid, VALUE path, VALUE async, VALUE 
 
   switch (call_type) {
     case SYNC:
-      rc = zoo_get(zk->zh, RSTRING_PTR(path), 0, data, &data_len, &stat);
+      rc = zkrb_call_zoo_get(zk->zh, RSTRING_PTR(path), 0, data, &data_len, &stat);
       break;
 
     case SYNC_WATCH:
-      rc = zoo_wget(zk->zh, RSTRING_PTR(path), zkrb_state_callback, watch_ctx, data, &data_len, &stat);
+      rc = zkrb_call_zoo_wget(zk->zh, RSTRING_PTR(path), zkrb_state_callback, watch_ctx, data, &data_len, &stat);
       break;
 
     case ASYNC:
-      rc = zoo_aget(zk->zh, RSTRING_PTR(path), 0, zkrb_data_callback, data_ctx);
+      rc = zkrb_call_zoo_aget(zk->zh, RSTRING_PTR(path), 0, zkrb_data_callback, data_ctx);
       break;
 
     case ASYNC_WATCH:
-      rc = zoo_awget(zk->zh, RSTRING_PTR(path), zkrb_state_callback, watch_ctx, zkrb_data_callback, data_ctx);
+      rc = zkrb_call_zoo_awget(zk->zh, RSTRING_PTR(path), zkrb_state_callback, watch_ctx, zkrb_data_callback, data_ctx);
       break;
   }
 
@@ -425,10 +425,10 @@ static VALUE method_set(VALUE self, VALUE reqid, VALUE path, VALUE data, VALUE a
   int rc;
   switch (call_type) {
     case SYNC:
-      rc = zoo_set2(zk->zh, RSTRING_PTR(path), data_ptr, (int)data_len, FIX2INT(version), &stat);
+      rc = zkrb_call_zoo_set2(zk->zh, RSTRING_PTR(path), data_ptr, (int)data_len, FIX2INT(version), &stat);
       break;
     case ASYNC:
-      rc = zoo_aset(zk->zh, RSTRING_PTR(path), data_ptr, (int)data_len, FIX2INT(version),
+      rc = zkrb_call_zoo_aset(zk->zh, RSTRING_PTR(path), data_ptr, (int)data_len, FIX2INT(version),
                             zkrb_stat_callback, data_ctx);
       break;
     default:
@@ -453,10 +453,10 @@ static VALUE method_set_acl(VALUE self, VALUE reqid, VALUE path, VALUE acls, VAL
   int rc;
   switch (call_type) {
     case SYNC:
-      rc = zoo_set_acl(zk->zh, RSTRING_PTR(path), FIX2INT(version), aclptr);
+      rc = zkrb_call_zoo_set_acl(zk->zh, RSTRING_PTR(path), FIX2INT(version), aclptr);
       break;
     case ASYNC:
-      rc = zoo_aset_acl(zk->zh, RSTRING_PTR(path), FIX2INT(version), aclptr, zkrb_void_callback, data_ctx);
+      rc = zkrb_call_zoo_aset_acl(zk->zh, RSTRING_PTR(path), FIX2INT(version), aclptr, zkrb_void_callback, data_ctx);
       break;
     default:
       /* TODO(wickman) raise proper argument error */
@@ -480,10 +480,10 @@ static VALUE method_get_acl(VALUE self, VALUE reqid, VALUE path, VALUE async) {
   int rc;
   switch (call_type) {
     case SYNC:
-      rc = zoo_get_acl(zk->zh, RSTRING_PTR(path), &acls, &stat);
+      rc = zkrb_call_zoo_get_acl(zk->zh, RSTRING_PTR(path), &acls, &stat);
       break;
     case ASYNC:
-      rc = zoo_aget_acl(zk->zh, RSTRING_PTR(path), zkrb_acl_callback, data_ctx);
+      rc = zkrb_call_zoo_aget_acl(zk->zh, RSTRING_PTR(path), zkrb_acl_callback, data_ctx);
       break;
     default:
       /* TODO(wickman) raise proper argument error */
