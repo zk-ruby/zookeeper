@@ -1,3 +1,19 @@
+v0.9.0 RELEASE THE KRAK..er, GIL!!
+
+  * In >= 1.9.2 the ruby interpreter allows you to release the GIL when
+    calling into native code, sounds like a good idea.
+    
+    This release makes use of that code by parsing the zookeeper.h header file
+    and extracting the method signatures of all relevant zoo_* functions, then
+    generating boilerplate that allows us to call those functions via the
+    rb_thread_blocking_region function.
+
+    1.8.7 compatibility is maintained by stubbing out that functionality if built
+    under 1.8.7. 
+
+  * 1.8.7 is deprecated! I will continue to support 1.8.7 for the near future
+    but sometime soon, you're gonna have to upgrade.
+
 v0.8.3 fix NonLocalJump exception in event delivery thread shutdown code
 
   * hit a corner case where we're waiting for the zkc handle setup
