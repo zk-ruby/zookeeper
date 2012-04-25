@@ -176,7 +176,7 @@ class CallingFunction
   end
 
   def rb_thread_blocking_region_call
-    "  zkrb_thread_blocking_region(#{wrapper_fn.name}, (void *)ptr, RUBY_UBF_IO, 0);"
+    "  zkrb_thread_blocking_region(#{wrapper_fn.name}, (void *)ptr);"
   end
 
   def bottom

@@ -28,7 +28,7 @@ int zkrb_call_zoo_recv_timeout(zhandle_t *zh) {
   ptr->rc = rc;
   ptr->zh = zh;
 
-  zkrb_thread_blocking_region(zkrb_gvl_zoo_recv_timeout, (void *)ptr, RUBY_UBF_IO, 0);
+  zkrb_thread_blocking_region(zkrb_gvl_zoo_recv_timeout, (void *)ptr);
 
   rc = ptr->rc;
 
@@ -53,7 +53,7 @@ int zkrb_call_zoo_state(zhandle_t *zh) {
   ptr->rc = rc;
   ptr->zh = zh;
 
-  zkrb_thread_blocking_region(zkrb_gvl_zoo_state, (void *)ptr, RUBY_UBF_IO, 0);
+  zkrb_thread_blocking_region(zkrb_gvl_zoo_state, (void *)ptr);
 
   rc = ptr->rc;
 
@@ -85,7 +85,7 @@ int zkrb_call_zoo_acreate(zhandle_t *zh, const char *path, const char *value, in
   ptr->completion = completion;
   ptr->data = data;
 
-  zkrb_thread_blocking_region(zkrb_gvl_zoo_acreate, (void *)ptr, RUBY_UBF_IO, 0);
+  zkrb_thread_blocking_region(zkrb_gvl_zoo_acreate, (void *)ptr);
 
   rc = ptr->rc;
 
@@ -114,7 +114,7 @@ int zkrb_call_zoo_adelete(zhandle_t *zh, const char *path, int version, void_com
   ptr->completion = completion;
   ptr->data = data;
 
-  zkrb_thread_blocking_region(zkrb_gvl_zoo_adelete, (void *)ptr, RUBY_UBF_IO, 0);
+  zkrb_thread_blocking_region(zkrb_gvl_zoo_adelete, (void *)ptr);
 
   rc = ptr->rc;
 
@@ -143,7 +143,7 @@ int zkrb_call_zoo_aexists(zhandle_t *zh, const char *path, int watch, stat_compl
   ptr->completion = completion;
   ptr->data = data;
 
-  zkrb_thread_blocking_region(zkrb_gvl_zoo_aexists, (void *)ptr, RUBY_UBF_IO, 0);
+  zkrb_thread_blocking_region(zkrb_gvl_zoo_aexists, (void *)ptr);
 
   rc = ptr->rc;
 
@@ -173,7 +173,7 @@ int zkrb_call_zoo_awexists(zhandle_t *zh, const char *path, watcher_fn watcher, 
   ptr->completion = completion;
   ptr->data = data;
 
-  zkrb_thread_blocking_region(zkrb_gvl_zoo_awexists, (void *)ptr, RUBY_UBF_IO, 0);
+  zkrb_thread_blocking_region(zkrb_gvl_zoo_awexists, (void *)ptr);
 
   rc = ptr->rc;
 
@@ -202,7 +202,7 @@ int zkrb_call_zoo_aget(zhandle_t *zh, const char *path, int watch, data_completi
   ptr->completion = completion;
   ptr->data = data;
 
-  zkrb_thread_blocking_region(zkrb_gvl_zoo_aget, (void *)ptr, RUBY_UBF_IO, 0);
+  zkrb_thread_blocking_region(zkrb_gvl_zoo_aget, (void *)ptr);
 
   rc = ptr->rc;
 
@@ -232,7 +232,7 @@ int zkrb_call_zoo_awget(zhandle_t *zh, const char *path, watcher_fn watcher, voi
   ptr->completion = completion;
   ptr->data = data;
 
-  zkrb_thread_blocking_region(zkrb_gvl_zoo_awget, (void *)ptr, RUBY_UBF_IO, 0);
+  zkrb_thread_blocking_region(zkrb_gvl_zoo_awget, (void *)ptr);
 
   rc = ptr->rc;
 
@@ -263,7 +263,7 @@ int zkrb_call_zoo_aset(zhandle_t *zh, const char *path, const char *buffer, int 
   ptr->completion = completion;
   ptr->data = data;
 
-  zkrb_thread_blocking_region(zkrb_gvl_zoo_aset, (void *)ptr, RUBY_UBF_IO, 0);
+  zkrb_thread_blocking_region(zkrb_gvl_zoo_aset, (void *)ptr);
 
   rc = ptr->rc;
 
@@ -292,7 +292,7 @@ int zkrb_call_zoo_aget_children(zhandle_t *zh, const char *path, int watch, stri
   ptr->completion = completion;
   ptr->data = data;
 
-  zkrb_thread_blocking_region(zkrb_gvl_zoo_aget_children, (void *)ptr, RUBY_UBF_IO, 0);
+  zkrb_thread_blocking_region(zkrb_gvl_zoo_aget_children, (void *)ptr);
 
   rc = ptr->rc;
 
@@ -322,7 +322,7 @@ int zkrb_call_zoo_awget_children(zhandle_t *zh, const char *path, watcher_fn wat
   ptr->completion = completion;
   ptr->data = data;
 
-  zkrb_thread_blocking_region(zkrb_gvl_zoo_awget_children, (void *)ptr, RUBY_UBF_IO, 0);
+  zkrb_thread_blocking_region(zkrb_gvl_zoo_awget_children, (void *)ptr);
 
   rc = ptr->rc;
 
@@ -351,7 +351,7 @@ int zkrb_call_zoo_aget_children2(zhandle_t *zh, const char *path, int watch, str
   ptr->completion = completion;
   ptr->data = data;
 
-  zkrb_thread_blocking_region(zkrb_gvl_zoo_aget_children2, (void *)ptr, RUBY_UBF_IO, 0);
+  zkrb_thread_blocking_region(zkrb_gvl_zoo_aget_children2, (void *)ptr);
 
   rc = ptr->rc;
 
@@ -381,7 +381,7 @@ int zkrb_call_zoo_awget_children2(zhandle_t *zh, const char *path, watcher_fn wa
   ptr->completion = completion;
   ptr->data = data;
 
-  zkrb_thread_blocking_region(zkrb_gvl_zoo_awget_children2, (void *)ptr, RUBY_UBF_IO, 0);
+  zkrb_thread_blocking_region(zkrb_gvl_zoo_awget_children2, (void *)ptr);
 
   rc = ptr->rc;
 
@@ -409,7 +409,7 @@ int zkrb_call_zoo_async(zhandle_t *zh, const char *path, string_completion_t com
   ptr->completion = completion;
   ptr->data = data;
 
-  zkrb_thread_blocking_region(zkrb_gvl_zoo_async, (void *)ptr, RUBY_UBF_IO, 0);
+  zkrb_thread_blocking_region(zkrb_gvl_zoo_async, (void *)ptr);
 
   rc = ptr->rc;
 
@@ -437,7 +437,7 @@ int zkrb_call_zoo_aget_acl(zhandle_t *zh, const char *path, acl_completion_t com
   ptr->completion = completion;
   ptr->data = data;
 
-  zkrb_thread_blocking_region(zkrb_gvl_zoo_aget_acl, (void *)ptr, RUBY_UBF_IO, 0);
+  zkrb_thread_blocking_region(zkrb_gvl_zoo_aget_acl, (void *)ptr);
 
   rc = ptr->rc;
 
@@ -467,7 +467,7 @@ int zkrb_call_zoo_aset_acl(zhandle_t *zh, const char *path, int version, struct 
   ptr->completion = completion;
   ptr->data = data;
 
-  zkrb_thread_blocking_region(zkrb_gvl_zoo_aset_acl, (void *)ptr, RUBY_UBF_IO, 0);
+  zkrb_thread_blocking_region(zkrb_gvl_zoo_aset_acl, (void *)ptr);
 
   rc = ptr->rc;
 
@@ -497,7 +497,7 @@ int zkrb_call_zoo_add_auth(zhandle_t *zh, const char* scheme, const char* cert, 
   ptr->completion = completion;
   ptr->data = data;
 
-  zkrb_thread_blocking_region(zkrb_gvl_zoo_add_auth, (void *)ptr, RUBY_UBF_IO, 0);
+  zkrb_thread_blocking_region(zkrb_gvl_zoo_add_auth, (void *)ptr);
 
   rc = ptr->rc;
 
@@ -529,7 +529,7 @@ int zkrb_call_zoo_create(zhandle_t *zh, const char *path, const char *value, int
   ptr->path_buffer = path_buffer;
   ptr->path_buffer_len = path_buffer_len;
 
-  zkrb_thread_blocking_region(zkrb_gvl_zoo_create, (void *)ptr, RUBY_UBF_IO, 0);
+  zkrb_thread_blocking_region(zkrb_gvl_zoo_create, (void *)ptr);
 
   rc = ptr->rc;
 
@@ -556,7 +556,7 @@ int zkrb_call_zoo_delete(zhandle_t *zh, const char *path, int version) {
   ptr->path = path;
   ptr->version = version;
 
-  zkrb_thread_blocking_region(zkrb_gvl_zoo_delete, (void *)ptr, RUBY_UBF_IO, 0);
+  zkrb_thread_blocking_region(zkrb_gvl_zoo_delete, (void *)ptr);
 
   rc = ptr->rc;
 
@@ -584,7 +584,7 @@ int zkrb_call_zoo_exists(zhandle_t *zh, const char *path, int watch, struct Stat
   ptr->watch = watch;
   ptr->stat = stat;
 
-  zkrb_thread_blocking_region(zkrb_gvl_zoo_exists, (void *)ptr, RUBY_UBF_IO, 0);
+  zkrb_thread_blocking_region(zkrb_gvl_zoo_exists, (void *)ptr);
 
   rc = ptr->rc;
 
@@ -613,7 +613,7 @@ int zkrb_call_zoo_wexists(zhandle_t *zh, const char *path, watcher_fn watcher, v
   ptr->watcherCtx = watcherCtx;
   ptr->stat = stat;
 
-  zkrb_thread_blocking_region(zkrb_gvl_zoo_wexists, (void *)ptr, RUBY_UBF_IO, 0);
+  zkrb_thread_blocking_region(zkrb_gvl_zoo_wexists, (void *)ptr);
 
   rc = ptr->rc;
 
@@ -643,7 +643,7 @@ int zkrb_call_zoo_get(zhandle_t *zh, const char *path, int watch, char *buffer, 
   ptr->buffer_len = buffer_len;
   ptr->stat = stat;
 
-  zkrb_thread_blocking_region(zkrb_gvl_zoo_get, (void *)ptr, RUBY_UBF_IO, 0);
+  zkrb_thread_blocking_region(zkrb_gvl_zoo_get, (void *)ptr);
 
   rc = ptr->rc;
 
@@ -674,7 +674,7 @@ int zkrb_call_zoo_wget(zhandle_t *zh, const char *path, watcher_fn watcher, void
   ptr->buffer_len = buffer_len;
   ptr->stat = stat;
 
-  zkrb_thread_blocking_region(zkrb_gvl_zoo_wget, (void *)ptr, RUBY_UBF_IO, 0);
+  zkrb_thread_blocking_region(zkrb_gvl_zoo_wget, (void *)ptr);
 
   rc = ptr->rc;
 
@@ -703,7 +703,7 @@ int zkrb_call_zoo_set(zhandle_t *zh, const char *path, const char *buffer, int b
   ptr->buflen = buflen;
   ptr->version = version;
 
-  zkrb_thread_blocking_region(zkrb_gvl_zoo_set, (void *)ptr, RUBY_UBF_IO, 0);
+  zkrb_thread_blocking_region(zkrb_gvl_zoo_set, (void *)ptr);
 
   rc = ptr->rc;
 
@@ -733,7 +733,7 @@ int zkrb_call_zoo_set2(zhandle_t *zh, const char *path, const char *buffer, int 
   ptr->version = version;
   ptr->stat = stat;
 
-  zkrb_thread_blocking_region(zkrb_gvl_zoo_set2, (void *)ptr, RUBY_UBF_IO, 0);
+  zkrb_thread_blocking_region(zkrb_gvl_zoo_set2, (void *)ptr);
 
   rc = ptr->rc;
 
@@ -761,7 +761,7 @@ int zkrb_call_zoo_get_children(zhandle_t *zh, const char *path, int watch, struc
   ptr->watch = watch;
   ptr->strings = strings;
 
-  zkrb_thread_blocking_region(zkrb_gvl_zoo_get_children, (void *)ptr, RUBY_UBF_IO, 0);
+  zkrb_thread_blocking_region(zkrb_gvl_zoo_get_children, (void *)ptr);
 
   rc = ptr->rc;
 
@@ -790,7 +790,7 @@ int zkrb_call_zoo_wget_children(zhandle_t *zh, const char *path, watcher_fn watc
   ptr->watcherCtx = watcherCtx;
   ptr->strings = strings;
 
-  zkrb_thread_blocking_region(zkrb_gvl_zoo_wget_children, (void *)ptr, RUBY_UBF_IO, 0);
+  zkrb_thread_blocking_region(zkrb_gvl_zoo_wget_children, (void *)ptr);
 
   rc = ptr->rc;
 
@@ -819,7 +819,7 @@ int zkrb_call_zoo_get_children2(zhandle_t *zh, const char *path, int watch, stru
   ptr->strings = strings;
   ptr->stat = stat;
 
-  zkrb_thread_blocking_region(zkrb_gvl_zoo_get_children2, (void *)ptr, RUBY_UBF_IO, 0);
+  zkrb_thread_blocking_region(zkrb_gvl_zoo_get_children2, (void *)ptr);
 
   rc = ptr->rc;
 
@@ -849,7 +849,7 @@ int zkrb_call_zoo_wget_children2(zhandle_t *zh, const char *path, watcher_fn wat
   ptr->strings = strings;
   ptr->stat = stat;
 
-  zkrb_thread_blocking_region(zkrb_gvl_zoo_wget_children2, (void *)ptr, RUBY_UBF_IO, 0);
+  zkrb_thread_blocking_region(zkrb_gvl_zoo_wget_children2, (void *)ptr);
 
   rc = ptr->rc;
 
@@ -877,7 +877,7 @@ int zkrb_call_zoo_get_acl(zhandle_t *zh, const char *path, struct ACL_vector *ac
   ptr->acl = acl;
   ptr->stat = stat;
 
-  zkrb_thread_blocking_region(zkrb_gvl_zoo_get_acl, (void *)ptr, RUBY_UBF_IO, 0);
+  zkrb_thread_blocking_region(zkrb_gvl_zoo_get_acl, (void *)ptr);
 
   rc = ptr->rc;
 
@@ -905,7 +905,7 @@ int zkrb_call_zoo_set_acl(zhandle_t *zh, const char *path, int version, const st
   ptr->version = version;
   ptr->acl = acl;
 
-  zkrb_thread_blocking_region(zkrb_gvl_zoo_set_acl, (void *)ptr, RUBY_UBF_IO, 0);
+  zkrb_thread_blocking_region(zkrb_gvl_zoo_set_acl, (void *)ptr);
 
   rc = ptr->rc;
 

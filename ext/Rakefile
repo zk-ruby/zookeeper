@@ -9,6 +9,16 @@ end
 
 GENERATE_GVL_CODE_RB = 'generate_gvl_code.rb'
 
+file 'c' do
+  if tarball = Dir['zkc-*.tar.gz'].first
+    sh "tar -zxf #{tarball}"
+  else
+    raise "couldn't find the tarball! wtf?!"
+  end
+end
+
+file GENERATE_GVL_CODE_RB => 'c'
+
 file 'zkrb_wrapper.c' => GENERATE_GVL_CODE_RB do
   sh "ruby generate_gvl_code.rb code"
 end

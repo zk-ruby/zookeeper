@@ -19,6 +19,10 @@ $LDFLAGS = "#{$LDFLAGS}".gsub("$(ldflags)", "").gsub("-arch ppc", "")
 $CXXFLAGS = " -std=gnu++98 #{$CFLAGS}"
 $CPPFLAGS = $ARCH_FLAG = $DLDFLAGS = ""
 
+if RUBY_VERSION == '1.8.7'
+  $CFLAGS << ' -DZKRB_RUBY_187'
+end
+
 ZK_DEBUG = (ENV['DEBUG'] or ARGV.any? { |arg| arg == '--debug' })
 DEBUG_CFLAGS = " -O0 -ggdb3 -DHAVE_DEBUG"
 
