@@ -7,6 +7,18 @@ task :clean do
   end
 end
 
+GENERATE_GVL_CODE_RB = 'generate_gvl_code.rb'
+
+file 'zkrb_wrapper.c' => GENERATE_GVL_CODE_RB do
+  sh "ruby generate_gvl_code.rb code"
+end
+
+file 'zkrb_wrapper.h' => GENERATE_GVL_CODE_RB do
+  sh "ruby generate_gvl_code.rb headers"
+end
+
+ZKRB_WRAPPER = %w[zkrb_wrapper.c zkrb_wrapper.h]
+
 task :clobber => :clean do
   rm_rf %w[Makefile c lib bin include]
 end
@@ -17,7 +29,7 @@ end
 
 file 'Makefile' => :build_zkc
 
-task :build => 'Makefile' do
+task :build => [ZKRB_WRAPPER, 'Makefile'].flatten do
   sh 'make'
 end
 
