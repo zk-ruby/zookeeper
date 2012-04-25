@@ -50,7 +50,7 @@ gemset_name = 'zookeeper'
     sh "rvm #{ruby_with_gemset} do bundle exec rspec spec --fail-fast"
   end
 
-  task "mb:test_all_rubies" => rspec_task_name
+  task "mb:test_all" => rspec_task_name
 end
 
 namespace :build do
