@@ -302,6 +302,47 @@ static VALUE method_sync(VALUE self, VALUE reqid, VALUE path) {
   return INT2FIX(rc);
 }
 
+typedef struct {
+  zhandle_t *zh;
+  const char *path;
+  const char *data_ptr;
+  int data_len;
+  const struct ACL_vector *aclptr;
+  int flags;
+  char *realpath;
+  int realpath_len;
+  int rc;
+} zkrb_zoo_create_args_t;
+
+typedef struct {
+  zhandle_t *zh;
+  const char *path;
+  const char *data_ptr;
+  int data_len;
+  const struct ACL_vector *aclptr;
+  int flags;
+  string_completion_t zkrb_string_callback;
+  const void *data_ctx;
+  int rc;
+} zkrb_zoo_acreate_args_t;
+
+static VALUE gvl_unlocked_zoo_create(void *data) {
+  zkrb_zoo_create_args_t *a = (zkrb_zoo_create_args_t *)data;
+  
+  a->rc = zoo_create(a->zh, a->path, a->data_ptr, a->data_len, a->aclptr, a->flags, a->realpath, a->realpath_len);
+
+  return Qnil;
+}
+
+static VALUE gvl_unlocked_zoo_acreate(void *data) {
+  zkrb_zoo_acreate_args_t *a = (zkrb_zoo_acreate_args_t *)data;
+  
+  a->rc = zoo_acreate(a->zh, a->path, a->data_ptr, a->data_len, a->aclptr, a->flags, a->zkrb_string_callback, a->data_ctx);
+
+  return Qnil;
+}
+
+
 static VALUE method_create(VALUE self, VALUE reqid, VALUE path, VALUE data, VALUE async, VALUE acls, VALUE flags) {
   VALUE watch = Qfalse;
   STANDARD_PREAMBLE(self, zk, reqid, path, async, watch, data_ctx, watch_ctx, call_type);
@@ -315,20 +356,64 @@ static VALUE method_create(VALUE self, VALUE reqid, VALUE path, VALUE data, VALU
   if (acls != Qnil) { aclptr = zkrb_ruby_to_aclvector(acls); }
   char realpath[16384];
 
+  zkrb_zoo_create_args_t *carg;
+  zkrb_zoo_acreate_args_t *acarg;
+
   int rc;
   switch (call_type) {
     case SYNC:
       // casting data_len to int is OK as you can only store 1MB in zookeeper
-      rc = zoo_create(zk->zh, RSTRING_PTR(path), data_ptr, (int)data_len, aclptr, FIX2INT(flags), realpath, sizeof(realpath));
+/*      rc = zoo_create(zk->zh, RSTRING_PTR(path), data_ptr, (int)data_len, aclptr, FIX2INT(flags), realpath, sizeof(realpath));*/
+
+      carg = malloc(sizeof(zkrb_zoo_create_args_t));
+
+      carg->rc = 0;
+
+      carg->zh = zk->zh;
+      carg->path = RSTRING_PTR(path);
+      carg->data_ptr = data_ptr;
+      carg->data_len = (int)data_len;
+      carg->aclptr = aclptr;
+      carg->flags = FIX2INT(flags);
+      carg->realpath = realpath;
+      carg->realpath_len = sizeof(realpath);
+
+      rb_thread_blocking_region(gvl_unlocked_zoo_create, (void *)carg, RUBY_UBF_IO, 0);
+
+      rc = carg->rc;
+
+      free(carg);
+
       break;
     case ASYNC:
-      rc = zoo_acreate(zk->zh, RSTRING_PTR(path), data_ptr, (int)data_len, aclptr, FIX2INT(flags), zkrb_string_callback, data_ctx);
+/*      rc = zoo_acreate(zk->zh, RSTRING_PTR(path), data_ptr, (int)data_len, aclptr, FIX2INT(flags), zkrb_string_callback, data_ctx);*/
+
+      acarg = malloc(sizeof(zkrb_zoo_acreate_args_t));
+
+      acarg->rc = 0;
+
+      acarg->zh = zk->zh;
+      acarg->path = RSTRING_PTR(path);
+      acarg->data_ptr = data_ptr;
+      acarg->data_len = (int)data_len;
+      acarg->aclptr = aclptr;
+      acarg->flags = FIX2INT(flags);
+      acarg->zkrb_string_callback = zkrb_string_callback;
+      acarg->data_ctx = data_ctx;
+
+      rb_thread_blocking_region(gvl_unlocked_zoo_acreate, (void *)acarg, RUBY_UBF_IO, 0);
+
+      rc = acarg->rc;
+
+      free(acarg);
+
       break;
     default:
       /* TODO(wickman) raise proper argument error */
       return Qnil;
       break;
   }
+
 
   if (aclptr) {
     deallocate_ACL_vector(aclptr);
