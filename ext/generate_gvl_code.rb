@@ -259,12 +259,6 @@ def render_header_file(code)
       fp.puts
     end
 
-#     code.wrapper_fns.each do |wf|
-#       fp.puts "#{wf.fn_signature};"
-#     end
-
-#     fp.puts
-
     code.calling_fns.each do |cf|
       fp.puts "#{cf.fn_signature};"
     end
