@@ -193,35 +193,35 @@ error:
   return Qnil;
 }
 
-#define FETCH_DATA_PTR(x, y)                                            \
-  struct zkrb_instance_data * y;                                        \
-  Data_Get_Struct(rb_iv_get(x, "@_data"), struct zkrb_instance_data, y); \
-  if ((y)->zh == NULL)                                                  \
+#define FETCH_DATA_PTR(X, Y)                                             \
+  struct zkrb_instance_data * Y;                                         \
+  Data_Get_Struct(rb_iv_get(X, "@_data"), struct zkrb_instance_data, Y); \
+  if ((Y)->zh == NULL)                                                   \
     rb_raise(rb_eRuntimeError, "zookeeper handle is closed")
 
 #define STANDARD_PREAMBLE(self, zk, reqid, path, async, watch, cb_ctx, w_ctx, call_type) \
-  if (TYPE(reqid) != T_FIXNUM && TYPE(reqid) != T_BIGNUM) {             \
-    rb_raise(rb_eTypeError, "reqid must be Fixnum/Bignum");             \
-    return Qnil;                                                        \
-  }                                                                     \
-  Check_Type(path, T_STRING);                                           \
-  struct zkrb_instance_data * zk;                                       \
-  Data_Get_Struct(rb_iv_get(self, "@_data"), struct zkrb_instance_data, zk); \
-  if (!zk->zh)                                                          \
-    rb_raise(rb_eRuntimeError, "zookeeper handle is closed");           \
-  zkrb_calling_context* cb_ctx =                                        \
-    (async != Qfalse && async != Qnil) ?                                \
-       zkrb_calling_context_alloc(NUM2LL(reqid), zk->queue) :           \
-       NULL;                                                            \
-  zkrb_calling_context* w_ctx =                                         \
-    (watch != Qfalse && watch != Qnil) ?                                \
-       zkrb_calling_context_alloc(NUM2LL(reqid), zk->queue) :           \
-       NULL;                                                            \
-  int a  = (async != Qfalse && async != Qnil);                          \
-  int w  = (watch != Qfalse && watch != Qnil);                          \
-  zkrb_call_type call_type;                                             \
-  if (a) { if (w) { call_type = ASYNC_WATCH; } else { call_type = ASYNC; } } \
-    else { if (w) { call_type =  SYNC_WATCH; } else { call_type = SYNC; } }
+  if (TYPE(reqid) != T_FIXNUM && TYPE(reqid) != T_BIGNUM) {                   \
+    rb_raise(rb_eTypeError, "reqid must be Fixnum/Bignum");                   \
+    return Qnil;                                                              \
+  }                                                                           \
+  Check_Type(path, T_STRING);                                                 \
+  struct zkrb_instance_data * zk;                                             \
+  Data_Get_Struct(rb_iv_get(self, "@_data"), struct zkrb_instance_data, zk);  \
+  if (!zk->zh)                                                                \
+    rb_raise(rb_eRuntimeError, "zookeeper handle is closed");                 \
+  zkrb_calling_context* cb_ctx =                                              \
+    (async != Qfalse && async != Qnil) ?                                      \
+       zkrb_calling_context_alloc(NUM2LL(reqid), zk->queue) :                 \
+       NULL;                                                                  \
+  zkrb_calling_context* w_ctx =                                               \
+    (watch != Qfalse && watch != Qnil) ?                                      \
+       zkrb_calling_context_alloc(NUM2LL(reqid), zk->queue) :                 \
+       NULL;                                                                  \
+  int a_  = (async != Qfalse && async != Qnil);                               \
+  int w_  = (watch != Qfalse && watch != Qnil);                               \
+  zkrb_call_type call_type;                                                   \
+  if (a_) { if (w_) { call_type = ASYNC_WATCH; } else { call_type = ASYNC; } } \
+     else { if (w_) { call_type =  SYNC_WATCH; } else { call_type = SYNC; } }
 
 static VALUE method_get_children(VALUE self, VALUE reqid, VALUE path, VALUE async, VALUE watch) {
   STANDARD_PREAMBLE(self, zk, reqid, path, async, watch, data_ctx, watch_ctx, call_type);
