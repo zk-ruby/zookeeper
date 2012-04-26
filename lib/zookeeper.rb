@@ -2,13 +2,16 @@
 
 require 'thread'
 require 'monitor'
+require 'forwardable'
+require 'logger'
+
 require 'zookeeper/common'
 require 'zookeeper/constants'
 require 'zookeeper/callbacks'
 require 'zookeeper/exceptions'
 require 'zookeeper/stat'
 require 'zookeeper/acls'
-require 'logger'
+
 
 if defined?(::JRUBY_VERSION)
   $LOAD_PATH.unshift(File.expand_path('../java', File.dirname(__FILE__))).uniq!
