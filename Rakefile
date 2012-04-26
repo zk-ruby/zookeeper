@@ -1,12 +1,26 @@
 # def gemset_name
 #   ENV.fetch('GEM_HOME').split('@').last
 # end
-# 
+
+GEM_FILES = FileList['slyphon-zookeeper-*.gem']
+
 namespace :mb do
-  task :build_gems do
-    sh "rvm 1.8.7 do gem build slyphon-zookeeper.gemspec"
-    ENV['JAVA_GEM'] = '1'
-    sh "rvm 1.8.7 do gem build slyphon-zookeeper.gemspec"
+  namespace :gems do
+    task :build do
+      sh "rvm 1.8.7 do gem build slyphon-zookeeper.gemspec"
+      ENV['JAVA_GEM'] = '1'
+      sh "rvm 1.8.7 do gem build slyphon-zookeeper.gemspec"
+    end
+
+    task :push do
+      GEM_FILES.each do |gem|
+        sh "gem push #{gem}"
+      end
+    end
+
+    task :clean do
+      rm_rf GEM_FILES
+    end
   end
 end
 
