@@ -25,13 +25,15 @@ describe 'Zookeeper chrooted' do
     z = Zookeeper.new(host)
     yield z
   ensure
-    z.close
+    if z
+      z.close
 
-    wait_until do 
-      begin
-        !z.connected?
-      rescue RuntimeError
-        true
+      wait_until do 
+        begin
+          !z.connected?
+        rescue RuntimeError
+          true
+        end
       end
     end
   end
