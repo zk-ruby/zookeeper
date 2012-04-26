@@ -1,3 +1,9 @@
+v0.8.4 fix NameError, require 'forwardable'
+  
+  * Really not sure why this didn't come up in tests
+
+  * issue here https://github.com/slyphon/zk/issues/22
+
 v0.8.3 fix NonLocalJump exception in event delivery thread shutdown code
 
   * hit a corner case where we're waiting for the zkc handle setup
