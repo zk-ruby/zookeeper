@@ -90,9 +90,15 @@ protected
 
         # we now release the mutex so that dispatch_next_callback can grab it
         # to do what it needs to do while delivering events
-        @dispatch_shutdown_cond.wait
+        #
+        # wait for a maximum of 2 sec for dispatcher to signal exit (should be
+        # fast)
+        @dispatch_shutdown_cond.wait(2)
 
-        @dispatcher.join
+        # wait for another 2 sec for the thread to join
+        unless @dispatcher.join(2)
+          logger.error { "Dispatch thread did not join cleanly, continuing" }
+        end
         @dispatcher = nil
       end
     end

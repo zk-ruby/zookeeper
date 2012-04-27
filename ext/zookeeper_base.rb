@@ -104,10 +104,14 @@ class ZookeeperBase
   end
 
   def close
-    @mutex.synchronize do
-      stop_dispatch_thread!
-      @czk.close
+    shutdown_thread = Thread.new do
+      @mutex.synchronize do
+        stop_dispatch_thread!
+        @czk.close
+      end
     end
+
+    shutdown_thread.join unless event_dispatch_thread?
   end
 
   # the C lib doesn't strip the chroot path off of returned path values, which

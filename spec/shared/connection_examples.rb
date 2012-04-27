@@ -997,5 +997,22 @@ shared_examples_for "connection" do
       zk.event_dispatch_thread?.should_not be_true
     end
   end
+
+  describe :close do
+    describe 'from the event dispatch thread' do
+      it %[should not deadlock] do
+
+        evil_cb = lambda do |*|
+          logger.debug { "calling close event_dispatch_thread? #{zk.event_dispatch_thread?}" }
+          zk.close
+        end
+
+        zk.stat(:path => path, :callback => evil_cb)
+
+        wait_until { zk.closed? }
+        zk.should be_closed
+      end
+    end
+  end
 end
 
