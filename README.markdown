@@ -7,8 +7,10 @@ such as locks, have a look at [ZK](https://github.com/slyphon/zk) (also
 available is [ZK-EventMachine](https://github.com/slyphon/zk-eventmachine) for
 those who prefer async).
 
-Unfortunately, since this is a fork of twitter/zookeeper, we don't have our own
-Issues tracker. Issues should be filed under [ZK](https://github.com/slyphon/zk/issues).
+Most development work is taking place on the [slyphon-zookeeper][] fork, and that
+code has regular releases and bug fixes.
+
+[slyphon-zookeeper]: https://github.com/slyphon/zookeeper
 
 ## License
 
@@ -16,6 +18,8 @@ Copyright 2008 Phillip Pearson, and 2010 Twitter, Inc. Licensed under the
 MIT License.  See the included LICENSE file.  Portions copyright 2008-2010
 the Apache Software Foundation, licensed under the Apache 2 license, and
 used with permission.
+
+Portions contributed to the open source community by HPDC, L.P.
 
 ## Install
 
