@@ -2,14 +2,14 @@
 $:.push File.expand_path("../lib", __FILE__)
 
 Gem::Specification.new do |s|
-  s.name        = "slyphon-zookeeper"
+  s.name        = "zookeeper"
   s.version     = '0.9.1'
 
   s.authors     = ["Phillip Pearson", "Eric Maland", "Evan Weaver", "Brian Wickman", "Neil Conway", "Jonathan D. Simms"]
   s.email       = ["slyphon@gmail.com"]
-  s.summary     = %q{twitter's zookeeper client}
+  s.summary     = %q{zookeeper client}
   s.description = s.summary
-  s.homepage    = 'https://github.com/slyphon/zookeeper'
+  s.homepage    = 'https://github.com/twitter/zookeeper'
 
   s.add_development_dependency "rspec", ">= 2.0.0"
   s.add_development_dependency 'flexmock', '~> 0.8.11'
