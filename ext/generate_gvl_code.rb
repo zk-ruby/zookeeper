@@ -35,29 +35,21 @@ we want
                 int valuelen, const struct ACL_vector *acl, int flags,
                 string_completion_t completion, const void *data) {
 
-      int rc;
-      zkrb_zoo_acreate_args_t *ptr = malloc(sizeof(zkrb_zoo_acreate_args_t)); 
-      check_mem(ptr);
+    zkrb_zoo_acreate_args_t args = {
+      .rc = ZKRB_FAIL,
+      .zh = zh,
+      .path = path,
+      .value = value,
+      .valuelen = valuelen,
+      .acl = acl,
+      .flags = flags,
+      .completion = completion,
+      .data = data
+    };
 
-      ptr->rc = 0; 
-      ptr->zh = zh; 
-      ptr->path = path; 
-      ptr->value = value;
-      ptr->valuelen = valuelen;
-      ptr->acl = acl;
-      ptr->flags = flags;
-      ptr->completion = completion;
-      ptr->data = data; 
+    zkrb_thread_blocking_region(zkrb_gvl_zoo_acreate, (void *)&args);
 
-      rb_thread_blocking_region(zkrb_gvl_zoo_acreate, (void *)ptr, RUBY_UBF_IO, 0);
-
-      rc = ptr->rc;
-      free(ptr);
-      return rc;
-
-    error:
-      free(ptr); 
-      return -1;
+    return args.rc;
   }
 
 =end
@@ -156,43 +148,35 @@ class CallingFunction
     @fn_signature ||= "int #{name}(#{typed_args.join(', ')})"
   end
 
-  def ptr_lines
-    @ptr_lines = (
-      lines = ["ptr->rc = rc;"]
-      lines += member_names.map { |n| "ptr->#{n} = #{n};" }
-      lines.map! { |n| "  #{n}" }
-      lines.join("\n")
-    )
+  def initializer_lines
+    @initializer_lines ||= member_names.map { |n| "    .#{n} = #{n}" }.join(",\n")
   end
 
   def top
     <<-EOS
 // wrapper that calls #{zoo_fn_name} via #{wrapper_fn.name} inside rb_thread_blocking_region
 #{fn_signature} {
-  int rc = ZKRB_FAIL;
-  #{struct.name} *ptr = malloc(sizeof(#{struct.name}));
-  check_mem(ptr);
+  #{struct.name} args = {
+    .rc = ZKRB_FAIL,
+#{initializer_lines}
+  };
     EOS
   end
 
   def rb_thread_blocking_region_call
-    "  zkrb_thread_blocking_region(#{wrapper_fn.name}, (void *)ptr);"
+    "  zkrb_thread_blocking_region(#{wrapper_fn.name}, (void *)&args);"
   end
 
   def bottom
     <<-EOS
 
-  rc = ptr->rc;
-
-error:
-  free(ptr);
-  return rc;
+  return args.rc;
 }
     EOS
   end
 
   def body
-    @body ||= [top, ptr_lines, nil, rb_thread_blocking_region_call, bottom].join("\n")
+    @body ||= [top, rb_thread_blocking_region_call, bottom].join("\n")
   end
 end
 
