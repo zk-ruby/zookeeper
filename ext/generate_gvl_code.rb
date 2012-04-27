@@ -193,6 +193,8 @@ class GeneratedCode < Struct.new(:structs, :wrapper_fns, :calling_fns)
     new.tap do |code|
       while true
         break unless text =~ REGEXP
+        text = $~.post_match
+
         zoo_fn_name, argstr = $1
         argstr = $2
 
@@ -212,8 +214,6 @@ class GeneratedCode < Struct.new(:structs, :wrapper_fns, :calling_fns)
         code.structs << struct
         code.wrapper_fns << wrapper_fn
         code.calling_fns << calling_fn
-
-        text = $~.post_match
       end
     end
   end
