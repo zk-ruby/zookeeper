@@ -21,6 +21,8 @@ namespace :mb do
     task :clean do
       rm_rf GEM_FILES
     end
+
+    task :all => [:build, :push, :clean]
   end
 end
 
