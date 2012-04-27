@@ -1,27 +1,21 @@
 require 'shared/all_success_return_values'
 
 shared_examples_for "connection" do
-  def ensure_node(path, data)
-    if zk.stat(:path => path)[:stat].exists?
-      zk.set(:path => path, :data => data)
-    else
-      zk.create(:path => path, :data => data)
-    end
-  end
 
   before :each do
-    ensure_node(path, data)
+    ensure_node(zk, path, data)
   end
 
   after :each do
-    ensure_node(path, data)
+    ensure_node(zk, path, data)
   end
 
   after :all do
     Zookeeper.logger.warn "running shared examples after :all"
-    z = Zookeeper.new("localhost:2181")
-    z.delete(:path => path)
-    z.close
+
+    with_open_zk(connection_string) do |z|
+      rm_rf(z, path)
+    end
   end
 
   # unfortunately, we can't test w/o exercising other parts of the driver, so

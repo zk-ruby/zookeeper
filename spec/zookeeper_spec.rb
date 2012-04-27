@@ -5,10 +5,10 @@ require 'shared/connection_examples'
 describe 'Zookeeper' do
   let(:path) { "/_zktest_" }
   let(:data) { "underpants" } 
-  let(:zk_host) { 'localhost:2181' }
+  let(:connection_string) { 'localhost:2181' }
 
   before do
-    @zk = Zookeeper.new(zk_host)
+    @zk = Zookeeper.new(connection_string)
   end
 
   after do

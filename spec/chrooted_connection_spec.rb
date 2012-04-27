@@ -16,50 +16,8 @@ describe 'Zookeeper chrooted' do
     @zk and @zk.close
   end
 
-
   def zk
     @zk
-  end
-
-  def with_open_zk(host='localhost:2181')
-    z = Zookeeper.new(host)
-    yield z
-  ensure
-    if z
-      z.close
-
-      wait_until do 
-        begin
-          !z.connected?
-        rescue RuntimeError
-          true
-        end
-      end
-    end
-  end
-
-  # this is not as safe as the one in ZK, just to be used to clean up
-  # when we're the only one adjusting a particular path
-  def rm_rf(z, path)
-    z.get_children(:path => path).tap do |h|
-      if h[:rc].zero?
-        h[:children].each do |child|
-          rm_rf(z, File.join(path, child))
-        end
-      elsif h[:rc] == ZookeeperExceptions::ZNONODE
-        # no-op
-      else
-        raise "Oh noes! unexpected return value! #{h.inspect}"
-      end
-    end
-
-    rv = z.delete(:path => path)
-
-    unless (rv[:rc].zero? or rv[:rc] == ZookeeperExceptions::ZNONODE)
-      raise "oh noes! failed to delete #{path}" 
-    end
-
-    path
   end
 
   describe 'non-existent' do
