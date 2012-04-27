@@ -73,6 +73,18 @@ gemset_name = 'zookeeper'
 end
 
 task :default => 'mb:1.9.3'
+
+# cargo culted from http://blog.flavorjon.es/2009/06/easily-valgrind-gdb-your-ruby-c.html
+VALGRIND_BASIC_OPTS = '--num-callers=50 --error-limit=no --partial-loads-ok=yes --undef-value-errors=no'
+
+task 'valgrind' do
+  cd 'ext' do
+    sh "rake clean build"
+  end
+
+  sh "valgrind #{VALGRIND_BASIC_OPTS} bundle exec rspec spec"
+end
+
 namespace :build do
   task :clean do
     cd 'ext' do
