@@ -50,7 +50,7 @@ end
 
 Dir.chdir(HERE) do
   if File.exist?("lib")
-    puts "Zkc already built; run 'rake clean' first if you need to rebuild."
+    puts "Zkc already built; run 'rake clobber' in ext/ first if you need to rebuild."
   else
     puts "Building zkc."
 
