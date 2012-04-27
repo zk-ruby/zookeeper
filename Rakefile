@@ -28,14 +28,16 @@ end
 
 gemset_name = 'zookeeper'
 
-directory 'tmp'
-
 # this nonsense w/ tmp and the Gemfile is a bundler optimization
 
-GEMSPEC_LINK = 'tmp/slyphon-zookeeper.gemspec'
+directory 'tmp'
+
+GEMSPEC_NAME = 'slyphon-zookeeper.gemspec'
+
+GEMSPEC_LINK = "tmp/#{GEMSPEC_NAME}"
 
 file GEMSPEC_LINK => 'tmp' do
-  ln_s '../slyphon-zookeeper.gemspec', GEMSPEC_LINK
+  ln_s "../#{GEMSPEC_NAME}", GEMSPEC_LINK
 end
 
 %w[1.8.7 1.9.2 jruby rbx 1.9.3].each do |ns_name|
@@ -95,12 +97,21 @@ end
 
   task "mb:#{ns_name}" => rspec_task_name
 
-  task "mb:test_all" => rspec_task_name
+  task "mb:test_all_rubies" => rspec_task_name
+end
+
+task "mb:test_all" do
+  require 'benchmark'
+  t = Benchmark.realtime do
+    Rake::Task['mb:test_all_rubies'].invoke
+  end
+
+  $stderr.puts "Full test run took: #{t} s"
 end
 
 task :default => 'mb:1.9.3'
 
-task :clean do
+task :clobber do
   rm_rf 'tmp'
 end
 
