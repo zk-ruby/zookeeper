@@ -27,7 +27,7 @@ end
 gemset_name = 'zookeeper'
 
 
-%w[1.8.7 1.9.2 1.9.3 jruby rbx].each do |ns_name|
+%w[1.8.7 1.9.2 jruby rbx 1.9.3].each do |ns_name|
   rvm_ruby = (ns_name == 'rbx') ? "rbx-2.0.testing" : ns_name
 
   ruby_with_gemset = "#{rvm_ruby}@#{gemset_name}"
@@ -72,6 +72,7 @@ gemset_name = 'zookeeper'
   task "mb:test_all" => rspec_task_name
 end
 
+task :default => 'mb:1.9.3'
 namespace :build do
   task :clean do
     cd 'ext' do
