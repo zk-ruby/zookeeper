@@ -49,7 +49,7 @@ void zkrb_enqueue(zkrb_queue_t *q, zkrb_event_t *elt) {
   check_debug(q != NULL && q->tail != NULL,  "zkrb_enqueue: queue ptr or tail was NULL\n");
 
   q->tail->event = elt;
-  q->tail->next = (struct zkrb_event_ll_t *) malloc(sizeof(struct zkrb_event_ll_t));
+  q->tail->next = (zkrb_event_ll_t *) malloc(sizeof(zkrb_event_ll_t));
   q->tail = q->tail->next;
   q->tail->event = NULL;
   q->tail->next = NULL;
@@ -87,20 +87,21 @@ zkrb_event_t * zkrb_peek(zkrb_queue_t *q) {
 
 zkrb_event_t* zkrb_dequeue(zkrb_queue_t *q, int need_lock) {
   zkrb_event_t *rv = NULL;
-
+  zkrb_event_ll_t *old_root = NULL;
+    
   if (need_lock)
     GLOBAL_MUTEX_LOCK("zkrb_dequeue");
 
   if (!ZKRB_QUEUE_EMPTY(q)) {
-    struct zkrb_event_ll_t *old_root = q->head;
+    old_root = q->head;
     q->head = q->head->next;
     rv = old_root->event;
-    free(old_root);
   }
 
   if (need_lock)
     GLOBAL_MUTEX_UNLOCK("zkrb_dequeue");
 
+  free(old_root);
   return rv;
 }
 
@@ -111,6 +112,17 @@ void zkrb_signal(zkrb_queue_t *q) {
     log_err("zkrb_signal: write to pipe failed, could not wake");
 
   GLOBAL_MUTEX_UNLOCK("zkrb_signal");
+}
+
+zkrb_event_ll_t *zkrb_event_ll_t_alloc(void) {
+  zkrb_event_ll_t *rv = malloc(sizeof(zkrb_event_ll_t));
+
+  if (!rv) return NULL;
+
+  rv->event = NULL;
+  rv->next = NULL;
+
+  return rv;
 }
 
 zkrb_queue_t *zkrb_queue_alloc(void) {
@@ -126,10 +138,9 @@ zkrb_queue_t *zkrb_queue_alloc(void) {
   rq = malloc(sizeof(zkrb_queue_t));
   check_mem(rq);
 
-  rq->head = malloc(sizeof(struct zkrb_event_ll_t));
+  rq->head = zkrb_event_ll_t_alloc();
   check_mem(rq->head);
 
-  rq->head->event = NULL; rq->head->next = NULL;
   rq->tail = rq->head;
   rq->pipe_read = pfd[0];
   rq->pipe_write = pfd[1];
@@ -139,6 +150,7 @@ zkrb_queue_t *zkrb_queue_alloc(void) {
 
 error:
   GLOBAL_MUTEX_UNLOCK("zkrb_queue_alloc");
+  free(rq);
   return NULL;
 }
 
@@ -160,7 +172,7 @@ error:
 }
 
 zkrb_event_t *zkrb_event_alloc(void) {
-  zkrb_event_t *rv = (zkrb_event_t *) malloc(sizeof(zkrb_event_t));
+  zkrb_event_t *rv = malloc(sizeof(zkrb_event_t));
   return rv;
 }
 
@@ -225,11 +237,10 @@ void zkrb_event_free(zkrb_event_t *event) {
     case ZKRB_VOID: {
       break;
     }
-
     default:
-#warning [wickman] TODO raise an exception?
-      fprintf(stderr, "ERROR?\n");
+      log_err("unrecognized event in event_free!");
   }
+
   free(event);
 }
 
@@ -237,6 +248,11 @@ void zkrb_event_free(zkrb_event_t *event) {
    allocated on the proper thread stack */
 VALUE zkrb_event_to_ruby(zkrb_event_t *event) {
   VALUE hash = rb_hash_new();
+
+  if (!event) {
+    log_err("event was NULL in zkrb_event_to_ruby");
+    return hash;
+  }
 
   rb_hash_aset(hash, GET_SYM("req_id"), LL2NUM(event->req_id));
   if (event->type != ZKRB_WATCHER)
@@ -251,39 +267,39 @@ VALUE zkrb_event_to_ruby(zkrb_event_t *event) {
       break;
     }
     case ZKRB_STAT: {
-      if (ZKRBDebugging) fprintf(stderr, "zkrb_event_to_ruby ZKRB_STAT\n");
+      zkrb_debug("zkrb_event_to_ruby ZKRB_STAT\n");
       struct zkrb_stat_completion *stat_ctx = event->completion.stat_completion;
       rb_hash_aset(hash, GET_SYM("stat"), stat_ctx->stat ? zkrb_stat_to_rarray(stat_ctx->stat) : Qnil);
       break;
     }
     case ZKRB_STRING: {
-      if (ZKRBDebugging) fprintf(stderr, "zkrb_event_to_ruby ZKRB_STRING\n");
+      zkrb_debug("zkrb_event_to_ruby ZKRB_STRING\n");
       struct zkrb_string_completion *string_ctx = event->completion.string_completion;
       rb_hash_aset(hash, GET_SYM("string"), string_ctx->value ? rb_str_new2(string_ctx->value) : Qnil);
       break;
     }
     case ZKRB_STRINGS: {
-      if (ZKRBDebugging) fprintf(stderr, "zkrb_event_to_ruby ZKRB_STRINGS\n");
+      zkrb_debug("zkrb_event_to_ruby ZKRB_STRINGS\n");
       struct zkrb_strings_completion *strings_ctx = event->completion.strings_completion;
       rb_hash_aset(hash, GET_SYM("strings"), strings_ctx->values ? zkrb_string_vector_to_ruby(strings_ctx->values) : Qnil);
       break;
     }
     case ZKRB_STRINGS_STAT: {
-      if (ZKRBDebugging) fprintf(stderr, "zkrb_event_to_ruby ZKRB_STRINGS_STAT\n");
+      zkrb_debug("zkrb_event_to_ruby ZKRB_STRINGS_STAT\n");
       struct zkrb_strings_stat_completion *strings_stat_ctx = event->completion.strings_stat_completion;
       rb_hash_aset(hash, GET_SYM("strings"), strings_stat_ctx->values ? zkrb_string_vector_to_ruby(strings_stat_ctx->values) : Qnil);
       rb_hash_aset(hash, GET_SYM("stat"), strings_stat_ctx->stat ? zkrb_stat_to_rarray(strings_stat_ctx->stat) : Qnil);
       break;
     }
     case ZKRB_ACL: {
-      if (ZKRBDebugging) fprintf(stderr, "zkrb_event_to_ruby ZKRB_ACL\n");
+      zkrb_debug("zkrb_event_to_ruby ZKRB_ACL\n");
       struct zkrb_acl_completion *acl_ctx = event->completion.acl_completion;
       rb_hash_aset(hash, GET_SYM("acl"), acl_ctx->acl ? zkrb_acl_vector_to_ruby(acl_ctx->acl) : Qnil);
       rb_hash_aset(hash, GET_SYM("stat"), acl_ctx->stat ? zkrb_stat_to_rarray(acl_ctx->stat) : Qnil);
       break;
     }
     case ZKRB_WATCHER: {
-      if (ZKRBDebugging) fprintf(stderr, "zkrb_event_to_ruby ZKRB_WATCHER\n");
+      zkrb_debug("zkrb_event_to_ruby ZKRB_WATCHER\n");
       struct zkrb_acl_completion *acl_ctx = event->completion.acl_completion;
       struct zkrb_watcher_completion *watcher_ctx = event->completion.watcher_completion;
       rb_hash_aset(hash, GET_SYM("type"), INT2FIX(watcher_ctx->type));
@@ -321,8 +337,11 @@ void zkrb_print_stat(const struct Stat *s) {
 
 zkrb_calling_context *zkrb_calling_context_alloc(int64_t req_id, zkrb_queue_t *queue) {
   zkrb_calling_context *ctx = malloc(sizeof(zkrb_calling_context));
+  if (!ctx) return NULL;
+
   ctx->req_id = req_id;
   ctx->queue  = queue;
+
   return ctx;
 }
 

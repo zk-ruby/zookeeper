@@ -6,4 +6,5 @@
 Makefile
 pkg
 zookeeper.gemspec
-Gemfile.lock
+Gemfile.*
+tmp/

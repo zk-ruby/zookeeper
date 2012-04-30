@@ -222,14 +222,19 @@ class ZookeeperBase
   end
 
   def close
-    @mutex.synchronize do
-      return if @_closed
-      @_closed = true    # these are probably unnecessary
-      @_running = false
+    shutdown_thread = Thread.new do
+      @mutex.synchronize do
+        unless @_closed
+          @_closed = true    # these are probably unnecessary
+          @_running = false
 
-      stop_dispatch_thread!
-      @jzk.close if @jzk
+          stop_dispatch_thread!
+          @jzk.close if @jzk
+        end
+      end
     end
+
+    shutdown_thread.join unless event_dispatch_thread?
   end
 
   def state

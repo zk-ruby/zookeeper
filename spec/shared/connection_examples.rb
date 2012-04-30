@@ -1,27 +1,21 @@
 require 'shared/all_success_return_values'
 
 shared_examples_for "connection" do
-  def ensure_node(path, data)
-    if zk.stat(:path => path)[:stat].exists?
-      zk.set(:path => path, :data => data)
-    else
-      zk.create(:path => path, :data => data)
-    end
-  end
 
   before :each do
-    ensure_node(path, data)
+    ensure_node(zk, path, data)
   end
 
   after :each do
-    ensure_node(path, data)
+    ensure_node(zk, path, data)
   end
 
   after :all do
     Zookeeper.logger.warn "running shared examples after :all"
-    z = Zookeeper.new("localhost:2181")
-    z.delete(:path => path)
-    z.close
+
+    with_open_zk(connection_string) do |z|
+      rm_rf(z, path)
+    end
   end
 
   # unfortunately, we can't test w/o exercising other parts of the driver, so
@@ -1001,6 +995,23 @@ shared_examples_for "connection" do
 
     it %[should return false when not on the event dispatching thread] do
       zk.event_dispatch_thread?.should_not be_true
+    end
+  end
+
+  describe :close do
+    describe 'from the event dispatch thread' do
+      it %[should not deadlock] do
+
+        evil_cb = lambda do |*|
+          logger.debug { "calling close event_dispatch_thread? #{zk.event_dispatch_thread?}" }
+          zk.close
+        end
+
+        zk.stat(:path => path, :callback => evil_cb)
+
+        wait_until { zk.closed? }
+        zk.should be_closed
+      end
     end
   end
 end

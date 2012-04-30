@@ -21,20 +21,14 @@ static VALUE zkrb_gvl_zoo_recv_timeout(void *data) {
 
 // wrapper that calls zoo_recv_timeout via zkrb_gvl_zoo_recv_timeout inside rb_thread_blocking_region
 int zkrb_call_zoo_recv_timeout(zhandle_t *zh) {
-  int rc = ZKRB_FAIL;
-  zkrb_zoo_recv_timeout_args_t *ptr = malloc(sizeof(zkrb_zoo_recv_timeout_args_t));
-  check_mem(ptr);
+  zkrb_zoo_recv_timeout_args_t args = {
+    .rc = ZKRB_FAIL,
+    .zh = zh
+  };
 
-  ptr->rc = rc;
-  ptr->zh = zh;
+  zkrb_thread_blocking_region(zkrb_gvl_zoo_recv_timeout, (void *)&args);
 
-  zkrb_thread_blocking_region(zkrb_gvl_zoo_recv_timeout, (void *)ptr);
-
-  rc = ptr->rc;
-
-error:
-  free(ptr);
-  return rc;
+  return args.rc;
 }
 
 
@@ -46,20 +40,14 @@ static VALUE zkrb_gvl_zoo_state(void *data) {
 
 // wrapper that calls zoo_state via zkrb_gvl_zoo_state inside rb_thread_blocking_region
 int zkrb_call_zoo_state(zhandle_t *zh) {
-  int rc = ZKRB_FAIL;
-  zkrb_zoo_state_args_t *ptr = malloc(sizeof(zkrb_zoo_state_args_t));
-  check_mem(ptr);
+  zkrb_zoo_state_args_t args = {
+    .rc = ZKRB_FAIL,
+    .zh = zh
+  };
 
-  ptr->rc = rc;
-  ptr->zh = zh;
+  zkrb_thread_blocking_region(zkrb_gvl_zoo_state, (void *)&args);
 
-  zkrb_thread_blocking_region(zkrb_gvl_zoo_state, (void *)ptr);
-
-  rc = ptr->rc;
-
-error:
-  free(ptr);
-  return rc;
+  return args.rc;
 }
 
 
@@ -71,27 +59,21 @@ static VALUE zkrb_gvl_zoo_acreate(void *data) {
 
 // wrapper that calls zoo_acreate via zkrb_gvl_zoo_acreate inside rb_thread_blocking_region
 int zkrb_call_zoo_acreate(zhandle_t *zh, const char *path, const char *value, int valuelen, const struct ACL_vector *acl, int flags, string_completion_t completion, const void *data) {
-  int rc = ZKRB_FAIL;
-  zkrb_zoo_acreate_args_t *ptr = malloc(sizeof(zkrb_zoo_acreate_args_t));
-  check_mem(ptr);
+  zkrb_zoo_acreate_args_t args = {
+    .rc = ZKRB_FAIL,
+    .zh = zh,
+    .path = path,
+    .value = value,
+    .valuelen = valuelen,
+    .acl = acl,
+    .flags = flags,
+    .completion = completion,
+    .data = data
+  };
 
-  ptr->rc = rc;
-  ptr->zh = zh;
-  ptr->path = path;
-  ptr->value = value;
-  ptr->valuelen = valuelen;
-  ptr->acl = acl;
-  ptr->flags = flags;
-  ptr->completion = completion;
-  ptr->data = data;
+  zkrb_thread_blocking_region(zkrb_gvl_zoo_acreate, (void *)&args);
 
-  zkrb_thread_blocking_region(zkrb_gvl_zoo_acreate, (void *)ptr);
-
-  rc = ptr->rc;
-
-error:
-  free(ptr);
-  return rc;
+  return args.rc;
 }
 
 
@@ -103,24 +85,18 @@ static VALUE zkrb_gvl_zoo_adelete(void *data) {
 
 // wrapper that calls zoo_adelete via zkrb_gvl_zoo_adelete inside rb_thread_blocking_region
 int zkrb_call_zoo_adelete(zhandle_t *zh, const char *path, int version, void_completion_t completion, const void *data) {
-  int rc = ZKRB_FAIL;
-  zkrb_zoo_adelete_args_t *ptr = malloc(sizeof(zkrb_zoo_adelete_args_t));
-  check_mem(ptr);
+  zkrb_zoo_adelete_args_t args = {
+    .rc = ZKRB_FAIL,
+    .zh = zh,
+    .path = path,
+    .version = version,
+    .completion = completion,
+    .data = data
+  };
 
-  ptr->rc = rc;
-  ptr->zh = zh;
-  ptr->path = path;
-  ptr->version = version;
-  ptr->completion = completion;
-  ptr->data = data;
+  zkrb_thread_blocking_region(zkrb_gvl_zoo_adelete, (void *)&args);
 
-  zkrb_thread_blocking_region(zkrb_gvl_zoo_adelete, (void *)ptr);
-
-  rc = ptr->rc;
-
-error:
-  free(ptr);
-  return rc;
+  return args.rc;
 }
 
 
@@ -132,24 +108,18 @@ static VALUE zkrb_gvl_zoo_aexists(void *data) {
 
 // wrapper that calls zoo_aexists via zkrb_gvl_zoo_aexists inside rb_thread_blocking_region
 int zkrb_call_zoo_aexists(zhandle_t *zh, const char *path, int watch, stat_completion_t completion, const void *data) {
-  int rc = ZKRB_FAIL;
-  zkrb_zoo_aexists_args_t *ptr = malloc(sizeof(zkrb_zoo_aexists_args_t));
-  check_mem(ptr);
+  zkrb_zoo_aexists_args_t args = {
+    .rc = ZKRB_FAIL,
+    .zh = zh,
+    .path = path,
+    .watch = watch,
+    .completion = completion,
+    .data = data
+  };
 
-  ptr->rc = rc;
-  ptr->zh = zh;
-  ptr->path = path;
-  ptr->watch = watch;
-  ptr->completion = completion;
-  ptr->data = data;
+  zkrb_thread_blocking_region(zkrb_gvl_zoo_aexists, (void *)&args);
 
-  zkrb_thread_blocking_region(zkrb_gvl_zoo_aexists, (void *)ptr);
-
-  rc = ptr->rc;
-
-error:
-  free(ptr);
-  return rc;
+  return args.rc;
 }
 
 
@@ -161,25 +131,19 @@ static VALUE zkrb_gvl_zoo_awexists(void *data) {
 
 // wrapper that calls zoo_awexists via zkrb_gvl_zoo_awexists inside rb_thread_blocking_region
 int zkrb_call_zoo_awexists(zhandle_t *zh, const char *path, watcher_fn watcher, void* watcherCtx, stat_completion_t completion, const void *data) {
-  int rc = ZKRB_FAIL;
-  zkrb_zoo_awexists_args_t *ptr = malloc(sizeof(zkrb_zoo_awexists_args_t));
-  check_mem(ptr);
+  zkrb_zoo_awexists_args_t args = {
+    .rc = ZKRB_FAIL,
+    .zh = zh,
+    .path = path,
+    .watcher = watcher,
+    .watcherCtx = watcherCtx,
+    .completion = completion,
+    .data = data
+  };
 
-  ptr->rc = rc;
-  ptr->zh = zh;
-  ptr->path = path;
-  ptr->watcher = watcher;
-  ptr->watcherCtx = watcherCtx;
-  ptr->completion = completion;
-  ptr->data = data;
+  zkrb_thread_blocking_region(zkrb_gvl_zoo_awexists, (void *)&args);
 
-  zkrb_thread_blocking_region(zkrb_gvl_zoo_awexists, (void *)ptr);
-
-  rc = ptr->rc;
-
-error:
-  free(ptr);
-  return rc;
+  return args.rc;
 }
 
 
@@ -191,24 +155,18 @@ static VALUE zkrb_gvl_zoo_aget(void *data) {
 
 // wrapper that calls zoo_aget via zkrb_gvl_zoo_aget inside rb_thread_blocking_region
 int zkrb_call_zoo_aget(zhandle_t *zh, const char *path, int watch, data_completion_t completion, const void *data) {
-  int rc = ZKRB_FAIL;
-  zkrb_zoo_aget_args_t *ptr = malloc(sizeof(zkrb_zoo_aget_args_t));
-  check_mem(ptr);
+  zkrb_zoo_aget_args_t args = {
+    .rc = ZKRB_FAIL,
+    .zh = zh,
+    .path = path,
+    .watch = watch,
+    .completion = completion,
+    .data = data
+  };
 
-  ptr->rc = rc;
-  ptr->zh = zh;
-  ptr->path = path;
-  ptr->watch = watch;
-  ptr->completion = completion;
-  ptr->data = data;
+  zkrb_thread_blocking_region(zkrb_gvl_zoo_aget, (void *)&args);
 
-  zkrb_thread_blocking_region(zkrb_gvl_zoo_aget, (void *)ptr);
-
-  rc = ptr->rc;
-
-error:
-  free(ptr);
-  return rc;
+  return args.rc;
 }
 
 
@@ -220,25 +178,19 @@ static VALUE zkrb_gvl_zoo_awget(void *data) {
 
 // wrapper that calls zoo_awget via zkrb_gvl_zoo_awget inside rb_thread_blocking_region
 int zkrb_call_zoo_awget(zhandle_t *zh, const char *path, watcher_fn watcher, void* watcherCtx, data_completion_t completion, const void *data) {
-  int rc = ZKRB_FAIL;
-  zkrb_zoo_awget_args_t *ptr = malloc(sizeof(zkrb_zoo_awget_args_t));
-  check_mem(ptr);
+  zkrb_zoo_awget_args_t args = {
+    .rc = ZKRB_FAIL,
+    .zh = zh,
+    .path = path,
+    .watcher = watcher,
+    .watcherCtx = watcherCtx,
+    .completion = completion,
+    .data = data
+  };
 
-  ptr->rc = rc;
-  ptr->zh = zh;
-  ptr->path = path;
-  ptr->watcher = watcher;
-  ptr->watcherCtx = watcherCtx;
-  ptr->completion = completion;
-  ptr->data = data;
+  zkrb_thread_blocking_region(zkrb_gvl_zoo_awget, (void *)&args);
 
-  zkrb_thread_blocking_region(zkrb_gvl_zoo_awget, (void *)ptr);
-
-  rc = ptr->rc;
-
-error:
-  free(ptr);
-  return rc;
+  return args.rc;
 }
 
 
@@ -250,26 +202,20 @@ static VALUE zkrb_gvl_zoo_aset(void *data) {
 
 // wrapper that calls zoo_aset via zkrb_gvl_zoo_aset inside rb_thread_blocking_region
 int zkrb_call_zoo_aset(zhandle_t *zh, const char *path, const char *buffer, int buflen, int version, stat_completion_t completion, const void *data) {
-  int rc = ZKRB_FAIL;
-  zkrb_zoo_aset_args_t *ptr = malloc(sizeof(zkrb_zoo_aset_args_t));
-  check_mem(ptr);
+  zkrb_zoo_aset_args_t args = {
+    .rc = ZKRB_FAIL,
+    .zh = zh,
+    .path = path,
+    .buffer = buffer,
+    .buflen = buflen,
+    .version = version,
+    .completion = completion,
+    .data = data
+  };
 
-  ptr->rc = rc;
-  ptr->zh = zh;
-  ptr->path = path;
-  ptr->buffer = buffer;
-  ptr->buflen = buflen;
-  ptr->version = version;
-  ptr->completion = completion;
-  ptr->data = data;
+  zkrb_thread_blocking_region(zkrb_gvl_zoo_aset, (void *)&args);
 
-  zkrb_thread_blocking_region(zkrb_gvl_zoo_aset, (void *)ptr);
-
-  rc = ptr->rc;
-
-error:
-  free(ptr);
-  return rc;
+  return args.rc;
 }
 
 
@@ -281,24 +227,18 @@ static VALUE zkrb_gvl_zoo_aget_children(void *data) {
 
 // wrapper that calls zoo_aget_children via zkrb_gvl_zoo_aget_children inside rb_thread_blocking_region
 int zkrb_call_zoo_aget_children(zhandle_t *zh, const char *path, int watch, strings_completion_t completion, const void *data) {
-  int rc = ZKRB_FAIL;
-  zkrb_zoo_aget_children_args_t *ptr = malloc(sizeof(zkrb_zoo_aget_children_args_t));
-  check_mem(ptr);
+  zkrb_zoo_aget_children_args_t args = {
+    .rc = ZKRB_FAIL,
+    .zh = zh,
+    .path = path,
+    .watch = watch,
+    .completion = completion,
+    .data = data
+  };
 
-  ptr->rc = rc;
-  ptr->zh = zh;
-  ptr->path = path;
-  ptr->watch = watch;
-  ptr->completion = completion;
-  ptr->data = data;
+  zkrb_thread_blocking_region(zkrb_gvl_zoo_aget_children, (void *)&args);
 
-  zkrb_thread_blocking_region(zkrb_gvl_zoo_aget_children, (void *)ptr);
-
-  rc = ptr->rc;
-
-error:
-  free(ptr);
-  return rc;
+  return args.rc;
 }
 
 
@@ -310,25 +250,19 @@ static VALUE zkrb_gvl_zoo_awget_children(void *data) {
 
 // wrapper that calls zoo_awget_children via zkrb_gvl_zoo_awget_children inside rb_thread_blocking_region
 int zkrb_call_zoo_awget_children(zhandle_t *zh, const char *path, watcher_fn watcher, void* watcherCtx, strings_completion_t completion, const void *data) {
-  int rc = ZKRB_FAIL;
-  zkrb_zoo_awget_children_args_t *ptr = malloc(sizeof(zkrb_zoo_awget_children_args_t));
-  check_mem(ptr);
+  zkrb_zoo_awget_children_args_t args = {
+    .rc = ZKRB_FAIL,
+    .zh = zh,
+    .path = path,
+    .watcher = watcher,
+    .watcherCtx = watcherCtx,
+    .completion = completion,
+    .data = data
+  };
 
-  ptr->rc = rc;
-  ptr->zh = zh;
-  ptr->path = path;
-  ptr->watcher = watcher;
-  ptr->watcherCtx = watcherCtx;
-  ptr->completion = completion;
-  ptr->data = data;
+  zkrb_thread_blocking_region(zkrb_gvl_zoo_awget_children, (void *)&args);
 
-  zkrb_thread_blocking_region(zkrb_gvl_zoo_awget_children, (void *)ptr);
-
-  rc = ptr->rc;
-
-error:
-  free(ptr);
-  return rc;
+  return args.rc;
 }
 
 
@@ -340,24 +274,18 @@ static VALUE zkrb_gvl_zoo_aget_children2(void *data) {
 
 // wrapper that calls zoo_aget_children2 via zkrb_gvl_zoo_aget_children2 inside rb_thread_blocking_region
 int zkrb_call_zoo_aget_children2(zhandle_t *zh, const char *path, int watch, strings_stat_completion_t completion, const void *data) {
-  int rc = ZKRB_FAIL;
-  zkrb_zoo_aget_children2_args_t *ptr = malloc(sizeof(zkrb_zoo_aget_children2_args_t));
-  check_mem(ptr);
+  zkrb_zoo_aget_children2_args_t args = {
+    .rc = ZKRB_FAIL,
+    .zh = zh,
+    .path = path,
+    .watch = watch,
+    .completion = completion,
+    .data = data
+  };
 
-  ptr->rc = rc;
-  ptr->zh = zh;
-  ptr->path = path;
-  ptr->watch = watch;
-  ptr->completion = completion;
-  ptr->data = data;
+  zkrb_thread_blocking_region(zkrb_gvl_zoo_aget_children2, (void *)&args);
 
-  zkrb_thread_blocking_region(zkrb_gvl_zoo_aget_children2, (void *)ptr);
-
-  rc = ptr->rc;
-
-error:
-  free(ptr);
-  return rc;
+  return args.rc;
 }
 
 
@@ -369,25 +297,19 @@ static VALUE zkrb_gvl_zoo_awget_children2(void *data) {
 
 // wrapper that calls zoo_awget_children2 via zkrb_gvl_zoo_awget_children2 inside rb_thread_blocking_region
 int zkrb_call_zoo_awget_children2(zhandle_t *zh, const char *path, watcher_fn watcher, void* watcherCtx, strings_stat_completion_t completion, const void *data) {
-  int rc = ZKRB_FAIL;
-  zkrb_zoo_awget_children2_args_t *ptr = malloc(sizeof(zkrb_zoo_awget_children2_args_t));
-  check_mem(ptr);
+  zkrb_zoo_awget_children2_args_t args = {
+    .rc = ZKRB_FAIL,
+    .zh = zh,
+    .path = path,
+    .watcher = watcher,
+    .watcherCtx = watcherCtx,
+    .completion = completion,
+    .data = data
+  };
 
-  ptr->rc = rc;
-  ptr->zh = zh;
-  ptr->path = path;
-  ptr->watcher = watcher;
-  ptr->watcherCtx = watcherCtx;
-  ptr->completion = completion;
-  ptr->data = data;
+  zkrb_thread_blocking_region(zkrb_gvl_zoo_awget_children2, (void *)&args);
 
-  zkrb_thread_blocking_region(zkrb_gvl_zoo_awget_children2, (void *)ptr);
-
-  rc = ptr->rc;
-
-error:
-  free(ptr);
-  return rc;
+  return args.rc;
 }
 
 
@@ -399,23 +321,17 @@ static VALUE zkrb_gvl_zoo_async(void *data) {
 
 // wrapper that calls zoo_async via zkrb_gvl_zoo_async inside rb_thread_blocking_region
 int zkrb_call_zoo_async(zhandle_t *zh, const char *path, string_completion_t completion, const void *data) {
-  int rc = ZKRB_FAIL;
-  zkrb_zoo_async_args_t *ptr = malloc(sizeof(zkrb_zoo_async_args_t));
-  check_mem(ptr);
+  zkrb_zoo_async_args_t args = {
+    .rc = ZKRB_FAIL,
+    .zh = zh,
+    .path = path,
+    .completion = completion,
+    .data = data
+  };
 
-  ptr->rc = rc;
-  ptr->zh = zh;
-  ptr->path = path;
-  ptr->completion = completion;
-  ptr->data = data;
+  zkrb_thread_blocking_region(zkrb_gvl_zoo_async, (void *)&args);
 
-  zkrb_thread_blocking_region(zkrb_gvl_zoo_async, (void *)ptr);
-
-  rc = ptr->rc;
-
-error:
-  free(ptr);
-  return rc;
+  return args.rc;
 }
 
 
@@ -427,23 +343,17 @@ static VALUE zkrb_gvl_zoo_aget_acl(void *data) {
 
 // wrapper that calls zoo_aget_acl via zkrb_gvl_zoo_aget_acl inside rb_thread_blocking_region
 int zkrb_call_zoo_aget_acl(zhandle_t *zh, const char *path, acl_completion_t completion, const void *data) {
-  int rc = ZKRB_FAIL;
-  zkrb_zoo_aget_acl_args_t *ptr = malloc(sizeof(zkrb_zoo_aget_acl_args_t));
-  check_mem(ptr);
+  zkrb_zoo_aget_acl_args_t args = {
+    .rc = ZKRB_FAIL,
+    .zh = zh,
+    .path = path,
+    .completion = completion,
+    .data = data
+  };
 
-  ptr->rc = rc;
-  ptr->zh = zh;
-  ptr->path = path;
-  ptr->completion = completion;
-  ptr->data = data;
+  zkrb_thread_blocking_region(zkrb_gvl_zoo_aget_acl, (void *)&args);
 
-  zkrb_thread_blocking_region(zkrb_gvl_zoo_aget_acl, (void *)ptr);
-
-  rc = ptr->rc;
-
-error:
-  free(ptr);
-  return rc;
+  return args.rc;
 }
 
 
@@ -455,25 +365,19 @@ static VALUE zkrb_gvl_zoo_aset_acl(void *data) {
 
 // wrapper that calls zoo_aset_acl via zkrb_gvl_zoo_aset_acl inside rb_thread_blocking_region
 int zkrb_call_zoo_aset_acl(zhandle_t *zh, const char *path, int version, struct ACL_vector *acl, void_completion_t completion, const void *data) {
-  int rc = ZKRB_FAIL;
-  zkrb_zoo_aset_acl_args_t *ptr = malloc(sizeof(zkrb_zoo_aset_acl_args_t));
-  check_mem(ptr);
+  zkrb_zoo_aset_acl_args_t args = {
+    .rc = ZKRB_FAIL,
+    .zh = zh,
+    .path = path,
+    .version = version,
+    .acl = acl,
+    .completion = completion,
+    .data = data
+  };
 
-  ptr->rc = rc;
-  ptr->zh = zh;
-  ptr->path = path;
-  ptr->version = version;
-  ptr->acl = acl;
-  ptr->completion = completion;
-  ptr->data = data;
+  zkrb_thread_blocking_region(zkrb_gvl_zoo_aset_acl, (void *)&args);
 
-  zkrb_thread_blocking_region(zkrb_gvl_zoo_aset_acl, (void *)ptr);
-
-  rc = ptr->rc;
-
-error:
-  free(ptr);
-  return rc;
+  return args.rc;
 }
 
 
@@ -485,25 +389,19 @@ static VALUE zkrb_gvl_zoo_add_auth(void *data) {
 
 // wrapper that calls zoo_add_auth via zkrb_gvl_zoo_add_auth inside rb_thread_blocking_region
 int zkrb_call_zoo_add_auth(zhandle_t *zh, const char* scheme, const char* cert, int certLen, void_completion_t completion, const void *data) {
-  int rc = ZKRB_FAIL;
-  zkrb_zoo_add_auth_args_t *ptr = malloc(sizeof(zkrb_zoo_add_auth_args_t));
-  check_mem(ptr);
+  zkrb_zoo_add_auth_args_t args = {
+    .rc = ZKRB_FAIL,
+    .zh = zh,
+    .scheme = scheme,
+    .cert = cert,
+    .certLen = certLen,
+    .completion = completion,
+    .data = data
+  };
 
-  ptr->rc = rc;
-  ptr->zh = zh;
-  ptr->scheme = scheme;
-  ptr->cert = cert;
-  ptr->certLen = certLen;
-  ptr->completion = completion;
-  ptr->data = data;
+  zkrb_thread_blocking_region(zkrb_gvl_zoo_add_auth, (void *)&args);
 
-  zkrb_thread_blocking_region(zkrb_gvl_zoo_add_auth, (void *)ptr);
-
-  rc = ptr->rc;
-
-error:
-  free(ptr);
-  return rc;
+  return args.rc;
 }
 
 
@@ -515,27 +413,21 @@ static VALUE zkrb_gvl_zoo_create(void *data) {
 
 // wrapper that calls zoo_create via zkrb_gvl_zoo_create inside rb_thread_blocking_region
 int zkrb_call_zoo_create(zhandle_t *zh, const char *path, const char *value, int valuelen, const struct ACL_vector *acl, int flags, char *path_buffer, int path_buffer_len) {
-  int rc = ZKRB_FAIL;
-  zkrb_zoo_create_args_t *ptr = malloc(sizeof(zkrb_zoo_create_args_t));
-  check_mem(ptr);
+  zkrb_zoo_create_args_t args = {
+    .rc = ZKRB_FAIL,
+    .zh = zh,
+    .path = path,
+    .value = value,
+    .valuelen = valuelen,
+    .acl = acl,
+    .flags = flags,
+    .path_buffer = path_buffer,
+    .path_buffer_len = path_buffer_len
+  };
 
-  ptr->rc = rc;
-  ptr->zh = zh;
-  ptr->path = path;
-  ptr->value = value;
-  ptr->valuelen = valuelen;
-  ptr->acl = acl;
-  ptr->flags = flags;
-  ptr->path_buffer = path_buffer;
-  ptr->path_buffer_len = path_buffer_len;
+  zkrb_thread_blocking_region(zkrb_gvl_zoo_create, (void *)&args);
 
-  zkrb_thread_blocking_region(zkrb_gvl_zoo_create, (void *)ptr);
-
-  rc = ptr->rc;
-
-error:
-  free(ptr);
-  return rc;
+  return args.rc;
 }
 
 
@@ -547,22 +439,16 @@ static VALUE zkrb_gvl_zoo_delete(void *data) {
 
 // wrapper that calls zoo_delete via zkrb_gvl_zoo_delete inside rb_thread_blocking_region
 int zkrb_call_zoo_delete(zhandle_t *zh, const char *path, int version) {
-  int rc = ZKRB_FAIL;
-  zkrb_zoo_delete_args_t *ptr = malloc(sizeof(zkrb_zoo_delete_args_t));
-  check_mem(ptr);
+  zkrb_zoo_delete_args_t args = {
+    .rc = ZKRB_FAIL,
+    .zh = zh,
+    .path = path,
+    .version = version
+  };
 
-  ptr->rc = rc;
-  ptr->zh = zh;
-  ptr->path = path;
-  ptr->version = version;
+  zkrb_thread_blocking_region(zkrb_gvl_zoo_delete, (void *)&args);
 
-  zkrb_thread_blocking_region(zkrb_gvl_zoo_delete, (void *)ptr);
-
-  rc = ptr->rc;
-
-error:
-  free(ptr);
-  return rc;
+  return args.rc;
 }
 
 
@@ -574,23 +460,17 @@ static VALUE zkrb_gvl_zoo_exists(void *data) {
 
 // wrapper that calls zoo_exists via zkrb_gvl_zoo_exists inside rb_thread_blocking_region
 int zkrb_call_zoo_exists(zhandle_t *zh, const char *path, int watch, struct Stat *stat) {
-  int rc = ZKRB_FAIL;
-  zkrb_zoo_exists_args_t *ptr = malloc(sizeof(zkrb_zoo_exists_args_t));
-  check_mem(ptr);
+  zkrb_zoo_exists_args_t args = {
+    .rc = ZKRB_FAIL,
+    .zh = zh,
+    .path = path,
+    .watch = watch,
+    .stat = stat
+  };
 
-  ptr->rc = rc;
-  ptr->zh = zh;
-  ptr->path = path;
-  ptr->watch = watch;
-  ptr->stat = stat;
+  zkrb_thread_blocking_region(zkrb_gvl_zoo_exists, (void *)&args);
 
-  zkrb_thread_blocking_region(zkrb_gvl_zoo_exists, (void *)ptr);
-
-  rc = ptr->rc;
-
-error:
-  free(ptr);
-  return rc;
+  return args.rc;
 }
 
 
@@ -602,24 +482,18 @@ static VALUE zkrb_gvl_zoo_wexists(void *data) {
 
 // wrapper that calls zoo_wexists via zkrb_gvl_zoo_wexists inside rb_thread_blocking_region
 int zkrb_call_zoo_wexists(zhandle_t *zh, const char *path, watcher_fn watcher, void* watcherCtx, struct Stat *stat) {
-  int rc = ZKRB_FAIL;
-  zkrb_zoo_wexists_args_t *ptr = malloc(sizeof(zkrb_zoo_wexists_args_t));
-  check_mem(ptr);
+  zkrb_zoo_wexists_args_t args = {
+    .rc = ZKRB_FAIL,
+    .zh = zh,
+    .path = path,
+    .watcher = watcher,
+    .watcherCtx = watcherCtx,
+    .stat = stat
+  };
 
-  ptr->rc = rc;
-  ptr->zh = zh;
-  ptr->path = path;
-  ptr->watcher = watcher;
-  ptr->watcherCtx = watcherCtx;
-  ptr->stat = stat;
+  zkrb_thread_blocking_region(zkrb_gvl_zoo_wexists, (void *)&args);
 
-  zkrb_thread_blocking_region(zkrb_gvl_zoo_wexists, (void *)ptr);
-
-  rc = ptr->rc;
-
-error:
-  free(ptr);
-  return rc;
+  return args.rc;
 }
 
 
@@ -631,25 +505,19 @@ static VALUE zkrb_gvl_zoo_get(void *data) {
 
 // wrapper that calls zoo_get via zkrb_gvl_zoo_get inside rb_thread_blocking_region
 int zkrb_call_zoo_get(zhandle_t *zh, const char *path, int watch, char *buffer, int* buffer_len, struct Stat *stat) {
-  int rc = ZKRB_FAIL;
-  zkrb_zoo_get_args_t *ptr = malloc(sizeof(zkrb_zoo_get_args_t));
-  check_mem(ptr);
+  zkrb_zoo_get_args_t args = {
+    .rc = ZKRB_FAIL,
+    .zh = zh,
+    .path = path,
+    .watch = watch,
+    .buffer = buffer,
+    .buffer_len = buffer_len,
+    .stat = stat
+  };
 
-  ptr->rc = rc;
-  ptr->zh = zh;
-  ptr->path = path;
-  ptr->watch = watch;
-  ptr->buffer = buffer;
-  ptr->buffer_len = buffer_len;
-  ptr->stat = stat;
+  zkrb_thread_blocking_region(zkrb_gvl_zoo_get, (void *)&args);
 
-  zkrb_thread_blocking_region(zkrb_gvl_zoo_get, (void *)ptr);
-
-  rc = ptr->rc;
-
-error:
-  free(ptr);
-  return rc;
+  return args.rc;
 }
 
 
@@ -661,26 +529,20 @@ static VALUE zkrb_gvl_zoo_wget(void *data) {
 
 // wrapper that calls zoo_wget via zkrb_gvl_zoo_wget inside rb_thread_blocking_region
 int zkrb_call_zoo_wget(zhandle_t *zh, const char *path, watcher_fn watcher, void* watcherCtx, char *buffer, int* buffer_len, struct Stat *stat) {
-  int rc = ZKRB_FAIL;
-  zkrb_zoo_wget_args_t *ptr = malloc(sizeof(zkrb_zoo_wget_args_t));
-  check_mem(ptr);
+  zkrb_zoo_wget_args_t args = {
+    .rc = ZKRB_FAIL,
+    .zh = zh,
+    .path = path,
+    .watcher = watcher,
+    .watcherCtx = watcherCtx,
+    .buffer = buffer,
+    .buffer_len = buffer_len,
+    .stat = stat
+  };
 
-  ptr->rc = rc;
-  ptr->zh = zh;
-  ptr->path = path;
-  ptr->watcher = watcher;
-  ptr->watcherCtx = watcherCtx;
-  ptr->buffer = buffer;
-  ptr->buffer_len = buffer_len;
-  ptr->stat = stat;
+  zkrb_thread_blocking_region(zkrb_gvl_zoo_wget, (void *)&args);
 
-  zkrb_thread_blocking_region(zkrb_gvl_zoo_wget, (void *)ptr);
-
-  rc = ptr->rc;
-
-error:
-  free(ptr);
-  return rc;
+  return args.rc;
 }
 
 
@@ -692,24 +554,18 @@ static VALUE zkrb_gvl_zoo_set(void *data) {
 
 // wrapper that calls zoo_set via zkrb_gvl_zoo_set inside rb_thread_blocking_region
 int zkrb_call_zoo_set(zhandle_t *zh, const char *path, const char *buffer, int buflen, int version) {
-  int rc = ZKRB_FAIL;
-  zkrb_zoo_set_args_t *ptr = malloc(sizeof(zkrb_zoo_set_args_t));
-  check_mem(ptr);
+  zkrb_zoo_set_args_t args = {
+    .rc = ZKRB_FAIL,
+    .zh = zh,
+    .path = path,
+    .buffer = buffer,
+    .buflen = buflen,
+    .version = version
+  };
 
-  ptr->rc = rc;
-  ptr->zh = zh;
-  ptr->path = path;
-  ptr->buffer = buffer;
-  ptr->buflen = buflen;
-  ptr->version = version;
+  zkrb_thread_blocking_region(zkrb_gvl_zoo_set, (void *)&args);
 
-  zkrb_thread_blocking_region(zkrb_gvl_zoo_set, (void *)ptr);
-
-  rc = ptr->rc;
-
-error:
-  free(ptr);
-  return rc;
+  return args.rc;
 }
 
 
@@ -721,25 +577,19 @@ static VALUE zkrb_gvl_zoo_set2(void *data) {
 
 // wrapper that calls zoo_set2 via zkrb_gvl_zoo_set2 inside rb_thread_blocking_region
 int zkrb_call_zoo_set2(zhandle_t *zh, const char *path, const char *buffer, int buflen, int version, struct Stat *stat) {
-  int rc = ZKRB_FAIL;
-  zkrb_zoo_set2_args_t *ptr = malloc(sizeof(zkrb_zoo_set2_args_t));
-  check_mem(ptr);
+  zkrb_zoo_set2_args_t args = {
+    .rc = ZKRB_FAIL,
+    .zh = zh,
+    .path = path,
+    .buffer = buffer,
+    .buflen = buflen,
+    .version = version,
+    .stat = stat
+  };
 
-  ptr->rc = rc;
-  ptr->zh = zh;
-  ptr->path = path;
-  ptr->buffer = buffer;
-  ptr->buflen = buflen;
-  ptr->version = version;
-  ptr->stat = stat;
+  zkrb_thread_blocking_region(zkrb_gvl_zoo_set2, (void *)&args);
 
-  zkrb_thread_blocking_region(zkrb_gvl_zoo_set2, (void *)ptr);
-
-  rc = ptr->rc;
-
-error:
-  free(ptr);
-  return rc;
+  return args.rc;
 }
 
 
@@ -751,23 +601,17 @@ static VALUE zkrb_gvl_zoo_get_children(void *data) {
 
 // wrapper that calls zoo_get_children via zkrb_gvl_zoo_get_children inside rb_thread_blocking_region
 int zkrb_call_zoo_get_children(zhandle_t *zh, const char *path, int watch, struct String_vector *strings) {
-  int rc = ZKRB_FAIL;
-  zkrb_zoo_get_children_args_t *ptr = malloc(sizeof(zkrb_zoo_get_children_args_t));
-  check_mem(ptr);
+  zkrb_zoo_get_children_args_t args = {
+    .rc = ZKRB_FAIL,
+    .zh = zh,
+    .path = path,
+    .watch = watch,
+    .strings = strings
+  };
 
-  ptr->rc = rc;
-  ptr->zh = zh;
-  ptr->path = path;
-  ptr->watch = watch;
-  ptr->strings = strings;
+  zkrb_thread_blocking_region(zkrb_gvl_zoo_get_children, (void *)&args);
 
-  zkrb_thread_blocking_region(zkrb_gvl_zoo_get_children, (void *)ptr);
-
-  rc = ptr->rc;
-
-error:
-  free(ptr);
-  return rc;
+  return args.rc;
 }
 
 
@@ -779,24 +623,18 @@ static VALUE zkrb_gvl_zoo_wget_children(void *data) {
 
 // wrapper that calls zoo_wget_children via zkrb_gvl_zoo_wget_children inside rb_thread_blocking_region
 int zkrb_call_zoo_wget_children(zhandle_t *zh, const char *path, watcher_fn watcher, void* watcherCtx, struct String_vector *strings) {
-  int rc = ZKRB_FAIL;
-  zkrb_zoo_wget_children_args_t *ptr = malloc(sizeof(zkrb_zoo_wget_children_args_t));
-  check_mem(ptr);
+  zkrb_zoo_wget_children_args_t args = {
+    .rc = ZKRB_FAIL,
+    .zh = zh,
+    .path = path,
+    .watcher = watcher,
+    .watcherCtx = watcherCtx,
+    .strings = strings
+  };
 
-  ptr->rc = rc;
-  ptr->zh = zh;
-  ptr->path = path;
-  ptr->watcher = watcher;
-  ptr->watcherCtx = watcherCtx;
-  ptr->strings = strings;
+  zkrb_thread_blocking_region(zkrb_gvl_zoo_wget_children, (void *)&args);
 
-  zkrb_thread_blocking_region(zkrb_gvl_zoo_wget_children, (void *)ptr);
-
-  rc = ptr->rc;
-
-error:
-  free(ptr);
-  return rc;
+  return args.rc;
 }
 
 
@@ -808,24 +646,18 @@ static VALUE zkrb_gvl_zoo_get_children2(void *data) {
 
 // wrapper that calls zoo_get_children2 via zkrb_gvl_zoo_get_children2 inside rb_thread_blocking_region
 int zkrb_call_zoo_get_children2(zhandle_t *zh, const char *path, int watch, struct String_vector *strings, struct Stat *stat) {
-  int rc = ZKRB_FAIL;
-  zkrb_zoo_get_children2_args_t *ptr = malloc(sizeof(zkrb_zoo_get_children2_args_t));
-  check_mem(ptr);
+  zkrb_zoo_get_children2_args_t args = {
+    .rc = ZKRB_FAIL,
+    .zh = zh,
+    .path = path,
+    .watch = watch,
+    .strings = strings,
+    .stat = stat
+  };
 
-  ptr->rc = rc;
-  ptr->zh = zh;
-  ptr->path = path;
-  ptr->watch = watch;
-  ptr->strings = strings;
-  ptr->stat = stat;
+  zkrb_thread_blocking_region(zkrb_gvl_zoo_get_children2, (void *)&args);
 
-  zkrb_thread_blocking_region(zkrb_gvl_zoo_get_children2, (void *)ptr);
-
-  rc = ptr->rc;
-
-error:
-  free(ptr);
-  return rc;
+  return args.rc;
 }
 
 
@@ -837,25 +669,19 @@ static VALUE zkrb_gvl_zoo_wget_children2(void *data) {
 
 // wrapper that calls zoo_wget_children2 via zkrb_gvl_zoo_wget_children2 inside rb_thread_blocking_region
 int zkrb_call_zoo_wget_children2(zhandle_t *zh, const char *path, watcher_fn watcher, void* watcherCtx, struct String_vector *strings, struct Stat *stat) {
-  int rc = ZKRB_FAIL;
-  zkrb_zoo_wget_children2_args_t *ptr = malloc(sizeof(zkrb_zoo_wget_children2_args_t));
-  check_mem(ptr);
+  zkrb_zoo_wget_children2_args_t args = {
+    .rc = ZKRB_FAIL,
+    .zh = zh,
+    .path = path,
+    .watcher = watcher,
+    .watcherCtx = watcherCtx,
+    .strings = strings,
+    .stat = stat
+  };
 
-  ptr->rc = rc;
-  ptr->zh = zh;
-  ptr->path = path;
-  ptr->watcher = watcher;
-  ptr->watcherCtx = watcherCtx;
-  ptr->strings = strings;
-  ptr->stat = stat;
+  zkrb_thread_blocking_region(zkrb_gvl_zoo_wget_children2, (void *)&args);
 
-  zkrb_thread_blocking_region(zkrb_gvl_zoo_wget_children2, (void *)ptr);
-
-  rc = ptr->rc;
-
-error:
-  free(ptr);
-  return rc;
+  return args.rc;
 }
 
 
@@ -867,23 +693,17 @@ static VALUE zkrb_gvl_zoo_get_acl(void *data) {
 
 // wrapper that calls zoo_get_acl via zkrb_gvl_zoo_get_acl inside rb_thread_blocking_region
 int zkrb_call_zoo_get_acl(zhandle_t *zh, const char *path, struct ACL_vector *acl, struct Stat *stat) {
-  int rc = ZKRB_FAIL;
-  zkrb_zoo_get_acl_args_t *ptr = malloc(sizeof(zkrb_zoo_get_acl_args_t));
-  check_mem(ptr);
+  zkrb_zoo_get_acl_args_t args = {
+    .rc = ZKRB_FAIL,
+    .zh = zh,
+    .path = path,
+    .acl = acl,
+    .stat = stat
+  };
 
-  ptr->rc = rc;
-  ptr->zh = zh;
-  ptr->path = path;
-  ptr->acl = acl;
-  ptr->stat = stat;
+  zkrb_thread_blocking_region(zkrb_gvl_zoo_get_acl, (void *)&args);
 
-  zkrb_thread_blocking_region(zkrb_gvl_zoo_get_acl, (void *)ptr);
-
-  rc = ptr->rc;
-
-error:
-  free(ptr);
-  return rc;
+  return args.rc;
 }
 
 
@@ -895,23 +715,17 @@ static VALUE zkrb_gvl_zoo_set_acl(void *data) {
 
 // wrapper that calls zoo_set_acl via zkrb_gvl_zoo_set_acl inside rb_thread_blocking_region
 int zkrb_call_zoo_set_acl(zhandle_t *zh, const char *path, int version, const struct ACL_vector *acl) {
-  int rc = ZKRB_FAIL;
-  zkrb_zoo_set_acl_args_t *ptr = malloc(sizeof(zkrb_zoo_set_acl_args_t));
-  check_mem(ptr);
+  zkrb_zoo_set_acl_args_t args = {
+    .rc = ZKRB_FAIL,
+    .zh = zh,
+    .path = path,
+    .version = version,
+    .acl = acl
+  };
 
-  ptr->rc = rc;
-  ptr->zh = zh;
-  ptr->path = path;
-  ptr->version = version;
-  ptr->acl = acl;
+  zkrb_thread_blocking_region(zkrb_gvl_zoo_set_acl, (void *)&args);
 
-  zkrb_thread_blocking_region(zkrb_gvl_zoo_set_acl, (void *)ptr);
-
-  rc = ptr->rc;
-
-error:
-  free(ptr);
-  return rc;
+  return args.rc;
 }
 
 

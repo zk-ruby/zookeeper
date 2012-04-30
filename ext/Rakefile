@@ -29,6 +29,10 @@ end
 
 ZKRB_WRAPPER = %w[zkrb_wrapper.c zkrb_wrapper.h]
 
+
+task :wrappers => ZKRB_WRAPPER
+
+
 task :clobber => :clean do
   rm_rf %w[Makefile c lib bin include]
 end
