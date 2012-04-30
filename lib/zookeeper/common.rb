@@ -1,60 +1,121 @@
+require 'zookeeper/exceptions'
+
 module ZookeeperCommon
   # sigh, i guess define this here?
   ZKRB_GLOBAL_CB_REQ   = -1
 
-  def self.included(mod)
-    mod.extend(ZookeeperCommon::ClassMethods)
-  end
-
-  module ClassMethods
-    def logger
-      @logger ||= Logger.new('/dev/null') # UNIX: YOU MUST USE IT!
-    end
-
-    def logger=(logger)
-      @logger = logger
-    end
+  def event_dispatch_thread?
+    @dispatcher && (@dispatcher == Thread.current)
   end
 
 protected
-  def setup_call(opts)
+  def get_next_event(blocking=true)
+    @event_queue.pop(!blocking).tap do |event|
+      logger.debug { "#{self.class}##{__method__} delivering event #{event.inspect}" }
+    end
+  rescue ThreadError
+    nil
+  end
+
+  def setup_call(meth_name, opts)
     req_id = nil
-    @req_mutex.synchronize {
+    @mutex.synchronize {
       req_id = @current_req_id
       @current_req_id += 1
-      setup_completion(req_id, opts) if opts[:callback]
+      setup_completion(req_id, meth_name, opts) if opts[:callback]
       setup_watcher(req_id, opts) if opts[:watcher]
     }
     req_id
   end
-  
+ 
   def setup_watcher(req_id, call_opts)
     @watcher_reqs[req_id] = { :watcher => call_opts[:watcher],
                               :context => call_opts[:watcher_context] }
   end
 
-  def setup_completion(req_id, call_opts)
+  # as a hack, to provide consistency between the java implementation and the C
+  # implementation when dealing w/ chrooted connections, we override this in
+  # ext/zookeeper_base.rb to wrap the callback in a chroot-path-stripping block.
+  #
+  # we don't use meth_name here, but we need it in the C implementation
+  #
+  def setup_completion(req_id, meth_name, call_opts)
     @completion_reqs[req_id] = { :callback => call_opts[:callback],
                                  :context => call_opts[:callback_context] }
   end
   
   def get_watcher(req_id)
-    @req_mutex.synchronize {
-      req_id != ZKRB_GLOBAL_CB_REQ ? @watcher_reqs.delete(req_id) : @watcher_reqs[req_id]
+    @mutex.synchronize {
+      (req_id == ZKRB_GLOBAL_CB_REQ) ? @watcher_reqs[req_id] : @watcher_reqs.delete(req_id)
     }
   end
   
   def get_completion(req_id)
-    @req_mutex.synchronize { @completion_reqs.delete(req_id) }
+    @mutex.synchronize { @completion_reqs.delete(req_id) }
   end
 
+  def setup_dispatch_thread!
+    logger.debug {  "starting dispatch thread" }
+    @dispatcher ||= Thread.new do
+      while true
+        begin
+          dispatch_next_callback(get_next_event(true))
+        rescue QueueWithPipe::ShutdownException
+          logger.info { "dispatch thread exiting, got shutdown exception" }
+          break
+        rescue Exception => e
+          $stderr.puts ["#{e.class}: #{e.message}", e.backtrace.map { |n| "\t#{n}" }.join("\n")].join("\n")
+        end
+      end
+      signal_dispatch_thread_exit!
+    end
+  end
+  
+  # this method is part of the reopen/close code, and is responsible for
+  # shutting down the dispatch thread. 
+  #
+  # @dispatcher will be nil when this method exits
+  #
+  def stop_dispatch_thread!
+    logger.debug { "#{self.class}##{__method__}" }
 
-  def dispatch_next_callback
-    hash = get_next_event
+    if @dispatcher
+      if @dispatcher.join(0)
+        @dispatcher = nil
+        return
+      end
+
+      @mutex.synchronize do
+        event_queue.graceful_close!
+
+        # we now release the mutex so that dispatch_next_callback can grab it
+        # to do what it needs to do while delivering events
+        #
+        # wait for a maximum of 2 sec for dispatcher to signal exit (should be
+        # fast)
+        @dispatch_shutdown_cond.wait(2)
+
+        # wait for another 2 sec for the thread to join
+        unless @dispatcher.join(2)
+          logger.error { "Dispatch thread did not join cleanly, continuing" }
+        end
+        @dispatcher = nil
+      end
+    end
+  end
+
+  def signal_dispatch_thread_exit!
+    @mutex.synchronize do
+      logger.debug { "dispatch thread exiting!" }
+      @dispatch_shutdown_cond.broadcast
+    end
+  end
+
+  def dispatch_next_callback(hash)
     return nil unless hash
-    
-    logger.debug {  "dispatch_next_callback got event: #{hash.inspect}" }
 
+    Zookeeper.logger.debug { "get_next_event returned: #{prettify_event(hash).inspect}" }
+    
     is_completion = hash.has_key?(:rc)
     
     hash[:stat] = ZookeeperStat::Stat.new(hash[:stat]) if hash.has_key?(:stat)
@@ -82,8 +143,8 @@ protected
     else
       logger.warn { "Duplicate event received (no handler for req_id #{hash[:req_id]}, event: #{hash.inspect}" }
     end
+    true
   end
-
 
   def assert_supported_keys(args, supported)
     unless (args.keys - supported).empty?
@@ -99,9 +160,15 @@ protected
     end
   end
 
-  # supplied by parent class impl.
-  def logger
-    self.class.logger
+private
+  def prettify_event(hash)
+    hash.dup.tap do |h|
+      # pretty up the event display
+      h[:type]    = ZookeeperConstants::EVENT_TYPE_NAMES.fetch(h[:type]) if h[:type]
+      h[:state]   = ZookeeperConstants::STATE_NAMES.fetch(h[:state]) if h[:state]
+      h[:req_id]  = :global_session if h[:req_id] == -1
+    end
   end
 end
 
+require 'zookeeper/common/queue_with_pipe'

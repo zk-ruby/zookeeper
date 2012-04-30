@@ -27,7 +27,7 @@ module ZookeeperExceptions
   ZNOTHING                  = -117
   ZSESSIONMOVED             = -118
 
-  class ZookeeperException < Exception
+  class ZookeeperException < StandardError
     class EverythingOk            < ZookeeperException; end
     class SystemError             < ZookeeperException; end
     class RunTimeInconsistency    < ZookeeperException; end
@@ -56,6 +56,11 @@ module ZookeeperExceptions
     # these are Ruby client exceptions
     class ConnectionClosed        < ZookeeperException; end
     class NotConnected            < ZookeeperException; end 
+    class ShuttingDownException   < ZookeeperException; end
+    class DataTooLargeException   < ZookeeperException; end
+
+    # yes, make an alias, this is the way zookeeper refers to it
+    ExpiredSession = SessionExpired
     
     def self.by_code(code)
       case code

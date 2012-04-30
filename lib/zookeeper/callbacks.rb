@@ -45,10 +45,12 @@ module ZookeeperCallbacks
 
   class StringCallback < Callback
     ## acreate, async
-    attr_reader :return_code, :path
+    attr_reader :return_code, :string, :context
+
+    alias path string
 
     def initialize_context(hash)
-      @return_code, @path, @context = hash[:rc], hash[:string], hash[:context]
+      @return_code, @string, @context = hash[:rc], hash[:string], hash[:context]
     end
   end
 

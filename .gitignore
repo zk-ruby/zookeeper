@@ -5,3 +5,6 @@
 *.log
 Makefile
 pkg
+zookeeper.gemspec
+Gemfile.*
+tmp/

@@ -1,6 +1,10 @@
+require File.expand_path('../c_zookeeper', __FILE__)
+require 'forwardable'
+
 # The low-level wrapper-specific methods for the C lib
 # subclassed by the top-level Zookeeper class
-class ZookeeperBase < CZookeeper
+class ZookeeperBase
+  extend Forwardable
   include ZookeeperCommon
   include ZookeeperCallbacks
   include ZookeeperConstants
@@ -8,6 +12,11 @@ class ZookeeperBase < CZookeeper
   include ZookeeperACLs
   include ZookeeperStat
 
+  # @private
+  class ClientShutdownException < StandardError; end
+
+  # @private
+  KILL_TOKEN = Object.new unless defined?(KILL_TOKEN)
 
   ZKRB_GLOBAL_CB_REQ   = -1
 
@@ -16,45 +25,76 @@ class ZookeeperBase < CZookeeper
   ZOO_LOG_LEVEL_WARN   = 2
   ZOO_LOG_LEVEL_INFO   = 3
   ZOO_LOG_LEVEL_DEBUG  = 4
-  
+
+  def_delegators :czk, 
+    :get_children, :exists, :delete, :get, :set, :set_acl, :get_acl, :client_id, :sync, :selectable_io
+
+  # some state methods need to be more paranoid about locking to ensure the correct
+  # state is returned
+  # 
+  def self.threadsafe_inquisitor(*syms)
+    syms.each do |sym|
+      class_eval(<<-EOM, __FILE__, __LINE__+1)
+        def #{sym}
+          false|@mutex.synchronize { @czk and @czk.#{sym} }
+        end
+      EOM
+    end
+  end
+
+  threadsafe_inquisitor :connected?, :connecting?, :associating?, :running?
+
+  attr_reader :event_queue
+ 
   def reopen(timeout = 10, watcher=nil)
-    watcher ||= @default_watcher
-
-    @req_mutex.synchronize do
+    if watcher and (watcher != @default_watcher)
+      raise "You cannot set the watcher to a different value this way anymore!"
+    end
+    
+    @mutex.synchronize do
       # flushes all outstanding watcher reqs.
-      @watcher_req = {}
-      set_default_global_watcher(&watcher)
+      @watcher_reqs.clear
+      set_default_global_watcher
+
+      orig_czk, @czk = @czk, CZookeeper.new(@host, @event_queue)
+
+      orig_czk.close if orig_czk
+      
+      @czk.wait_until_connected(timeout)
     end
 
-    init(@host)
-
-    if timeout > 0
-      time_to_stop = Time.now + timeout
-      until state == Zookeeper::ZOO_CONNECTED_STATE
-        break if Time.now > time_to_stop
-        sleep 0.1
-      end
-    end
-
+    setup_dispatch_thread!
     state
   end
 
   def initialize(host, timeout = 10, watcher=nil)
     @watcher_reqs = {}
     @completion_reqs = {}
-    @req_mutex = Monitor.new
-    @current_req_id = 1
+
+    @mutex = Monitor.new
+    @dispatch_shutdown_cond = @mutex.new_cond
+
+    @current_req_id = 0
+    @event_queue = QueueWithPipe.new
+    @czk = nil
+    
+    # approximate the java behavior of raising java.lang.IllegalArgumentException if the host
+    # argument ends with '/'
+    raise ArgumentError, "Host argument #{host.inspect} may not end with /" if host.end_with?('/')
+
     @host = host
 
-    watcher ||= get_default_global_watcher
-
-    @_running = nil # used by the C layer
+    @default_watcher = (watcher or get_default_global_watcher)
 
     yield self if block_given?
 
-    reopen(timeout, watcher)
-    return nil unless connected?
-    setup_dispatch_thread!
+    reopen(timeout)
+  end
+
+  # synchronized accessor to the @czk instance
+  # @private
+  def czk
+    @mutex.synchronize { @czk }
   end
   
   # if either of these happen, the user will need to renegotiate a connection via reopen
@@ -63,58 +103,109 @@ class ZookeeperBase < CZookeeper
     raise ZookeeperException::NotConnected   unless connected?
   end
 
-  def connected?
-    state == ZOO_CONNECTED_STATE
-  end
-
-  def connecting?
-    state == ZOO_CONNECTING_STATE
-  end
-
-  def associating?
-    state == ZOO_ASSOCIATING_STATE
-  end
-
   def close
-    @_running = false
-    wake_event_loop!
-    
-    @dispatcher.join
+    shutdown_thread = Thread.new do
+      @mutex.synchronize do
+        stop_dispatch_thread!
+        @czk.close
+      end
+    end
 
-    super
+    shutdown_thread.join unless event_dispatch_thread?
+  end
+
+  # the C lib doesn't strip the chroot path off of returned path values, which
+  # is pretty damn annoying. this is used to clean things up.
+  def create(*args)
+    # since we don't care about the inputs, just glob args
+    rc, new_path = czk.create(*args)
+    [rc, strip_chroot_from(new_path)]
+  end
+
+  def set_debug_level(int)
+    warn "DEPRECATION WARNING: #{self.class.name}#set_debug_level, it has moved to the class level and will be removed in a future release"
+    self.class.set_debug_level(int)
   end
 
   # set the watcher object/proc that will receive all global events (such as session/state events)
-  def set_default_global_watcher(&block)
-    @req_mutex.synchronize do
-      @default_watcher = block # save this here for reopen() to use
+  def set_default_global_watcher
+    warn "DEPRECATION WARNING: #{self.class}#set_default_global_watcher ignores block" if block_given?
+
+    @mutex.synchronize do
+#       @default_watcher = block # save this here for reopen() to use
       @watcher_reqs[ZKRB_GLOBAL_CB_REQ] = { :watcher => @default_watcher, :watcher_context => nil }
     end
   end
 
-protected
-  def running?
-    false|@_running
+  def state
+    return ZOO_CLOSED_STATE if closed?
+    czk.state
   end
 
-  def setup_dispatch_thread!
-    @dispatcher = Thread.new do
-      while running?
-        begin                     # calling user code, so protect ourselves
-          dispatch_next_callback 
-        rescue Exception => e
-          $stderr.puts "Error in dispatch thread, #{e.class}: #{e.message}\n" << e.backtrace.map{|n| "\t#{n}"}.join("\n")
-        end
+  def session_id
+    cid = client_id and cid.session_id
+  end
+
+  def session_passwd
+    cid = client_id and cid.passwd
+  end
+
+  # we are closed if there is no @czk instance or @czk.closed?
+  def closed?
+    @mutex.synchronize { !@czk or @czk.closed? } 
+  end
+ 
+protected
+  # this is a hack: to provide consistency between the C and Java drivers when
+  # using a chrooted connection, we wrap the callback in a block that will
+  # strip the chroot path from the returned path (important in an async create
+  # sequential call). This is the only place where we can hook *just* the C
+  # version. The non-async manipulation is handled in ZookeeperBase#create.
+  # 
+  def setup_completion(req_id, meth_name, call_opts)
+    if (meth_name == :create) and cb = call_opts[:callback]
+      call_opts[:callback] = lambda do |hash|
+        # in this case the string will be the absolute zookeeper path (i.e.
+        # with the chroot still prepended to the path). Here's where we strip it off
+        hash[:string] = strip_chroot_from(hash[:string])
+
+        # call the original callback
+        cb.call(hash)
       end
     end
+
+    # pass this along to the ZookeeperCommon implementation
+    super(req_id, meth_name, call_opts)
   end
 
-  # TODO: Make all global puts configurable
+  # if we're chrooted, this method will strip the chroot prefix from +path+
+  def strip_chroot_from(path)
+    return path unless (chrooted? and path and path.start_with?(chroot_path))
+    path[chroot_path.length..-1]
+  end
+
   def get_default_global_watcher
     Proc.new { |args|
       logger.debug { "Ruby ZK Global CB called type=#{event_by_value(args[:type])} state=#{state_by_value(args[:state])}" }
       true
     }
+  end
+
+  def chrooted?
+    !chroot_path.empty?
+  end
+
+  def chroot_path
+    if @chroot_path.nil?
+      @chroot_path = 
+        if idx = @host.index('/')
+          @host.slice(idx, @host.length)
+        else
+          ''
+        end
+    end
+
+    @chroot_path
   end
 end
 
