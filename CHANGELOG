@@ -1,3 +1,86 @@
+v0.9.2 More efficient and simpler wrappers for GIL release
+
+  * After a code review by Andrew Wason (rectalogic), use a much simpler
+    technique for creating the arg structs and passing them to the
+    zkrb_gvl_* functions. No malloc(), no free(), no problem.
+
+v0.9.1 see v0.8.4 notes, same patch
+
+v0.9.0 RELEASE THE KRAK..er, GIL!!
+
+  * In >= 1.9.2 the ruby interpreter allows you to release the GIL when
+    calling into native code, sounds like a good idea.
+    
+    This release makes use of that code by parsing the zookeeper.h header file
+    and extracting the method signatures of all relevant zoo_* functions, then
+    generating boilerplate that allows us to call those functions via the
+    rb_thread_blocking_region function.
+
+    1.8.7 compatibility is maintained by stubbing out that functionality if built
+    under 1.8.7. 
+
+  * 1.8.7 is deprecated! I will continue to support 1.8.7 for the near future
+    but sometime soon, you're gonna have to upgrade.
+
+v0.8.4 fix NameError, require 'forwardable'
+  
+  * Really not sure why this didn't come up in tests
+
+  * issue here https://github.com/slyphon/zk/issues/22
+
+v0.8.3 fix NonLocalJump exception in event delivery thread shutdown code
+
+  * hit a corner case where we're waiting for the zkc handle setup
+    and the user decides to shutdown, but before we've had a chance
+    to enter the delivery loop.
+
+  * Cleaned up some nasty code in ZookeeperConstants
+
+  * removed ZookeeperConstants#print_events and ZookeeperConstants#print_states
+
+  * changed EVENT_TYPE_NAMES and EVENT_STATE_NAMES in ZookeeperConstants
+    to use string values instead of symbols
+
+v0.8.2 fix close after a fork()
+
+  * The dispatch thread will be dead in this situation, so we need to 
+    check to see if it's already dead before waiting on it to exit.
+
+v0.8.1 Java client fix, silence warnings
+
+v0.8.0 Refactor C implementaion, EventMachine client
+
+  * separated CZookeeper and ZookeeperBase implementation
+  
+    This solves issues with reopen not working properly, makes for a much
+    cleaner event delivery implementation. ZookeeperBase controls the lifecycle
+    of the event dispatch thread now, rather than it being tied to CZookeeper.
+  
+  * added support for the 'sync' API call
+  
+  * Refactored zookeeper_c.c and zookeeper_lib.c
+  
+    More error checking in zookeeper_lib.c and restructure some things to make
+    logic easier to follow
+  
+    Fix bug in method_get_next_event that made the shutdown case so complicated
+  
+  * Massively simplified EMClient implementation
+
+    Rather than trying to hook the IO used by zookeeper_lib to notify zookeeper_c
+    about event availabiltiy directly into EventMachine, use the same event delivery
+    thread, but wrap the dispatch call in EM.schedule.
+
+  * Improve implementation of spin-lock-esque code that waits for the connection to be
+    established before returning.
+
+    This cut the test runtime down from 1m 20s to 2s.
+
+  * Java client refactoring, similar correctness changes
+
+  * Change ZookeeperException base class to StandardError instead of Exception
+
+
 v0.4.5 Upgrade to ZooKeeper 3.3.3
 
 v0.4.4 Fix race condition on close, possible data corruption on async get.
@@ -24,3 +107,4 @@ v0.2. Bundle C dependencies, like memcached.gem.
 
 v0.1. First release.
 
+# vim:ft=text:ts=2:sw=2:et

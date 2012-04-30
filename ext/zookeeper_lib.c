@@ -6,6 +6,17 @@ This file contains three sets of helpers:
   - functions for translating between Ruby and C versions of ZK datatypes
 
 wickman@twitter.com
+
+*********************************************************************************
+*
+* NOTE: be *very careful* in these functions, calling *ANY* ruby interpreter
+* function when you're not in an interpreter thread can hork ruby, trigger a
+* [BUG], corrupt the stack, kill your dog, knock up your daughter, etc. etc.
+*
+*********************************************************************************
+
+slyphon@gmail.com
+
 */
 
 #include "ruby.h"
@@ -16,90 +27,136 @@ wickman@twitter.com
 #include <stdlib.h>
 #include <pthread.h>
 #include <unistd.h>
+#include <inttypes.h>
+#include "dbg.h"
 
 #define GET_SYM(str) ID2SYM(rb_intern(str))
 
 int ZKRBDebugging;
 
+// XXX(slyphon): need to check these for error, but what to do if they fail?
 pthread_mutex_t zkrb_q_mutex = PTHREAD_MUTEX_INITIALIZER;
 
-/* push/pop is a misnomer, this is a queue */
+#define LOG_PTHREAD_ERR(A, M, ...) if (A) { log_err(M, ##__VA_ARGS__); errno=0; }
+
+#define GLOBAL_MUTEX_LOCK(F)   LOG_PTHREAD_ERR(pthread_mutex_lock(&zkrb_q_mutex), F)
+#define GLOBAL_MUTEX_UNLOCK(F) LOG_PTHREAD_ERR(pthread_mutex_unlock(&zkrb_q_mutex), F)
+
+
 void zkrb_enqueue(zkrb_queue_t *q, zkrb_event_t *elt) {
-  pthread_mutex_lock(&zkrb_q_mutex);
-  if (q == NULL || q->tail == NULL) {
-    pthread_mutex_unlock(&zkrb_q_mutex);
-    return;
-  }
+  GLOBAL_MUTEX_LOCK("zkrb_enqueue");
+
+  check_debug(q != NULL && q->tail != NULL,  "zkrb_enqueue: queue ptr or tail was NULL\n");
+
   q->tail->event = elt;
-  q->tail->next = (struct zkrb_event_ll_t *) malloc(sizeof(struct zkrb_event_ll_t));
+  q->tail->next = (zkrb_event_ll_t *) malloc(sizeof(zkrb_event_ll_t));
   q->tail = q->tail->next;
   q->tail->event = NULL;
   q->tail->next = NULL;
   ssize_t ret = write(q->pipe_write, "0", 1);   /* Wake up Ruby listener */
-  pthread_mutex_unlock(&zkrb_q_mutex);
-  if (ret == -1)
-    rb_raise(rb_eRuntimeError, "write to pipe failed: %d", errno);
+
+  // XXX(slyphon): can't raise a ruby exception here as we may not be calling
+  // this from a ruby thread. Calling into the interpreter from a non-ruby
+  // thread is bad, mm'kay?
+
+  check(ret != -1, "write to queue (%p) pipe failed!\n", q);
+
+error:
+  GLOBAL_MUTEX_UNLOCK("zkrb_enqueue");
 }
 
+// NOTE: the zkrb_event_t* returned *is* the same pointer that's part of the
+// queue, the only place this is used is in method_has_events, and it is simply
+// tested for null-ness. it's probably better to make the null-test here and
+// not return the pointer
+//
 zkrb_event_t * zkrb_peek(zkrb_queue_t *q) {
-  pthread_mutex_lock(&zkrb_q_mutex);
   zkrb_event_t *event = NULL;
+
+  GLOBAL_MUTEX_LOCK("zkrb_peek");
+
   if (q != NULL && q->head != NULL && q->head->event != NULL) {
     event = q->head->event;
   }
-  pthread_mutex_unlock(&zkrb_q_mutex);
+
+  GLOBAL_MUTEX_UNLOCK("zkrb_peek");
   return event;
 }
 
+#define ZKRB_QUEUE_EMPTY(q) (q == NULL || q->head == NULL || q->head->event == NULL)
+
 zkrb_event_t* zkrb_dequeue(zkrb_queue_t *q, int need_lock) {
+  zkrb_event_t *rv = NULL;
+  zkrb_event_ll_t *old_root = NULL;
+    
   if (need_lock)
-    pthread_mutex_lock(&zkrb_q_mutex);
-  if (q == NULL || q->head == NULL || q->head->event == NULL) {
-    if (need_lock)
-      pthread_mutex_unlock(&zkrb_q_mutex);
-    return NULL;
-  } else {
-    struct zkrb_event_ll_t *old_root = q->head;
+    GLOBAL_MUTEX_LOCK("zkrb_dequeue");
+
+  if (!ZKRB_QUEUE_EMPTY(q)) {
+    old_root = q->head;
     q->head = q->head->next;
-    zkrb_event_t *rv = old_root->event;
-    free(old_root);
-    if (need_lock)
-      pthread_mutex_unlock(&zkrb_q_mutex);
-    return rv;
+    rv = old_root->event;
   }
+
+  if (need_lock)
+    GLOBAL_MUTEX_UNLOCK("zkrb_dequeue");
+
+  free(old_root);
+  return rv;
 }
 
 void zkrb_signal(zkrb_queue_t *q) {
-  pthread_mutex_lock(&zkrb_q_mutex);
-  ssize_t ret = write(q->pipe_write, "0", 1);   /* Wake up Ruby listener */
-  pthread_mutex_unlock(&zkrb_q_mutex);
-  if (ret == -1)
-    rb_raise(rb_eRuntimeError, "write to pipe failed: %d", errno);
+  GLOBAL_MUTEX_LOCK("zkrb_signal");
+
+  if (!write(q->pipe_write, "0", 1))      /* Wake up Ruby listener */
+    log_err("zkrb_signal: write to pipe failed, could not wake");
+
+  GLOBAL_MUTEX_UNLOCK("zkrb_signal");
+}
+
+zkrb_event_ll_t *zkrb_event_ll_t_alloc(void) {
+  zkrb_event_ll_t *rv = malloc(sizeof(zkrb_event_ll_t));
+
+  if (!rv) return NULL;
+
+  rv->event = NULL;
+  rv->next = NULL;
+
+  return rv;
 }
 
 zkrb_queue_t *zkrb_queue_alloc(void) {
-  int pfd[2];
-  if (pipe(pfd) == -1)
-    rb_raise(rb_eRuntimeError, "create of pipe failed: %d", errno);
+  // some of the locking is a little coarse, but it 
+  // eases the logic of releasing in case of error.
+  GLOBAL_MUTEX_LOCK("zkrb_queue_alloc"); 
 
-  pthread_mutex_lock(&zkrb_q_mutex);
-  zkrb_queue_t *rq = malloc(sizeof(zkrb_queue_t));
-  rq->head = malloc(sizeof(struct zkrb_event_ll_t));
-  rq->head->event = NULL; rq->head->next = NULL;
+  int pfd[2];
+  zkrb_queue_t *rq = NULL;
+ 
+  check(pipe(pfd) == 0, "creating the signal pipe failed");
+
+  rq = malloc(sizeof(zkrb_queue_t));
+  check_mem(rq);
+
+  rq->head = zkrb_event_ll_t_alloc();
+  check_mem(rq->head);
+
   rq->tail = rq->head;
   rq->pipe_read = pfd[0];
   rq->pipe_write = pfd[1];
-  pthread_mutex_unlock(&zkrb_q_mutex);
 
+  GLOBAL_MUTEX_UNLOCK("zkrb_queue_alloc");
   return rq;
+
+error:
+  GLOBAL_MUTEX_UNLOCK("zkrb_queue_alloc");
+  free(rq);
+  return NULL;
 }
 
 void zkrb_queue_free(zkrb_queue_t *queue) {
-  pthread_mutex_lock(&zkrb_q_mutex);
-  if (queue == NULL) {
-    pthread_mutex_unlock(&zkrb_q_mutex);
-    return;
-  }
+  GLOBAL_MUTEX_LOCK("zkrb_queue_free");
+  check_debug(queue != NULL, "zkrb_queue_free: queue was NULL");
 
   zkrb_event_t *elt;
   while ((elt = zkrb_dequeue(queue, 0)) != NULL) {
@@ -109,11 +166,13 @@ void zkrb_queue_free(zkrb_queue_t *queue) {
   close(queue->pipe_read);
   close(queue->pipe_write);
   free(queue);
-  pthread_mutex_unlock(&zkrb_q_mutex);
+
+error:
+  GLOBAL_MUTEX_UNLOCK("zkrb_queue_free");
 }
 
 zkrb_event_t *zkrb_event_alloc(void) {
-  zkrb_event_t *rv = (zkrb_event_t *) malloc(sizeof(zkrb_event_t));
+  zkrb_event_t *rv = malloc(sizeof(zkrb_event_t));
   return rv;
 }
 
@@ -153,7 +212,9 @@ void zkrb_event_free(zkrb_event_t *event) {
       if (strings_stat_ctx->values)
         for (k = 0; k < strings_stat_ctx->values->count; ++k) free(strings_stat_ctx->values->data[k]);
       free(strings_stat_ctx->values);
-      free(strings_stat_ctx->stat);
+
+      if (strings_stat_ctx->stat)
+	free(strings_stat_ctx->stat);
       free(strings_stat_ctx);
       break;
     }
@@ -176,11 +237,10 @@ void zkrb_event_free(zkrb_event_t *event) {
     case ZKRB_VOID: {
       break;
     }
-
     default:
-#warning [wickman] TODO raise an exception?
-      fprintf(stderr, "ERROR?\n");
+      log_err("unrecognized event in event_free!");
   }
+
   free(event);
 }
 
@@ -188,6 +248,11 @@ void zkrb_event_free(zkrb_event_t *event) {
    allocated on the proper thread stack */
 VALUE zkrb_event_to_ruby(zkrb_event_t *event) {
   VALUE hash = rb_hash_new();
+
+  if (!event) {
+    log_err("event was NULL in zkrb_event_to_ruby");
+    return hash;
+  }
 
   rb_hash_aset(hash, GET_SYM("req_id"), LL2NUM(event->req_id));
   if (event->type != ZKRB_WATCHER)
@@ -202,33 +267,40 @@ VALUE zkrb_event_to_ruby(zkrb_event_t *event) {
       break;
     }
     case ZKRB_STAT: {
+      zkrb_debug("zkrb_event_to_ruby ZKRB_STAT\n");
       struct zkrb_stat_completion *stat_ctx = event->completion.stat_completion;
       rb_hash_aset(hash, GET_SYM("stat"), stat_ctx->stat ? zkrb_stat_to_rarray(stat_ctx->stat) : Qnil);
       break;
     }
     case ZKRB_STRING: {
+      zkrb_debug("zkrb_event_to_ruby ZKRB_STRING\n");
       struct zkrb_string_completion *string_ctx = event->completion.string_completion;
       rb_hash_aset(hash, GET_SYM("string"), string_ctx->value ? rb_str_new2(string_ctx->value) : Qnil);
       break;
     }
     case ZKRB_STRINGS: {
+      zkrb_debug("zkrb_event_to_ruby ZKRB_STRINGS\n");
       struct zkrb_strings_completion *strings_ctx = event->completion.strings_completion;
       rb_hash_aset(hash, GET_SYM("strings"), strings_ctx->values ? zkrb_string_vector_to_ruby(strings_ctx->values) : Qnil);
       break;
     }
     case ZKRB_STRINGS_STAT: {
+      zkrb_debug("zkrb_event_to_ruby ZKRB_STRINGS_STAT\n");
       struct zkrb_strings_stat_completion *strings_stat_ctx = event->completion.strings_stat_completion;
       rb_hash_aset(hash, GET_SYM("strings"), strings_stat_ctx->values ? zkrb_string_vector_to_ruby(strings_stat_ctx->values) : Qnil);
       rb_hash_aset(hash, GET_SYM("stat"), strings_stat_ctx->stat ? zkrb_stat_to_rarray(strings_stat_ctx->stat) : Qnil);
       break;
     }
     case ZKRB_ACL: {
+      zkrb_debug("zkrb_event_to_ruby ZKRB_ACL\n");
       struct zkrb_acl_completion *acl_ctx = event->completion.acl_completion;
       rb_hash_aset(hash, GET_SYM("acl"), acl_ctx->acl ? zkrb_acl_vector_to_ruby(acl_ctx->acl) : Qnil);
       rb_hash_aset(hash, GET_SYM("stat"), acl_ctx->stat ? zkrb_stat_to_rarray(acl_ctx->stat) : Qnil);
       break;
     }
     case ZKRB_WATCHER: {
+      zkrb_debug("zkrb_event_to_ruby ZKRB_WATCHER\n");
+      struct zkrb_acl_completion *acl_ctx = event->completion.acl_completion;
       struct zkrb_watcher_completion *watcher_ctx = event->completion.watcher_completion;
       rb_hash_aset(hash, GET_SYM("type"), INT2FIX(watcher_ctx->type));
       rb_hash_aset(hash, GET_SYM("state"), INT2FIX(watcher_ctx->state));
@@ -246,17 +318,17 @@ VALUE zkrb_event_to_ruby(zkrb_event_t *event) {
 void zkrb_print_stat(const struct Stat *s) {
   fprintf(stderr,  "stat {\n");
   if (s != NULL) {
-    fprintf(stderr,  "\t          czxid: %lld\n", s->czxid);
-    fprintf(stderr,  "\t          mzxid: %lld\n", s->mzxid);
-    fprintf(stderr,  "\t          ctime: %lld\n", s->ctime);
-    fprintf(stderr,  "\t          mtime: %lld\n", s->mtime);
-    fprintf(stderr,  "\t        version: %d\n"  , s->version);
-    fprintf(stderr,  "\t       cversion: %d\n"  , s->cversion);
-    fprintf(stderr,  "\t       aversion: %d\n"  , s->aversion);
-    fprintf(stderr,  "\t ephemeralOwner: %lld\n", s->ephemeralOwner);
-    fprintf(stderr,  "\t     dataLength: %d\n"  , s->dataLength);
-    fprintf(stderr,  "\t    numChildren: %d\n"  , s->numChildren);
-    fprintf(stderr,  "\t          pzxid: %lld\n", s->pzxid);
+    fprintf(stderr,  "\t          czxid: %"PRId64"\n", s->czxid);   // PRId64 defined in inttypes.h
+    fprintf(stderr,  "\t          mzxid: %"PRId64"\n", s->mzxid);
+    fprintf(stderr,  "\t          ctime: %"PRId64"\n", s->ctime);
+    fprintf(stderr,  "\t          mtime: %"PRId64"\n", s->mtime);
+    fprintf(stderr,  "\t        version: %d\n",        s->version);
+    fprintf(stderr,  "\t       cversion: %d\n",        s->cversion);
+    fprintf(stderr,  "\t       aversion: %d\n",        s->aversion);
+    fprintf(stderr,  "\t ephemeralOwner: %"PRId64"\n", s->ephemeralOwner);
+    fprintf(stderr,  "\t     dataLength: %d\n",        s->dataLength);
+    fprintf(stderr,  "\t    numChildren: %d\n",        s->numChildren);
+    fprintf(stderr,  "\t          pzxid: %"PRId64"\n", s->pzxid);
   } else {
     fprintf(stderr, "\tNULL\n");
   }
@@ -265,14 +337,17 @@ void zkrb_print_stat(const struct Stat *s) {
 
 zkrb_calling_context *zkrb_calling_context_alloc(int64_t req_id, zkrb_queue_t *queue) {
   zkrb_calling_context *ctx = malloc(sizeof(zkrb_calling_context));
+  if (!ctx) return NULL;
+
   ctx->req_id = req_id;
   ctx->queue  = queue;
+
   return ctx;
 }
 
 void zkrb_print_calling_context(zkrb_calling_context *ctx) {
   fprintf(stderr, "calling context (%p){\n", ctx);
-  fprintf(stderr, "\treq_id = %lld\n", ctx->req_id);
+  fprintf(stderr, "\treq_id = %"PRId64"\n", ctx->req_id);
   fprintf(stderr, "\tqueue  = %p\n", ctx->queue);
   fprintf(stderr, "}\n");
 }
@@ -294,12 +369,10 @@ void zkrb_print_calling_context(zkrb_calling_context *ctx) {
 
 void zkrb_state_callback(
     zhandle_t *zh, int type, int state, const char *path, void *calling_ctx) {
-  /* logging */
-  if (ZKRBDebugging) {
-    fprintf(stderr, "ZOOKEEPER_C_STATE WATCHER "
+
+  zkrb_debug("ZOOKEEPER_C_STATE WATCHER "
                     "type = %d, state = %d, path = %p, value = %s\n",
       type, state, (void *) path, path ? path : "NULL");
-  }
 
   /* save callback context */
   struct zkrb_watcher_completion *wc = malloc(sizeof(struct zkrb_watcher_completion));
@@ -328,11 +401,10 @@ void zkrb_state_callback(
 
 void zkrb_data_callback(
     int rc, const char *value, int value_len, const struct Stat *stat, const void *calling_ctx) {
-  if (ZKRBDebugging) {
-    fprintf(stderr, "ZOOKEEPER_C_DATA WATCHER "
-                    "rc = %d (%s), value = %s, len = %d\n",
-      rc, zerror(rc), value ? value : "NULL", value_len);
-  }
+
+  zkrb_debug("ZOOKEEPER_C_DATA WATCHER "
+                "rc = %d (%s), value = %s, len = %d\n",
+                rc, zerror(rc), value ? value : "NULL", value_len);
 
   /* copy data completion */
   struct zkrb_data_completion *dc = malloc(sizeof(struct zkrb_data_completion));
@@ -358,10 +430,8 @@ void zkrb_data_callback(
 
 void zkrb_stat_callback(
     int rc, const struct Stat *stat, const void *calling_ctx) {
-  if (ZKRBDebugging) {
-    fprintf(stderr, "ZOOKEEPER_C_STAT WATCHER "
+  zkrb_debug("ZOOKEEPER_C_STAT WATCHER "
                     "rc = %d (%s)\n", rc, zerror(rc));
-  }
 
   struct zkrb_stat_completion *sc = malloc(sizeof(struct zkrb_stat_completion));
   sc->stat = NULL;
@@ -377,10 +447,9 @@ void zkrb_stat_callback(
 
 void zkrb_string_callback(
     int rc, const char *string, const void *calling_ctx) {
-  if (ZKRBDebugging) {
-    fprintf(stderr, "ZOOKEEPER_C_STRING WATCHER "
+
+  zkrb_debug("ZOOKEEPER_C_STRING WATCHER "
                     "rc = %d (%s)\n", rc, zerror(rc));
-  }
 
   struct zkrb_string_completion *sc = malloc(sizeof(struct zkrb_string_completion));
   sc->value = NULL;
@@ -397,10 +466,8 @@ void zkrb_string_callback(
 
 void zkrb_strings_callback(
     int rc, const struct String_vector *strings, const void *calling_ctx) {
-  if (ZKRBDebugging) {
-    fprintf(stderr, "ZOOKEEPER_C_STRINGS WATCHER "
+  zkrb_debug("ZOOKEEPER_C_STRINGS WATCHER "
                     "rc = %d (%s), calling_ctx = %p\n", rc, zerror(rc), calling_ctx);
-  }
 
   /* copy string vector */
   struct zkrb_strings_completion *sc = malloc(sizeof(struct zkrb_strings_completion));
@@ -416,14 +483,13 @@ void zkrb_strings_callback(
 
 void zkrb_strings_stat_callback(
     int rc, const struct String_vector *strings, const struct Stat *stat, const void *calling_ctx) {
-  if (ZKRBDebugging) {
-    fprintf(stderr, "ZOOKEEPER_C_STRINGS_STAT WATCHER "
+  zkrb_debug("ZOOKEEPER_C_STRINGS_STAT WATCHER "
                     "rc = %d (%s), calling_ctx = %p\n", rc, zerror(rc), calling_ctx);
-  }
 
   struct zkrb_strings_stat_completion *sc = malloc(sizeof(struct zkrb_strings_stat_completion));
   sc->stat = NULL;
   if (stat != NULL) { sc->stat = malloc(sizeof(struct Stat)); memcpy(sc->stat, stat, sizeof(struct Stat)); }
+
   sc->values = (strings != NULL) ? zkrb_clone_string_vector(strings) : NULL;
 
   ZKH_SETUP_EVENT(queue, event);
@@ -434,12 +500,9 @@ void zkrb_strings_stat_callback(
   zkrb_enqueue(queue, event);
 }
 
-void zkrb_void_callback(
-    int rc, const void *calling_ctx) {
-  if (ZKRBDebugging) {
-    fprintf(stderr, "ZOOKEEPER_C_VOID WATCHER "
+void zkrb_void_callback(int rc, const void *calling_ctx) {
+  zkrb_debug("ZOOKEEPER_C_VOID WATCHER "
                     "rc = %d (%s)\n", rc, zerror(rc));
-  }
 
   ZKH_SETUP_EVENT(queue, event);
   event->rc = rc;
@@ -451,10 +514,7 @@ void zkrb_void_callback(
 
 void zkrb_acl_callback(
     int rc, struct ACL_vector *acls, struct Stat *stat, const void *calling_ctx) {
-  if (ZKRBDebugging) {
-    fprintf(stderr, "ZOOKEEPER_C_ACL WATCHER "
-                    "rc = %d (%s)\n", rc, zerror(rc));
-  }
+  zkrb_debug("ZOOKEEPER_C_ACL WATCHER rc = %d (%s)\n", rc, zerror(rc));
 
   struct zkrb_acl_completion *ac = malloc(sizeof(struct zkrb_acl_completion));
   ac->acl = NULL;
@@ -486,11 +546,12 @@ VALUE zkrb_acl_to_ruby(struct ACL *acl) {
 }
 
 #warning [wickman] TODO test zkrb_ruby_to_aclvector
+#warning [slyphon] TODO size checking on acl_ary (cast to int)
 struct ACL_vector * zkrb_ruby_to_aclvector(VALUE acl_ary) {
   Check_Type(acl_ary, T_ARRAY);
 
   struct ACL_vector *v = malloc(sizeof(struct ACL_vector));
-  allocate_ACL_vector(v, RARRAY_LEN(acl_ary));
+  allocate_ACL_vector(v, (int)RARRAY_LEN(acl_ary));
 
   int k;
   for (k = 0; k < v->count; ++k) {
@@ -612,3 +673,5 @@ struct String_vector * zkrb_clone_string_vector(const struct String_vector * src
   }
   return dst;
 }
+
+// vim:sts=2:sw=2:et

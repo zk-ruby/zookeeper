@@ -18,38 +18,40 @@ module ZookeeperConstants
   ZOO_CHILD_EVENT        = 4
   ZOO_SESSION_EVENT      = -1
   ZOO_NOTWATCHING_EVENT  = -2
+
+  # only used by the C extension
+  ZOO_LOG_LEVEL_ERROR = 1
+  ZOO_LOG_LEVEL_WARN  = 2
+  ZOO_LOG_LEVEL_INFO  = 3
+  ZOO_LOG_LEVEL_DEBUG = 4
+
+  # used to find the name for a numeric event
+  # @private
+  EVENT_TYPE_NAMES = {
+    1   => 'created',
+    2   => 'deleted',
+    3   => 'changed',
+    4   => 'child',
+    -1  => 'session',
+    -2  => 'notwatching',
+  }
+
+  # used to pretty print the state name
+  # @private
+  STATE_NAMES = {
+    -112 => 'expired_session',
+    -113 => 'auth_failed',
+    0    => 'closed',
+    1    => 'connecting',
+    2    => 'associating',
+    3    => 'connected',
+  }
               
-  def print_events
-    puts "ZK events:"
-    ZookeeperConstants::constants.each do |c|
-      puts "\t #{c}" if c =~ /^ZOO..*EVENT$/
-    end
-  end
-
-  def print_states
-    puts "ZK states:"
-    ZookeeperConstants::constants.each do |c|
-      puts "\t #{c}" if c =~ /^ZOO..*STATE$/
-    end
-  end
-
   def event_by_value(v)
-    return unless v
-    ZookeeperConstants::constants.each do |c|
-      next unless c =~ /^ZOO..*EVENT$/
-      if eval("ZookeeperConstants::#{c}") == v
-        return c
-      end
-    end
+    (name = EVENT_TYPE_NAMES[v]) ?  "ZOO_#{name.upcase}_EVENT" : ''
   end
-  
+
   def state_by_value(v)
-    return unless v
-    ZookeeperConstants::constants.each do |c|
-      next unless c =~ /^ZOO..*STATE$/
-      if eval("ZookeeperConstants::#{c}") == v
-        return c
-      end
-    end
+    (name = STATE_NAMES[v]) ?  "ZOO_#{name.upcase}_STATE" : ''
   end
 end
