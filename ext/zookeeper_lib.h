@@ -11,6 +11,11 @@
 #define ZK_FALSE 0
 #define ZKRB_GLOBAL_REQ -1
 
+// (slyphon): this RC value does not conflict with any of the ZOO_ERRORS
+// but need to find a better way of formalizing and defining this stuff
+#define ZKRB_ERR_REQ -2
+#define ZKRB_ERR_RC -15
+
 #ifndef RSTRING_LEN
 # define RSTRING_LEN(x) RSTRING(x)->len
 #endif
@@ -88,14 +93,16 @@ typedef struct {
   } completion;
 } zkrb_event_t;
 
-struct zkrb_event_ll_t {
-  zkrb_event_t           *event;
-  struct zkrb_event_ll_t *next;
+struct zkrb_event_ll {
+  zkrb_event_t         *event;
+  struct zkrb_event_ll *next;
 };
 
+typedef struct zkrb_event_ll zkrb_event_ll_t;
+
 typedef struct {
-  struct zkrb_event_ll_t *head;
-  struct zkrb_event_ll_t *tail;
+  zkrb_event_ll_t *head;
+  zkrb_event_ll_t *tail;
   int                     pipe_read;
   int                     pipe_write;
 } zkrb_queue_t;
@@ -105,7 +112,6 @@ void           zkrb_queue_free(zkrb_queue_t *queue);
 zkrb_event_t * zkrb_event_alloc(void);
 void           zkrb_event_free(zkrb_event_t *ptr);
 
-/* push/pop is a misnomer, this is a queue */
 void                 zkrb_enqueue(zkrb_queue_t *queue, zkrb_event_t *elt);
 zkrb_event_t *       zkrb_peek(zkrb_queue_t *queue);
 zkrb_event_t *       zkrb_dequeue(zkrb_queue_t *queue, int need_lock);
