@@ -1,3 +1,12 @@
+v0.9.3 Event thread shutdown fix, Windows compatibility fix
+
+  * Use a 'shutdown thread' to coordinate cleanup if close is called from the
+    event thread (prevents deadlock)
+
+  * Default Logger now uses $stderr instead of opening /dev/null [#16]
+
+  * Gemfile/gemspec/Rakefile refactoring.
+
 v0.9.2 More efficient and simpler wrappers for GIL release
 
   * After a code review by Andrew Wason (rectalogic), use a much simpler
