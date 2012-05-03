@@ -3,14 +3,14 @@ require 'forwardable'
 
 # The low-level wrapper-specific methods for the C lib
 # subclassed by the top-level Zookeeper class
+module Zookeeper
 class ZookeeperBase
   extend Forwardable
-  include ZookeeperCommon
-  include ZookeeperCallbacks
-  include ZookeeperConstants
-  include ZookeeperExceptions
-  include ZookeeperACLs
-  include ZookeeperStat
+  include Zookeeper::Common
+  include Zookeeper::Callbacks
+  include Zookeeper::Constants
+  include Zookeeper::Exceptions
+  include Zookeeper::ACLs
 
   # @private
   class ClientShutdownException < StandardError; end
@@ -208,4 +208,4 @@ protected
     @chroot_path
   end
 end
-
+end

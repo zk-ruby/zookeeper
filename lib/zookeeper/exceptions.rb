@@ -1,100 +1,107 @@
-module ZookeeperExceptions
-  # exceptions/errors
-  ZOK                    =  0
-  ZSYSTEMERROR           = -1
-  ZRUNTIMEINCONSISTENCY  = -2
-  ZDATAINCONSISTENCY     = -3
-  ZCONNECTIONLOSS        = -4
-  ZMARSHALLINGERROR      = -5
-  ZUNIMPLEMENTED         = -6
-  ZOPERATIONTIMEOUT      = -7
-  ZBADARGUMENTS          = -8
-  ZINVALIDSTATE          = -9
-  
-  # api errors
-  ZAPIERROR                 = -100
-  ZNONODE                   = -101
-  ZNOAUTH                   = -102
-  ZBADVERSION               = -103
-  ZNOCHILDRENFOREPHEMERALS  = -108
-  ZNODEEXISTS               = -110
-  ZNOTEMPTY                 = -111
-  ZSESSIONEXPIRED           = -112
-  ZINVALIDCALLBACK          = -113
-  ZINVALIDACL               = -114
-  ZAUTHFAILED               = -115
-  ZCLOSING                  = -116
-  ZNOTHING                  = -117
-  ZSESSIONMOVED             = -118
+module Zookeeper
+module Exceptions
+  include Constants
 
   class ZookeeperException < StandardError
-    class EverythingOk            < ZookeeperException; end
-    class SystemError             < ZookeeperException; end
-    class RunTimeInconsistency    < ZookeeperException; end
-    class DataInconsistency       < ZookeeperException; end
-    class ConnectionLoss          < ZookeeperException; end
-    class MarshallingError        < ZookeeperException; end
-    class Unimplemented           < ZookeeperException; end
-    class OperationTimeOut        < ZookeeperException; end
-    class BadArguments            < ZookeeperException; end
-    class InvalidState            < ZookeeperException; end
-    class ApiError                < ZookeeperException; end
-    class NoNode                  < ZookeeperException; end
-    class NoAuth                  < ZookeeperException; end
-    class BadVersion              < ZookeeperException; end
-    class NoChildrenForEphemerals < ZookeeperException; end
-    class NodeExists              < ZookeeperException; end
-    class NotEmpty                < ZookeeperException; end
-    class SessionExpired          < ZookeeperException; end
-    class InvalidCallback         < ZookeeperException; end
-    class InvalidACL              < ZookeeperException; end
-    class AuthFailed              < ZookeeperException; end
-    class Closing                 < ZookeeperException; end
-    class Nothing                 < ZookeeperException; end
-    class SessionMoved            < ZookeeperException; end
-    
-    # these are Ruby client exceptions
-    class ConnectionClosed        < ZookeeperException; end
-    class NotConnected            < ZookeeperException; end 
-    class ShuttingDownException   < ZookeeperException; end
-    class DataTooLargeException   < ZookeeperException; end
+    CONST_MISSING_WARNING = <<-EOS
 
-    # yes, make an alias, this is the way zookeeper refers to it
-    ExpiredSession = SessionExpired
-    
-    def self.by_code(code)
-      case code
-        when ZOK then EverythingOk
-        when ZSYSTEMERROR then SystemError
-        when ZRUNTIMEINCONSISTENCY then RunTimeInconsistency
-        when ZDATAINCONSISTENCY then DataInconsistency
-        when ZCONNECTIONLOSS then ConnectionLoss
-        when ZMARSHALLINGERROR then MarshallingError
-        when ZUNIMPLEMENTED then Unimplemented
-        when ZOPERATIONTIMEOUT then OperationTimeOut
-        when ZBADARGUMENTS then BadArguments
-        when ZINVALIDSTATE then InvalidState
-        when ZAPIERROR then ApiError
-        when ZNONODE then NoNode
-        when ZNOAUTH then NoAuth
-        when ZBADVERSION then BadVersion
-        when ZNOCHILDRENFOREPHEMERALS then NoChildrenForEphemerals 
-        when ZNODEEXISTS then NodeExists              
-        when ZNOTEMPTY then NotEmpty                
-        when ZSESSIONEXPIRED then SessionExpired          
-        when ZINVALIDCALLBACK then InvalidCallback         
-        when ZINVALIDACL then InvalidACL
-        when ZAUTHFAILED then AuthFailed
-        when ZCLOSING then Closing
-        when ZNOTHING then Nothing
-        when ZSESSIONMOVED then SessionMoved
-      else Exception.new("no exception defined for code #{code}")
+------------------------------------------------------------------------------------------
+WARNING! THE ZOOKEEPER NAMESPACE HAS CHNAGED AS OF 1.0!
+
+Please update your code to use the new heirarchy!
+
+The constant that got you this was ZookeeperExceptions::ZookeeperException::%s
+------------------------------------------------------------------------------------------
+
+    EOS
+
+    # NOTE(slyphon): Since 0.4 all of the ZookeeperException subclasses were
+    #   defined inside of ZookeeperException, which always seemed well, icky.
+    #   if someone references one of these we'll print out a warning and 
+    #   then give them the constant
+    # 
+    def self.const_missing(const)
+      if Zookeeper::Exceptions.const_defined?(const)
+
+        Zookeeper.deprecation_warning(CONST_MISSING_WARNING % [const.to_s])
+
+        Zookeeper::Exceptions.const_get(const).tap do |const_val|
+          self.const_set(const, const_val)
+        end
+      else
+        super
       end
     end
+  end
+
+
+  class EverythingOk            < ZookeeperException; end
+  class SystemError             < ZookeeperException; end
+  class RunTimeInconsistency    < ZookeeperException; end
+  class DataInconsistency       < ZookeeperException; end
+  class ConnectionLoss          < ZookeeperException; end
+  class MarshallingError        < ZookeeperException; end
+  class Unimplemented           < ZookeeperException; end
+  class OperationTimeOut        < ZookeeperException; end
+  class BadArguments            < ZookeeperException; end
+  class InvalidState            < ZookeeperException; end
+  class ApiError                < ZookeeperException; end
+  class NoNode                  < ZookeeperException; end
+  class NoAuth                  < ZookeeperException; end
+  class BadVersion              < ZookeeperException; end
+  class NoChildrenForEphemerals < ZookeeperException; end
+  class NodeExists              < ZookeeperException; end
+  class NotEmpty                < ZookeeperException; end
+  class SessionExpired          < ZookeeperException; end
+  class InvalidCallback         < ZookeeperException; end
+  class InvalidACL              < ZookeeperException; end
+  class AuthFailed              < ZookeeperException; end
+  class Closing                 < ZookeeperException; end
+  class Nothing                 < ZookeeperException; end
+  class SessionMoved            < ZookeeperException; end
+  
+  # these are Ruby client exceptions
+  class ConnectionClosed        < ZookeeperException; end
+  class NotConnected            < ZookeeperException; end 
+  class ShuttingDownException   < ZookeeperException; end
+  class DataTooLargeException   < ZookeeperException; end
+
+  # yes, make an alias, this is the way zookeeper refers to it
+  ExpiredSession = SessionExpired
     
-    def self.raise_on_error(code)
-      exc = self.by_code(code)
-      raise exc unless exc == EverythingOk
+  def self.by_code(code)
+    case code
+      when ZOK then EverythingOk
+      when ZSYSTEMERROR then SystemError
+      when ZRUNTIMEINCONSISTENCY then RunTimeInconsistency
+      when ZDATAINCONSISTENCY then DataInconsistency
+      when ZCONNECTIONLOSS then ConnectionLoss
+      when ZMARSHALLINGERROR then MarshallingError
+      when ZUNIMPLEMENTED then Unimplemented
+      when ZOPERATIONTIMEOUT then OperationTimeOut
+      when ZBADARGUMENTS then BadArguments
+      when ZINVALIDSTATE then InvalidState
+      when ZAPIERROR then ApiError
+      when ZNONODE then NoNode
+      when ZNOAUTH then NoAuth
+      when ZBADVERSION then BadVersion
+      when ZNOCHILDRENFOREPHEMERALS then NoChildrenForEphemerals 
+      when ZNODEEXISTS then NodeExists              
+      when ZNOTEMPTY then NotEmpty                
+      when ZSESSIONEXPIRED then SessionExpired          
+      when ZINVALIDCALLBACK then InvalidCallback         
+      when ZINVALIDACL then InvalidACL
+      when ZAUTHFAILED then AuthFailed
+      when ZCLOSING then Closing
+      when ZNOTHING then Nothing
+      when ZSESSIONMOVED then SessionMoved
+    else Exception.new("no exception defined for code #{code}")
     end
   end
-end
+  
+  def self.raise_on_error(code)
+    exc = self.by_code(code)
+    raise exc unless exc == EverythingOk
+  end
+end # Exceptions
+end # Zookeeper

@@ -1,5 +1,6 @@
-module ZookeeperCallbacks
-  class Callback
+module Zookeeper
+module Callbacks
+  class Base
     attr_reader :proc, :completed, :context
 
     def initialize
@@ -24,8 +25,8 @@ module ZookeeperCallbacks
       @context = nil
     end
   end
-  
-  class WatcherCallback < Callback
+
+  class WatcherCallback < Base
     ## wexists, awexists, wget, awget, wget_children, awget_children
     attr_reader :type, :state, :path
     
@@ -34,7 +35,7 @@ module ZookeeperCallbacks
     end
   end
 
-  class DataCallback < Callback
+  class DataCallback < Base
     ## aget, awget
     attr_reader :return_code, :data, :stat
 
@@ -43,7 +44,7 @@ module ZookeeperCallbacks
     end
   end
 
-  class StringCallback < Callback
+  class StringCallback < Base
     ## acreate, async
     attr_reader :return_code, :string, :context
 
@@ -54,7 +55,7 @@ module ZookeeperCallbacks
     end
   end
 
-  class StringsCallback < Callback
+  class StringsCallback < Base
     ## aget_children, awget_children
     attr_reader :return_code, :children, :stat
 
@@ -63,7 +64,7 @@ module ZookeeperCallbacks
     end
   end
 
-  class StatCallback < Callback
+  class StatCallback < Base
     ## aset, aexists, awexists
     attr_reader :return_code, :stat
 
@@ -72,7 +73,7 @@ module ZookeeperCallbacks
     end
   end
 
-  class VoidCallback < Callback
+  class VoidCallback < Base
     ## adelete, aset_acl, add_auth
     attr_reader :return_code
     
@@ -81,11 +82,12 @@ module ZookeeperCallbacks
     end
   end
 
-  class ACLCallback < Callback
+  class ACLCallback < Base
     ## aget_acl
     attr_reader :return_code, :acl, :stat
     def initialize_context(hash)
       @return_code, @acl, @stat, @context = hash[:rc], hash[:acl], hash[:stat], hash[:context]
     end
   end
+end
 end

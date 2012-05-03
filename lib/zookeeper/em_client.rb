@@ -2,7 +2,7 @@ require 'zookeeper'
 require 'eventmachine'
 
 module ZookeeperEM 
-  class Client < Zookeeper
+  class Client < Zookeeper::Client
     # @private
     # the EM Connection instance we receive once we call EM.watch on our selectable_io
     attr_reader :em_connection

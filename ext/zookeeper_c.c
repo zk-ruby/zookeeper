@@ -26,7 +26,9 @@
 #include "zkrb_wrapper.h"
 #include "dbg.h"
 
-static VALUE Zookeeper = Qnil;
+
+static VALUE mZookeeper = Qnil;         // the Zookeeper module
+static VALUE CZookeeper = Qnil;         // the Zookeeper::CZookeeper class
 static VALUE ZookeeperClientId = Qnil;
 
 // slyphon: possibly add a lock to this for synchronizing during get_next_event
@@ -160,7 +162,7 @@ static VALUE method_zkrb_init(int argc, VALUE* argv, VALUE self) {
 
   VALUE data;
   struct zkrb_instance_data *zk_local_ctx;
-  data = Data_Make_Struct(Zookeeper, struct zkrb_instance_data, 0, free_zkrb_instance_data, zk_local_ctx);
+  data = Data_Make_Struct(CZookeeper, struct zkrb_instance_data, 0, free_zkrb_instance_data, zk_local_ctx);
   zk_local_ctx->queue = zkrb_queue_alloc();
 
   if (zk_local_ctx->queue == NULL)
@@ -654,9 +656,9 @@ static VALUE method_zerror(VALUE self, VALUE errc) {
 
 static void zkrb_define_methods(void) {
 #define DEFINE_METHOD(method, args) { \
-    rb_define_method(Zookeeper, #method, method_ ## method, args); }
+    rb_define_method(CZookeeper, #method, method_ ## method, args); }
 #define DEFINE_CLASS_METHOD(method, args) { \
-    rb_define_singleton_method(Zookeeper, #method, method_ ## method, args); }
+    rb_define_singleton_method(CZookeeper, #method, method_ ## method, args); }
 
   // the number after the method name should be actual arity of C function - 1
   DEFINE_METHOD(zkrb_init, -1);
@@ -686,10 +688,10 @@ static void zkrb_define_methods(void) {
   // Make these class methods?
   DEFINE_METHOD(zerror, 1);
 
-  rb_define_singleton_method(Zookeeper, "set_zkrb_debug_level", klass_method_zkrb_set_debug_level, 1);
+  rb_define_singleton_method(CZookeeper, "set_zkrb_debug_level", klass_method_zkrb_set_debug_level, 1);
 
-  rb_attr(Zookeeper, rb_intern("selectable_io"), 1, 0, Qtrue);
-  rb_define_method(Zookeeper, "wake_event_loop!", method_wake_event_loop_bang, 0);
+  rb_attr(CZookeeper, rb_intern("selectable_io"), 1, 0, Qtrue);
+  rb_define_method(CZookeeper, "wake_event_loop!", method_wake_event_loop_bang, 0);
 
 }
 
@@ -712,11 +714,13 @@ static VALUE zkrb_client_id_method_initialize(VALUE self) {
 void Init_zookeeper_c() {
   ZKRBDebugging = 0;
 
-  /* initialize Zookeeper class */
-  Zookeeper = rb_define_class("CZookeeper", rb_cObject);
+  mZookeeper = rb_define_module("Zookeeper");
+
+  /* initialize CZookeeper class */
+  CZookeeper = rb_define_class_under(mZookeeper, "CZookeeper", rb_cObject);
   zkrb_define_methods();
 
-  ZookeeperClientId = rb_define_class_under(Zookeeper, "ClientId", rb_cObject);
+  ZookeeperClientId = rb_define_class_under(CZookeeper, "ClientId", rb_cObject);
   rb_define_method(ZookeeperClientId, "initialize", zkrb_client_id_method_initialize, 0);
   rb_define_attr(ZookeeperClientId, "session_id", 1, 1);
   rb_define_attr(ZookeeperClientId, "passwd", 1, 1);

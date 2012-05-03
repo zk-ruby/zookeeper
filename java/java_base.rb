@@ -8,16 +8,19 @@ gem 'slyphon-zookeeper_jar', '= 3.3.5'
 require 'log4j'
 require 'zookeeper_jar'
 
+
+# XXX: reindent this WHOLE FILE later
+module Zookeeper
+
 # The low-level wrapper-specific methods for the Java lib,
 # subclassed by the top-level Zookeeper class
-class ZookeeperBase
+class JavaBase
   include Java
-  include ZookeeperCommon
-  include ZookeeperConstants
-  include ZookeeperCallbacks
-  include ZookeeperExceptions
-  include ZookeeperACLs
-  include ZookeeperStat
+  include Zookeeper::Common
+  include Zookeeper::Constants
+  include Zookeeper::Callbacks
+  include Zookeeper::Exceptions
+  include Zookeeper::ACLs
 
   JZK   = org.apache.zookeeper
   JZKD  = org.apache.zookeeper.data
@@ -473,5 +476,5 @@ class ZookeeperBase
       orig_jzk.close if orig_jzk
     end
 end
-
+end
 

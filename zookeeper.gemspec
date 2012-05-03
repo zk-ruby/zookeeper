@@ -3,8 +3,8 @@ $:.push File.expand_path("../lib", __FILE__)
 require 'zookeeper/version'
 
 Gem::Specification.new do |s|
-  s.name        = ENV.fetch('ZOOKEEPER_GEM_NAME')
-  s.version     = ZookeeperVersion::VERSION
+  s.name        = ENV.fetch('ZOOKEEPER_GEM_NAME', 'zookeeper')
+  s.version     = Zookeeper::VERSION
 
   s.authors     = ["Phillip Pearson", "Eric Maland", "Evan Weaver", "Brian Wickman", "Neil Conway", "Jonathan D. Simms"]
   s.email       = ["slyphon@gmail.com"]
@@ -19,7 +19,7 @@ MRI: 1.8.7, 1.9.2, 1.9.3
 JRuby: ~> 1.6.7
 Rubinius: 2.0.testing
 
-This library uses version #{ZookeeperVersion::DRIVER_VERSION} of zookeeper bindings.
+This library uses version #{Zookeeper::DRIVER_VERSION} of zookeeper bindings.
 
   EOS
 

@@ -1,6 +1,8 @@
 require 'zookeeper/exceptions'
+require 'zookeeper/common/queue_with_pipe'
 
-module ZookeeperCommon
+module Zookeeper
+module Common
   # sigh, i guess define this here?
   ZKRB_GLOBAL_CB_REQ   = -1
 
@@ -27,7 +29,7 @@ protected
     }
     req_id
   end
- 
+
   def setup_watcher(req_id, call_opts)
     @watcher_reqs[req_id] = { :watcher => call_opts[:watcher],
                               :context => call_opts[:watcher_context] }
@@ -41,7 +43,7 @@ protected
   #
   def setup_completion(req_id, meth_name, call_opts)
     @completion_reqs[req_id] = { :callback => call_opts[:callback],
-                                 :context => call_opts[:callback_context] }
+                                :context => call_opts[:callback_context] }
   end
   
   def get_watcher(req_id)
@@ -170,5 +172,4 @@ private
     end
   end
 end
-
-require 'zookeeper/common/queue_with_pipe'
+end

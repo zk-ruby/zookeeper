@@ -1,7 +1,7 @@
 # tests the CZookeeper, obviously only available when running under MRI
 require 'spec_helper'
 
-if Module.const_defined?(:CZookeeper)
+unless defined?(::JRUBY_VERSION)
   describe CZookeeper do
     def pop_all_events
       [].tap do |rv|

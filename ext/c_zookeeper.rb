@@ -1,12 +1,14 @@
+require 'zookeeper/common'
 require 'zookeeper/constants'
 require File.expand_path('../zookeeper_c', __FILE__)
 
 # TODO: see if we can get the destructor to handle thread/event queue teardown
 #       when we're garbage collected
+module Zookeeper
 class CZookeeper
-  include ZookeeperCommon
-  include ZookeeperConstants
-  include ZookeeperExceptions
+  include Zookeeper::Common
+  include Zookeeper::Constants
+  include Zookeeper::Exceptions
 
   DEFAULT_SESSION_TIMEOUT_MSEC = 10000
 
@@ -209,4 +211,4 @@ class CZookeeper
       end
     end
 end
-
+end
