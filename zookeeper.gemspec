@@ -1,15 +1,29 @@
 # -*- encoding: utf-8 -*-
 $:.push File.expand_path("../lib", __FILE__)
+require 'zookeeper/version'
 
 Gem::Specification.new do |s|
   s.name        = "zookeeper"
-  s.version     = '0.9.2'
+  s.version     = ZookeeperVersion::VERSION
 
   s.authors     = ["Phillip Pearson", "Eric Maland", "Evan Weaver", "Brian Wickman", "Neil Conway", "Jonathan D. Simms"]
   s.email       = ["slyphon@gmail.com"]
-  s.summary     = %q{zookeeper client}
-  s.description = s.summary
-  s.homepage    = 'https://github.com/twitter/zookeeper'
+  s.summary     = %q{Low level zookeeper client}
+  s.description = <<-EOS
+A low-level multi-Ruby wrapper around the ZooKeeper API bindings.
+For a friendlier interface, see http://github.com/slyphon/zk
+
+Currently supported:
+
+MRI: 1.8.7, 1.9.2, 1.9.3
+JRuby: ~> 1.6.7
+Rubinius: 2.0.testing
+
+This library uses version #{ZookeeperVersion::DRIVER_VERSION} of zookeeper bindings.
+
+  EOS
+
+  s.homepage    = 'https://github.com/slyphon/zookeeper'
 
   s.add_development_dependency "rspec", ">= 2.0.0"
   s.add_development_dependency 'flexmock', '~> 0.8.11'
