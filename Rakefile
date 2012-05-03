@@ -30,15 +30,9 @@ gemset_name = 'zookeeper'
 
 # this nonsense w/ tmp and the Gemfile is a bundler optimization
 
-directory 'tmp'
 
 GEMSPEC_NAME = 'slyphon-zookeeper.gemspec'
 
-GEMSPEC_LINK = "tmp/#{GEMSPEC_NAME}"
-
-file GEMSPEC_LINK => 'tmp' do
-  ln_s "../#{GEMSPEC_NAME}", GEMSPEC_LINK
-end
 
 %w[1.8.7 1.9.2 jruby rbx 1.9.3].each do |ns_name|
   rvm_ruby = (ns_name == 'rbx') ? "rbx-2.0.testing" : ns_name
@@ -52,11 +46,16 @@ end
   bundle_task_name    = "mb:#{ns_name}:bundle_install"
   rspec_task_name     = "mb:#{ns_name}:run_rspec"
 
-  phony_gemfile_link_name = File.expand_path("tmp/Gemfile.#{ns_name}")
+  phony_gemfile_link_name = "Gemfile.#{ns_name}"
+  phony_gemfile_lock_name = "#{phony_gemfile_link_name}.lock"
 
-  file phony_gemfile_link_name => GEMSPEC_LINK do
+  file phony_gemfile_link_name do
     # apparently, rake doesn't deal with symlinks intelligently :P
-    ln_s('../Gemfile', phony_gemfile_link_name) unless File.exists?(phony_gemfile_link_name)
+    ln_s('Gemfile', phony_gemfile_link_name) unless File.symlink?(phony_gemfile_link_name)
+  end
+
+  task :clean do
+    rm_rf [phony_gemfile_lock_name, phony_gemfile_lock_name]
   end
 
   task create_gemset_name do
@@ -106,7 +105,7 @@ task "mb:test_all" do
     Rake::Task['mb:test_all_rubies'].invoke
   end
 
-  $stderr.puts "Full test run took: #{t} s"
+  $stderr.puts "Test run took: #{t} s"
 end
 
 task :default => 'mb:1.9.3'
