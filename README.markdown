@@ -51,7 +51,7 @@ Calls take a dictionary of parameters.  With the exception of set\_acl, the only
 
 Twitter's open source office was kind enough to transfer this repository to facilitate development and administration of this repository. The `zookeeper` gem's last three releases were recorded in branches `v0.4.2`, `v0.4.3` and `v0.4.4`. Releases of the `slyphon-zookeeper` gem were cut off of the fork, and unfortunately (due to an oversight on my part) were tagged with unrelated versions. Those were tagged with names `release/0.9.2`. 
 
-The plan is to rename the `slyphon-zookeeper` tags to `slyzk/release/0.9.2`, and to tag the `zookeeper` releases `twitter/release/0.4.2`.
+The plan is to keep the `slyphon-zookeeper` tags, and to tag the `zookeeper` releases `twitter/release/0.4.2`.
 
 Further work will be carried out on this repository. The `0.9.2` release of the zookeeper gem will bring the two divergent (conceptual) branches of development together.
 
