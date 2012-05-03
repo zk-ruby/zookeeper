@@ -23,7 +23,7 @@ require 'zookeeper_base'
 
 class Zookeeper < ZookeeperBase
   unless defined?(@@logger)
-    @@logger = Logger.new('/dev/null').tap { |l| l.level = Logger::FATAL } # UNIX: FOR GREAT JUSTICE !!
+    @@logger = Logger.new($stderr).tap { |l| l.level = Logger::ERROR } 
   end
 
   def self.logger
