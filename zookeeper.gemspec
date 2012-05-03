@@ -3,7 +3,7 @@ $:.push File.expand_path("../lib", __FILE__)
 require 'zookeeper/version'
 
 Gem::Specification.new do |s|
-  s.name        = "zookeeper"
+  s.name        = ENV.fetch('ZOOKEEPER_GEM_NAME')
   s.version     = ZookeeperVersion::VERSION
 
   s.authors     = ["Phillip Pearson", "Eric Maland", "Evan Weaver", "Brian Wickman", "Neil Conway", "Jonathan D. Simms"]

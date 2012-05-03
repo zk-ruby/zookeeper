@@ -2,17 +2,24 @@
 #   ENV.fetch('GEM_HOME').split('@').last
 # end
 
-GEM_FILES = FileList['slyphon-zookeeper-*.gem']
+GEM_FILES = FileList['*zookeeper-*.gem']
+
+# need to releaase under both names until ZK is updated to use just 'zookeeper'
+GEM_NAMES = %w[zookeeper slyphon-zookeeper]
 
 namespace :mb do
   namespace :gems do
     task :build do
-      sh "rvm 1.8.7 do gem build slyphon-zookeeper.gemspec"
-      ENV['JAVA_GEM'] = '1'
-      sh "rvm 1.8.7 do gem build slyphon-zookeeper.gemspec"
+      GEM_NAMES.each do |gem_name|
+        ENV['JAVA_GEM'] = nil
+        sh "rvm 1.8.7 do env ZOOKEEPER_GEM_NAME='#{gem_name}' gem build zookeeper.gemspec"
+        sh "rvm 1.8.7 do env JAVA_GEM=1 ZOOKEEPER_GEM_NAME='#{gem_name}' gem build zookeeper.gemspec"
+      end
     end
 
-    task :push do
+    task :push => :build do
+      raise "No gemfiles to push!" if GEM_FILES.empty?
+
       GEM_FILES.each do |gem|
         sh "gem push #{gem}"
       end
@@ -29,10 +36,6 @@ end
 gemset_name = 'zookeeper'
 
 # this nonsense w/ tmp and the Gemfile is a bundler optimization
-
-
-GEMSPEC_NAME = 'slyphon-zookeeper.gemspec'
-
 
 %w[1.8.7 1.9.2 jruby rbx 1.9.3].each do |ns_name|
   rvm_ruby = (ns_name == 'rbx') ? "rbx-2.0.testing" : ns_name
