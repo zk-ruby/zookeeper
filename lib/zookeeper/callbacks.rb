@@ -16,7 +16,7 @@ module Callbacks
     #
     #
     def self.create
-      cb_inst = new { blk.call(cb_inst) }
+      cb_inst = new { yield cb_inst }
     end
 
     def initialize
