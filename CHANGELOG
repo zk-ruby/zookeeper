@@ -1,3 +1,33 @@
+v1.0.0 Single Zookeeper namespace
+
+  * The top level Zookeeper class is now a module, the former Zookeeper
+    class is now Zookeeper::Client
+
+  * Consolidate the 6 top-level namespaces into one, Zookeeper module
+
+    ZookeeperCommon -> Zookeeper::Common
+    ZookeeperCallbacks -> Zookeeper::Callbacks
+    ZookeeperConstants -> Zookeeper::Constants
+    ZookeeperExceptions -> Zookeeper::Exceptions
+    ZookeeperACLs -> Zookeeper::ACLs
+    CZookeeper -> Zookeeper::CZookeeper
+
+  * Added a 'zookeeper/compatibility' file that will define the old names
+    and look up the new constants for users, and print a warning telling them
+    the change has occurred and that they should update their code
+
+  * Added scripts/upgrade-1.0-sed-alike.rb which will basically do a
+    find-and-replace, changing the old names to the new names (worked on
+    both the Zookeeper and ZK codebases).
+
+  * Java and C now use different names for the base class, to avoid the
+    possibility of error. Java is now JavaBase, C remains ZookeeperBase.
+    
+  * All client methods are defined in the ClientMethods module and mixed
+    into the constructed Client class.
+
+  * Fix all requires, no longer monkey with $LOAD_PATH, use require_relative
+
 v0.9.3 Event thread shutdown fix, Windows compatibility fix
 
   * Use a 'shutdown thread' to coordinate cleanup if close is called from the
