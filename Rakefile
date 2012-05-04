@@ -33,85 +33,14 @@ namespace :mb do
   end
 end
 
-gemset_name = 'zookeeper'
 
-# this nonsense w/ tmp and the Gemfile is a bundler optimization
+require File.expand_path('../lib/zookeeper/rake_tasks', __FILE__)
 
-%w[1.8.7 1.9.2 jruby rbx 1.9.3].each do |ns_name|
-  rvm_ruby = (ns_name == 'rbx') ? "rbx-2.0.testing" : ns_name
+RUBY_NAMES = %w[1.8.7 1.9.2 jruby rbx 1.9.3]
 
-  ruby_with_gemset = "#{rvm_ruby}@#{gemset_name}"
+Zookeeper::RakeTasks.define_test_tasks_for(*RUBY_NAMES)
 
-  create_gemset_name  = "mb:#{ns_name}:create_gemset"
-  clobber_task_name   = "mb:#{ns_name}:clobber"
-  clean_task_name     = "mb:#{ns_name}:clean"
-  build_task_name     = "mb:#{ns_name}:build"
-  bundle_task_name    = "mb:#{ns_name}:bundle_install"
-  rspec_task_name     = "mb:#{ns_name}:run_rspec"
-
-  phony_gemfile_link_name = "Gemfile.#{ns_name}"
-  phony_gemfile_lock_name = "#{phony_gemfile_link_name}.lock"
-
-  file phony_gemfile_link_name do
-    # apparently, rake doesn't deal with symlinks intelligently :P
-    ln_s('Gemfile', phony_gemfile_link_name) unless File.symlink?(phony_gemfile_link_name)
-  end
-
-  task :clean do
-    rm_rf [phony_gemfile_lock_name, phony_gemfile_lock_name]
-  end
-
-  task create_gemset_name do
-    sh "rvm #{rvm_ruby} do rvm gemset create #{gemset_name}"
-  end
-
-  task clobber_task_name do
-    unless rvm_ruby == 'jruby'
-      cd 'ext' do
-        sh "rake clobber"
-      end
-    end
-  end
-
-  task clean_task_name do
-    unless rvm_ruby == 'jruby'
-      cd 'ext' do
-        sh "rake clean"
-      end
-    end
-  end
-
-  task build_task_name => [create_gemset_name, clean_task_name] do
-    unless rvm_ruby == 'jruby'
-      cd 'ext' do
-        sh "rvm #{ruby_with_gemset} do rake build"
-      end
-    end
-  end
-
-  task bundle_task_name => [phony_gemfile_link_name, build_task_name] do
-    sh "rvm #{ruby_with_gemset} do bundle install --gemfile #{phony_gemfile_link_name}"
-  end
-
-  task rspec_task_name => bundle_task_name do
-    sh "rvm #{ruby_with_gemset} do env BUNDLE_GEMFILE=#{phony_gemfile_link_name} bundle exec rspec spec --fail-fast"
-  end
-
-  task "mb:#{ns_name}" => rspec_task_name
-
-  task "mb:test_all_rubies" => rspec_task_name
-end
-
-task "mb:test_all" do
-  require 'benchmark'
-  t = Benchmark.realtime do
-    Rake::Task['mb:test_all_rubies'].invoke
-  end
-
-  $stderr.puts "Test run took: #{t} s"
-end
-
-task :default => 'mb:1.9.3'
+task :default => 'zk:1.9.3'
 
 task :clobber do
   rm_rf 'tmp'
