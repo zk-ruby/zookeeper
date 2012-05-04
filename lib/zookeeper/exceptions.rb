@@ -3,7 +3,10 @@ module Exceptions
   include Constants
 
   class ZookeeperException < StandardError
-    CONST_MISSING_WARNING = <<-EOS
+
+    unless defined?(CONST_MISSING_WARNING)
+
+      CONST_MISSING_WARNING = <<-EOS
 
 ------------------------------------------------------------------------------------------
 WARNING! THE ZOOKEEPER NAMESPACE HAS CHNAGED AS OF 1.0!
@@ -11,9 +14,14 @@ WARNING! THE ZOOKEEPER NAMESPACE HAS CHNAGED AS OF 1.0!
 Please update your code to use the new heirarchy!
 
 The constant that got you this was ZookeeperExceptions::ZookeeperException::%s
+
+stacktrace: 
+%s
+
 ------------------------------------------------------------------------------------------
 
-    EOS
+      EOS
+    end
 
     # NOTE(slyphon): Since 0.4 all of the ZookeeperException subclasses were
     #   defined inside of ZookeeperException, which always seemed well, icky.
@@ -23,7 +31,10 @@ The constant that got you this was ZookeeperExceptions::ZookeeperException::%s
     def self.const_missing(const)
       if Zookeeper::Exceptions.const_defined?(const)
 
-        Zookeeper.deprecation_warning(CONST_MISSING_WARNING % [const.to_s])
+        stacktrace = caller[0..-2].reject {|n| n =~ %r%/rspec/% }.map { |n| "\t#{n}" }.join("\n")
+
+        Zookeeper.deprecation_warning(CONST_MISSING_WARNING % [const.to_s, stacktrace])
+
 
         Zookeeper::Exceptions.const_get(const).tap do |const_val|
           self.const_set(const, const_val)
@@ -67,7 +78,7 @@ The constant that got you this was ZookeeperExceptions::ZookeeperException::%s
   class DataTooLargeException   < ZookeeperException; end
 
   # yes, make an alias, this is the way zookeeper refers to it
-  ExpiredSession = SessionExpired
+  ExpiredSession = SessionExpired unless defined?(ExpiredSession)
     
   def self.by_code(code)
     case code

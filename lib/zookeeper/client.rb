@@ -1,16 +1,10 @@
 # figure out what platform we're on
+# this way there's no ambiguity about which file to include
+# or which class we're subclassing.
 
 if defined?(::JRUBY_VERSION)
-#   $stderr.puts "Loading the jruby extensions"
-#   $LOAD_PATH.unshift(File.expand_path('../../../java', __FILE__)).uniq!
-#   require 'java_base'
-  
   require_relative('../../java/java_base')
 else
-#   $stderr.puts "adding the C extensions"
-#   $LOAD_PATH.unshift(File.expand_path('../../../ext', __FILE__)).uniq!
-#   require 'zookeeper_base'
-
   require_relative('../../ext/zookeeper_base')
 end
 

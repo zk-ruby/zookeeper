@@ -129,7 +129,7 @@ shared_examples_for "connection" do
 
     describe 'bad arguments' do
       it %[should barf with a BadArguments error] do
-        lambda { zk.get(:bad_arg => 'what!?') }.should raise_error(ZookeeperExceptions::ZookeeperException::BadArguments)
+        lambda { zk.get(:bad_arg => 'what!?') }.should raise_error(Zookeeper::Exceptions::BadArguments)
       end
     end
   end   # get
