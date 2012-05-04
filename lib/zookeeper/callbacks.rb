@@ -3,6 +3,22 @@ module Callbacks
   class Base
     attr_reader :proc, :completed, :context
 
+    # allows for easier construction of a user callback block that will be
+    # called with the callback object itself as an argument. 
+    #
+    # @example
+    #   
+    #   Base.create do |cb|
+    #     puts "watcher callback called with argument: #{cb.inspect}"
+    #   end
+    #
+    #   "watcher callback called with argument: #<Zookeeper::Callbacks::Base:0x1018a3958 @state=3, @type=1, ...>"
+    #
+    #
+    def self.create
+      cb_inst = new { blk.call(cb_inst) }
+    end
+
     def initialize
       @completed = false
       @proc = Proc.new do |hash|
@@ -13,7 +29,6 @@ module Callbacks
     end
     
     def call(*args)
-      # puts "call passed #{args.inspect}"
       @proc.call(*args)
     end
     
