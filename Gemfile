@@ -9,7 +9,12 @@ group :test do
   gem 'flexmock', '~> 0.8.11'
   gem 'eventmachine', '1.0.0.beta.4'
   gem 'evented-spec', '~> 0.9.0'
-  gem 'zk-server', '~> 0.9.1'
+
+  git 'git://github.com/slyphon/zk-server.git', :branch => 'master' do
+    gem 'zk-server', '>= 1.0.0'
+  end
+
+#   gem 'zk-server', '~> 0.9.1'
 end
 
 group :development do
