@@ -1,3 +1,21 @@
+warn <<-EOS
+
+-----------------------------------------------------------------------------
+
+          NOTICE: ZOOKEEPER BACKWARDS COMPATIBILTY EANBLED!! 
+        
+               THIS WILL NOT BE AUTOMATIC IN 1.1 !!
+
+  There was a major change to the organization of the Zookeeper gem between
+  0.9 and 1.0, breaking backwards compatibility. To ease the transition, 
+  
+  #{__FILE__}
+  
+  is automatically required. This will *not* be the case in 1.1.
+
+-----------------------------------------------------------------------------
+EOS
+
 module Zookeeper
   module Compatibility
     def clean_backtrace

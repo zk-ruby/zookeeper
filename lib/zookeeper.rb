@@ -81,5 +81,5 @@ module Zookeeper
 end
 
 # just for first test, get rid of this soon
-#require_relative 'zookeeper/compatibility'
+require_relative 'zookeeper/compatibility'
 
