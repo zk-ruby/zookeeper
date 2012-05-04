@@ -44,7 +44,7 @@ class JavaBase
 
   JZKD::ACL.class_eval do
     def self.from_ruby_acl(acl)
-      raise TypeError, "acl must be a ZookeeperACLs::ACL not #{acl.inspect}" unless acl.kind_of?(ZookeeperACLs::ACL)
+      raise TypeError, "acl must be a Zookeeper::ACLs::ACL not #{acl.inspect}" unless acl.kind_of?(Zookeeper::ACLs::ACL)
       id = org.apache.zookeeper.data.Id.new(acl.id.scheme.to_s, acl.id.id.to_s)
       new(acl.perms.to_i, id)
     end
