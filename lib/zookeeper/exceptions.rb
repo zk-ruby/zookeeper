@@ -106,7 +106,7 @@ stacktrace:
       when ZCLOSING then Closing
       when ZNOTHING then Nothing
       when ZSESSIONMOVED then SessionMoved
-    else Exception.new("no exception defined for code #{code}")
+    else ZookeeperException.new("no exception defined for code #{code}")
     end
   end
   
