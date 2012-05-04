@@ -29,9 +29,10 @@ ARGV.each do |path|
       while line = input.gets
         tmp.puts line.gsub(/\bZookeeperStat::Stat\b/, 'Zookeeper::Stat').
           gsub(/\bZookeeper::(\w+)Callback\b/, 'Zookeeper::Callbacks::\1Callback').
-          gsub(/\bZookeeperACLs::ACL\b/, 'Zookeeper::ACLs::ACL').
           gsub(/\bZookeeperACLs::(ZOO_\w+)\b/, 'Zookeeper::Constants::\1').
-          gsub(/\bZookeeperConstants\b/, 'Zookeeper::Constants')
+          gsub(/\bZookeeper(Constants|Exceptions|Common|ACLs|Callbacks)\b/, 'Zookeeper::\1')
+
+
       end
     end
 

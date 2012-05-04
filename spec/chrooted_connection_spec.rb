@@ -52,7 +52,7 @@ describe 'Zookeeper chrooted' do
         it %[should return ZNONODE] do
           rv = zk.create(:path => '/', :data => '')
           rv[:rc].should_not be_zero
-          rv[:rc].should == ZookeeperExceptions::ZNONODE
+          rv[:rc].should == Zookeeper::Exceptions::ZNONODE
         end
       end
     end

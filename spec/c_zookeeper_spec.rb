@@ -16,12 +16,12 @@ else
     end
 
     def wait_until_connected(timeout=2)
-      wait_until(timeout) { @czk.state == ZookeeperConstants::ZOO_CONNECTED_STATE }
+      wait_until(timeout) { @czk.state == Zookeeper::Constants::ZOO_CONNECTED_STATE }
     end
 
     describe do
       before do
-        @event_queue = ZookeeperCommon::QueueWithPipe.new
+        @event_queue = Zookeeper::Common::QueueWithPipe.new
         @czk = Zookeeper::CZookeeper.new('localhost:2181', @event_queue)
       end
 
@@ -42,9 +42,9 @@ else
         it %[should have a connection event after being connected] do
           event = wait_until(2) { @event_queue.pop }
           event.should be
-          event[:req_id].should == ZookeeperCommon::ZKRB_GLOBAL_CB_REQ
-          event[:type].should   == ZookeeperConstants::ZOO_SESSION_EVENT
-          event[:state].should  == ZookeeperConstants::ZOO_CONNECTED_STATE
+          event[:req_id].should == Zookeeper::Common::ZKRB_GLOBAL_CB_REQ
+          event[:type].should   == Zookeeper::Constants::ZOO_SESSION_EVENT
+          event[:state].should  == Zookeeper::Constants::ZOO_CONNECTED_STATE
         end
       end
     end

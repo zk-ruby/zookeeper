@@ -69,7 +69,7 @@ module ZookeeperSpecHeleprs
         h[:children].each do |child|
           rm_rf(z, File.join(path, child))
         end
-      elsif h[:rc] == ZookeeperExceptions::ZNONODE
+      elsif h[:rc] == Zookeeper::Exceptions::ZNONODE
         # no-op
       else
         raise "Oh noes! unexpected return value! #{h.inspect}"
@@ -78,7 +78,7 @@ module ZookeeperSpecHeleprs
 
     rv = z.delete(:path => path)
 
-    unless (rv[:rc].zero? or rv[:rc] == ZookeeperExceptions::ZNONODE)
+    unless (rv[:rc].zero? or rv[:rc] == Zookeeper::Exceptions::ZNONODE)
       raise "oh noes! failed to delete #{path}" 
     end
 

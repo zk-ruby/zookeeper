@@ -353,7 +353,7 @@ shared_examples_for "connection" do
       it_should_behave_like "all success return values"
 
       before do
-        @cb = ZookeeperCallbacks::StringsCallback.new
+        @cb = Zookeeper::Callbacks::StringsCallback.new
         @rv = zk.get_children(:path => path, :callback => @cb, :callback_context => path)
 
         wait_until { @cb.completed? }
@@ -384,7 +384,7 @@ shared_examples_for "connection" do
         @addtl_child = 'child3'
 
         @watcher = Zookeeper::Callbacks::WatcherCallback.new
-        @cb = ZookeeperCallbacks::StringsCallback.new
+        @cb = Zookeeper::Callbacks::StringsCallback.new
 
         @rv = zk.get_children(:path => path, :watcher => @watcher, :watcher_context => path, :callback => @cb, :callback_context => path)
         wait_until { @cb.completed? }
@@ -472,7 +472,7 @@ shared_examples_for "connection" do
       it_should_behave_like "all success return values"
 
       before do
-        @cb = ZookeeperCallbacks::StatCallback.new
+        @cb = Zookeeper::Callbacks::StatCallback.new
         @rv = zk.stat(:path => path, :callback => @cb, :callback_context => path)
 
         wait_until { @cb.completed? }
@@ -496,7 +496,7 @@ shared_examples_for "connection" do
 
         @watcher = Zookeeper::Callbacks::WatcherCallback.new
 
-        @cb = ZookeeperCallbacks::StatCallback.new
+        @cb = Zookeeper::Callbacks::StatCallback.new
         @rv = zk.stat(:path => path, :callback => @cb, :callback_context => path, :watcher => @watcher, :watcher_context => path)
 
         wait_until { @cb.completed? }
@@ -642,7 +642,7 @@ shared_examples_for "connection" do
 
     describe :async do
       before do
-        @cb = ZookeeperCallbacks::StringCallback.new
+        @cb = Zookeeper::Callbacks::StringCallback.new
       end
 
       describe :default_flags do
@@ -821,7 +821,7 @@ shared_examples_for "connection" do
 
     describe :async do
       before do
-        @cb = ZookeeperCallbacks::VoidCallback.new
+        @cb = Zookeeper::Callbacks::VoidCallback.new
       end
 
       describe 'without version' do
