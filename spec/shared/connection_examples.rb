@@ -190,7 +190,7 @@ shared_examples_for "connection" do
         it %[should barf if the data size is too large], :input_size => true do
           large_data = '0' * (1024 ** 2)
 
-          lambda { zk.set(:path => path, :data => large_data) }.should raise_error(ZookeeperExceptions::ZookeeperException::DataTooLargeException)
+          lambda { zk.set(:path => path, :data => large_data) }.should raise_error(Zookeeper::Exceptions::DataTooLargeException)
         end
       end
     end   # sync
@@ -264,7 +264,7 @@ shared_examples_for "connection" do
         it %[should barf if the data size is too large], :input_size => true do
           large_data = '0' * (1024 ** 2)
 
-          lambda { zk.set(:path => path, :data => large_data, :callback => @cb, :callback_context => path) }.should raise_error(ZookeeperExceptions::ZookeeperException::DataTooLargeException)
+          lambda { zk.set(:path => path, :data => large_data, :callback => @cb, :callback_context => path) }.should raise_error(Zookeeper::Exceptions::DataTooLargeException)
         end
       end
 
@@ -541,7 +541,7 @@ shared_examples_for "connection" do
         it %[should barf if the data size is too large], :input_size => true do
           large_data = '0' * (1024 ** 2)
 
-          lambda { zk.create(:path => path, :data => large_data) }.should raise_error(ZookeeperExceptions::ZookeeperException::DataTooLargeException)
+          lambda { zk.create(:path => path, :data => large_data) }.should raise_error(Zookeeper::Exceptions::DataTooLargeException)
         end
       end
 
@@ -676,7 +676,7 @@ shared_examples_for "connection" do
 
           lambda do
             zk.create(:path => path, :data => large_data, :callback => @cb, :callback_context => path)
-          end.should raise_error(ZookeeperExceptions::ZookeeperException::DataTooLargeException)
+          end.should raise_error(Zookeeper::Exceptions::DataTooLargeException)
         end
       end
 
@@ -975,7 +975,7 @@ shared_examples_for "connection" do
 
     describe :errors do
       it %[should barf with BadArguments if :callback is not given] do
-        lambda { zk.sync(:path => path) }.should raise_error(ZookeeperExceptions::ZookeeperException::BadArguments)
+        lambda { zk.sync(:path => path) }.should raise_error(Zookeeper::Exceptions::BadArguments)
       end
     end
   end
