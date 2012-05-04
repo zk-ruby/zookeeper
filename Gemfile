@@ -10,11 +10,7 @@ group :test do
   gem 'eventmachine', '1.0.0.beta.4'
   gem 'evented-spec', '~> 0.9.0'
 
-  git 'git://github.com/slyphon/zk-server.git', :branch => 'master' do
-    gem 'zk-server', '>= 1.0.0'
-  end
-
-#   gem 'zk-server', '~> 0.9.1'
+  gem 'zk-server', '~> 1.0.0'
 end
 
 group :development do
