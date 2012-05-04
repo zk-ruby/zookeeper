@@ -150,14 +150,14 @@ protected
 
   def assert_supported_keys(args, supported)
     unless (args.keys - supported).empty?
-      raise ZookeeperExceptions::ZookeeperException::BadArguments,  # this heirarchy is kind of retarded
+      raise Zookeeper::Exceptions::BadArguments,  # this heirarchy is kind of retarded
             "Supported arguments are: #{supported.inspect}, but arguments #{args.keys.inspect} were supplied instead"
     end
   end
 
   def assert_required_keys(args, required)
     unless (required - args.keys).empty?
-      raise ZookeeperExceptions::ZookeeperException::BadArguments,
+      raise Zookeeper::Exceptions::BadArguments,
             "Required arguments are: #{required.inspect}, but only the arguments #{args.keys.inspect} were supplied."
     end
   end

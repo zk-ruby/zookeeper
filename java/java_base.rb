@@ -29,8 +29,6 @@ class JavaBase
   ANY_VERSION = -1
   DEFAULT_SESSION_TIMEOUT = 10_000
 
-  ZKRB_GLOBAL_CB_REQ = -1 unless defined?(ZKRB_GLOBAL_CB_REQ)
-
   JZKD::Stat.class_eval do
     MEMBERS = [:version, :czxid, :mzxid, :ctime, :mtime, :cversion, :aversion, :ephemeralOwner, :dataLength, :numChildren, :pzxid]
     def to_hash
@@ -161,7 +159,7 @@ class JavaBase
 
       def initialize(event_queue)
         @event_queue = event_queue
-        super(ZookeeperBase::ZKRB_GLOBAL_CB_REQ)
+        super(Zookeeper::Constants::ZKRB_GLOBAL_CB_REQ)
       end
 
       def process(event)

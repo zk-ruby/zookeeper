@@ -5,21 +5,23 @@ require 'monitor'
 require 'forwardable'
 require 'logger'
 
+require 'backports'
+
 module Zookeeper
   # establishes the namespace
 end
 
-require 'zookeeper/acls'
-require 'zookeeper/constants'
-require 'zookeeper/exceptions'
-require 'zookeeper/common'
-require 'zookeeper/callbacks'
-require 'zookeeper/stat'
-require 'zookeeper/client_methods'
+require_relative 'zookeeper/acls'
+require_relative 'zookeeper/constants'
+require_relative 'zookeeper/exceptions'
+require_relative 'zookeeper/common'
+require_relative 'zookeeper/callbacks'
+require_relative 'zookeeper/stat'
+require_relative 'zookeeper/client_methods'
 
 # ok, now we construct the client
 
-require 'zookeeper/client'
+require_relative 'zookeeper/client'
 
 module Zookeeper
   include Constants

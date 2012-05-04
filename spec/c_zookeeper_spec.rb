@@ -1,8 +1,11 @@
 # tests the CZookeeper, obviously only available when running under MRI
-require 'spec_helper'
 
-unless defined?(::JRUBY_VERSION)
-  describe CZookeeper do
+if defined?(::JRUBY_VERSION)
+  $stderr.puts "NOT TESTING C ZOOKEEPER UNDER JRUBY"
+else
+  require 'spec_helper'
+
+  describe Zookeeper::CZookeeper do
     def pop_all_events
       [].tap do |rv|
         begin
@@ -19,7 +22,7 @@ unless defined?(::JRUBY_VERSION)
     describe do
       before do
         @event_queue = ZookeeperCommon::QueueWithPipe.new
-        @czk = CZookeeper.new('localhost:2181', @event_queue)
+        @czk = Zookeeper::CZookeeper.new('localhost:2181', @event_queue)
       end
 
       after do

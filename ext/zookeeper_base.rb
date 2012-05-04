@@ -1,4 +1,6 @@
-require File.expand_path('../c_zookeeper', __FILE__)
+# require File.expand_path('../c_zookeeper', __FILE__)
+
+require_relative 'c_zookeeper'
 require 'forwardable'
 
 # The low-level wrapper-specific methods for the C lib

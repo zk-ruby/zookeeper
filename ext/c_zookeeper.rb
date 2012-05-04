@@ -1,6 +1,8 @@
 require 'zookeeper/common'
 require 'zookeeper/constants'
-require File.expand_path('../zookeeper_c', __FILE__)
+require_relative 'zookeeper_c'
+
+# require File.expand_path('../zookeeper_c', __FILE__)
 
 # TODO: see if we can get the destructor to handle thread/event queue teardown
 #       when we're garbage collected

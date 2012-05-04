@@ -56,6 +56,8 @@ module Constants
   ZNOTHING                  = -117
   ZSESSIONMOVED             = -118
 
+  ZKRB_GLOBAL_CB_REQ = -1
+
   # used to find the name for a numeric event
   # @private
   EVENT_TYPE_NAMES = {

@@ -20,10 +20,15 @@ module ZookeeperACLs
   include Zookeeper::ACLs::Constants
 end
 
+module ZookeeperCommon
+  include Zookeeper::Common
+end
+
 module Zookeeper
   include ZookeeperConstants
   include ZookeeperCallbacks
   include ZookeeperExceptions
+  include ZookeeperCommon
   include ZookeeperStat
   include ZookeeperACLs
 end
