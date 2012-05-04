@@ -1,5 +1,5 @@
-require 'zookeeper/common'
-require 'zookeeper/constants'
+require_relative '../lib/zookeeper/common'
+require_relative '../lib/zookeeper/constants'
 require_relative 'zookeeper_c'
 
 # require File.expand_path('../zookeeper_c', __FILE__)
