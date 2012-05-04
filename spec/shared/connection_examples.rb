@@ -950,7 +950,7 @@ shared_examples_for "connection" do
 
   describe :session_id do
     it %[should return the session_id as a Fixnum] do
-      zk.session_id.should be_kind_of(Fixnum)
+      zk.session_id.should be_kind_of(Integer)
     end
   end
 
