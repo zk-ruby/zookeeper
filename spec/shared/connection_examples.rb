@@ -34,7 +34,7 @@ shared_examples_for "connection" do
 
       it %[should return a stat] do
         @rv[:stat].should_not be_nil
-        @rv[:stat].should be_kind_of(ZookeeperStat::Stat)
+        @rv[:stat].should be_kind_of(Zookeeper::Stat)
       end
     end
 
@@ -43,7 +43,7 @@ shared_examples_for "connection" do
 
       before do
         @event = nil
-        @watcher = Zookeeper::WatcherCallback.new
+        @watcher = Zookeeper::Callbacks::WatcherCallback.new
 
         @rv = zk.get(:path => path, :watcher => @watcher, :watcher_context => path) 
       end
@@ -67,7 +67,7 @@ shared_examples_for "connection" do
 
     describe :async do
       before do
-        @cb = Zookeeper::DataCallback.new
+        @cb = Zookeeper::Callbacks::DataCallback.new
 
         @rv = zk.get(:path => path, :callback => @cb, :callback_context => path)
         wait_until(1.0) { @cb.completed? }
@@ -82,7 +82,7 @@ shared_examples_for "connection" do
 
       it %[should have the stat object in the callback] do
         @cb.stat.should_not be_nil
-        @cb.stat.should be_kind_of(ZookeeperStat::Stat)
+        @cb.stat.should be_kind_of(Zookeeper::Stat)
       end
 
       it %[should have the data] do
@@ -94,8 +94,8 @@ shared_examples_for "connection" do
       it_should_behave_like "all success return values"
 
       before do
-        @cb = Zookeeper::DataCallback.new
-        @watcher = Zookeeper::WatcherCallback.new
+        @cb = Zookeeper::Callbacks::DataCallback.new
+        @watcher = Zookeeper::Callbacks::WatcherCallback.new
 
         @rv = zk.get(:path => path, :callback => @cb, :callback_context => path, :watcher => @watcher, :watcher_context => path)
         wait_until(1.0) { @cb.completed? }
@@ -104,7 +104,7 @@ shared_examples_for "connection" do
 
       it %[should have the stat object in the callback] do
         @cb.stat.should_not be_nil
-        @cb.stat.should be_kind_of(ZookeeperStat::Stat)
+        @cb.stat.should be_kind_of(Zookeeper::Stat)
       end
 
       it %[should have the data] do
@@ -150,7 +150,7 @@ shared_examples_for "connection" do
 
         it %[should return the new stat] do
           @rv[:stat].should_not be_nil
-          @rv[:stat].should be_kind_of(ZookeeperStat::Stat)
+          @rv[:stat].should be_kind_of(Zookeeper::Stat)
           @rv[:stat].version.should > @stat.version
         end
       end
@@ -164,7 +164,7 @@ shared_examples_for "connection" do
 
         it %[should return the new stat] do
           @rv[:stat].should_not be_nil
-          @rv[:stat].should be_kind_of(ZookeeperStat::Stat)
+          @rv[:stat].should be_kind_of(Zookeeper::Stat)
           @rv[:stat].version.should > @stat.version
         end
       end
@@ -197,7 +197,7 @@ shared_examples_for "connection" do
 
     describe :async do
       before do
-        @cb = Zookeeper::StatCallback.new
+        @cb = Zookeeper::Callbacks::StatCallback.new
       end
 
       describe 'without version' do
@@ -303,7 +303,7 @@ shared_examples_for "connection" do
 
       it %[should have a stat object whose num_children is 3] do
         @rv[:stat].should_not be_nil
-        @rv[:stat].should be_kind_of(ZookeeperStat::Stat)
+        @rv[:stat].should be_kind_of(Zookeeper::Stat)
         @rv[:stat].num_children.should == 3
       end
     end
@@ -314,7 +314,7 @@ shared_examples_for "connection" do
       before do
         @addtl_child = 'child3'
 
-        @watcher = Zookeeper::WatcherCallback.new
+        @watcher = Zookeeper::Callbacks::WatcherCallback.new
 
         @rv = zk.get_children(:path => path, :watcher => @watcher, :watcher_context => path)
       end
@@ -331,7 +331,7 @@ shared_examples_for "connection" do
 
       it %[should have a stat object whose num_children is 3] do
         @rv[:stat].should_not be_nil
-        @rv[:stat].should be_kind_of(ZookeeperStat::Stat)
+        @rv[:stat].should be_kind_of(Zookeeper::Stat)
         @rv[:stat].num_children.should == 3
       end
 
@@ -372,7 +372,7 @@ shared_examples_for "connection" do
 
       it %[should have a stat object whose num_children is 3] do
         @cb.stat.should_not be_nil
-        @cb.stat.should be_kind_of(ZookeeperStat::Stat)
+        @cb.stat.should be_kind_of(Zookeeper::Stat)
         @cb.stat.num_children.should == 3
       end
     end
@@ -383,7 +383,7 @@ shared_examples_for "connection" do
       before do
         @addtl_child = 'child3'
 
-        @watcher = Zookeeper::WatcherCallback.new
+        @watcher = Zookeeper::Callbacks::WatcherCallback.new
         @cb = ZookeeperCallbacks::StringsCallback.new
 
         @rv = zk.get_children(:path => path, :watcher => @watcher, :watcher_context => path, :callback => @cb, :callback_context => path)
@@ -407,7 +407,7 @@ shared_examples_for "connection" do
 
       it %[should have a stat object whose num_children is 3] do
         @cb.stat.should_not be_nil
-        @cb.stat.should be_kind_of(ZookeeperStat::Stat)
+        @cb.stat.should be_kind_of(Zookeeper::Stat)
         @cb.stat.num_children.should == 3
       end
 
@@ -445,7 +445,7 @@ shared_examples_for "connection" do
       it_should_behave_like "all success return values"
 
       before do
-        @watcher = Zookeeper::WatcherCallback.new
+        @watcher = Zookeeper::Callbacks::WatcherCallback.new
 
         @rv = zk.stat(:path => path, :watcher => @watcher, :watcher_context => path)
       end
@@ -494,7 +494,7 @@ shared_examples_for "connection" do
       before do
         @addtl_child = 'child3'
 
-        @watcher = Zookeeper::WatcherCallback.new
+        @watcher = Zookeeper::Callbacks::WatcherCallback.new
 
         @cb = ZookeeperCallbacks::StatCallback.new
         @rv = zk.stat(:path => path, :callback => @cb, :callback_context => path, :watcher => @watcher, :watcher_context => path)
@@ -886,7 +886,7 @@ shared_examples_for "connection" do
       end
 
       it %[should return a stat for the path] do
-        @rv[:stat].should be_kind_of(ZookeeperStat::Stat)
+        @rv[:stat].should be_kind_of(Zookeeper::Stat)
       end
 
       it %[should return the acls] do
@@ -906,7 +906,7 @@ shared_examples_for "connection" do
       it_should_behave_like "all success return values"
 
       before do
-        @cb = Zookeeper::ACLCallback.new
+        @cb = Zookeeper::Callbacks::ACLCallback.new
         @rv = zk.get_acl(:path => path, :callback => @cb, :callback_context => path)
 
         wait_until(2) { @cb.completed? }
@@ -914,7 +914,7 @@ shared_examples_for "connection" do
       end
 
       it %[should return a stat for the path] do
-        @cb.stat.should be_kind_of(ZookeeperStat::Stat)
+        @cb.stat.should be_kind_of(Zookeeper::Stat)
       end
 
       it %[should return the acls] do
@@ -922,7 +922,7 @@ shared_examples_for "connection" do
         acls.should be_kind_of(Array)
 
         acl = acls.first
-        acl.should be_kind_of(ZookeeperACLs::ACL)
+        acl.should be_kind_of(Zookeeper::ACLs::ACL)
 
         acl.perms.should == Zookeeper::ZOO_PERM_ALL
 
@@ -935,7 +935,7 @@ shared_examples_for "connection" do
   describe :set_acl do
     before do
       @perms = 5
-      @new_acl = [ZookeeperACLs::ACL.new(:perms => @perms, :id => ZookeeperACLs::ZOO_ANYONE_ID_UNSAFE)]
+      @new_acl = [Zookeeper::ACLs::ACL.new(:perms => @perms, :id => Zookeeper::Constants::ZOO_ANYONE_ID_UNSAFE)]
       pending("No idea how to set ACLs")
     end
 
@@ -965,7 +965,7 @@ shared_examples_for "connection" do
       it_should_behave_like "all success return values"
 
       before do
-        @cb = Zookeeper::StringCallback.new
+        @cb = Zookeeper::Callbacks::StringCallback.new
         @rv = zk.sync(:path => path, :callback => @cb)
 
         wait_until(2) { @cb.completed }
