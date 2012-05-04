@@ -87,7 +87,7 @@ namespace :spec do
   end
 end
 
-task 'spec:run' => 'build:clean'
 
+task 'spec:run' => 'build:clean' unless defined?(::JRUBY_VERSION)
 task :default => 'spec:run'
 
