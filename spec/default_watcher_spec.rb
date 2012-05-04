@@ -5,7 +5,7 @@ describe Zookeeper do
     before do
       @events = []
       @watch_block = lambda do |hash| 
-        $stderr.puts "watch_block: #{hash.inspect}"
+        logger.debug "watch_block: #{hash.inspect}"
         @events << hash
       end
 
@@ -13,10 +13,10 @@ describe Zookeeper do
 
       wait_until(2) { @zk.connected? }
       @zk.should be_connected
-      $stderr.puts "connected!"
+      logger.debug "connected!"
 
       wait_until(2) { !@events.empty? }
-      $stderr.puts "got events!"
+      logger.debug "got events!"
     end
 
     after do
