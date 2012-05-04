@@ -149,7 +149,7 @@ module Zookeeper
           task "#{namespace}:test_all_rubies" => rspec_task_name
 
           unless Rake::Task.task_defined?("#{namespace}:test_all")
-            task "mb:test_all" do
+            task "#{namespace}:test_all" do
               require 'benchmark'
               t = Benchmark.realtime do
                 Rake::Task["#{namespace}:test_all_rubies"].invoke
