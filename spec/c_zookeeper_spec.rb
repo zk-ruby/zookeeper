@@ -1,8 +1,6 @@
 # tests the CZookeeper, obviously only available when running under MRI
 
-if defined?(::JRUBY_VERSION)
-  $stderr.puts "NOT TESTING C ZOOKEEPER UNDER JRUBY"
-else
+unless defined?(::JRUBY_VERSION)
   require 'spec_helper'
 
   describe Zookeeper::CZookeeper do
@@ -22,7 +20,7 @@ else
     describe do
       before do
         @event_queue = Zookeeper::Common::QueueWithPipe.new
-        @czk = Zookeeper::CZookeeper.new('localhost:2181', @event_queue)
+        @czk = Zookeeper::CZookeeper.new(Zookeeper.default_cnx_str, @event_queue)
       end
 
       after do

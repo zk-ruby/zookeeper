@@ -11,7 +11,7 @@ describe 'ZookeeperEM' do
     default_timeout 3.0
 
     def setup_zk
-      @zk = ZookeeperEM::Client.new('localhost:2181')
+      @zk = ZookeeperEM::Client.new(Zookeeper.default_cnx_str)
       em do
         @zk.on_attached do
           yield

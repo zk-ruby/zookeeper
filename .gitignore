@@ -9,3 +9,4 @@ zookeeper.gemspec
 Gemfile.*
 tmp/
 .rvmrc
+.zkserver

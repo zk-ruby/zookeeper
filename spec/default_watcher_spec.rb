@@ -9,7 +9,7 @@ describe Zookeeper do
         @events << hash
       end
 
-      @zk = Zookeeper.new('localhost:2181', 10, @watch_block)
+      @zk = Zookeeper.new(Zookeeper.default_cnx_str, 10, @watch_block)
 
       wait_until(2) { @zk.connected? }
       @zk.should be_connected

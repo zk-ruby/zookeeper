@@ -6,7 +6,7 @@ describe 'Zookeeper chrooted' do
   let(:data) { "underpants" } 
   let(:chroot_path) { '/slyphon-zookeeper-chroot' }
 
-  let(:connection_string) { "localhost:2181#{chroot_path}" }
+  let(:connection_string) { "#{Zookeeper.default_cnx_str}#{chroot_path}" }
 
   before do
     @zk = Zookeeper.new(connection_string)
