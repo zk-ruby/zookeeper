@@ -181,21 +181,20 @@ class JavaBase
       set_default_global_watcher
 
       replace_jzk!
-      wait_until_connected
     end
 
     state
   end
 
-  def wait_until_connected(timeout=10)
-    time_to_stop = timeout ? (Time.now + timeout) : nil
+#   def wait_until_connected(timeout=10)
+#     time_to_stop = timeout ? (Time.now + timeout) : nil
 
-    until connected? or (time_to_stop and Time.now > time_to_stop)
-      Thread.pass
-    end
+#     until connected? or (time_to_stop and Time.now > time_to_stop)
+#       Thread.pass
+#     end
 
-    connected?
-  end
+#     connected?
+#   end
 
   def initialize(host, timeout=10, watcher=nil, options={})
     @host = host
@@ -213,6 +212,8 @@ class JavaBase
 
     @default_watcher = (watcher || get_default_global_watcher)
 
+    common_init
+
     # allows connected-state handlers to be registered before 
     yield self if block_given?
 
@@ -220,6 +221,7 @@ class JavaBase
     return nil unless connected?
     @_running = true
     setup_dispatch_thread!
+    wait_until_connected(timeout)
   end
 
   def close

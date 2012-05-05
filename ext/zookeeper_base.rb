@@ -61,11 +61,10 @@ class ZookeeperBase
       orig_czk, @czk = @czk, CZookeeper.new(@host, @event_queue)
 
       orig_czk.close if orig_czk
-      
-      @czk.wait_until_connected(timeout)
     end
 
     setup_dispatch_thread!
+    wait_until_connected(timeout) # Zookeeper::Common#wait_until_connected
     state
   end
 
@@ -87,6 +86,8 @@ class ZookeeperBase
     @host = host
 
     @default_watcher = (watcher or get_default_global_watcher)
+
+    common_init
 
     yield self if block_given?
 

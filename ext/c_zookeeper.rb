@@ -52,7 +52,7 @@ class CZookeeper
     
     # used to signal that we're running
     @running_cond = @start_stop_mutex.new_cond
-    
+   
     @event_thread = nil
 
     setup_event_thread!
@@ -113,17 +113,17 @@ class CZookeeper
   #
   # if timeout is nil, we never time out, and wait forever for CONNECTED state
   #
-  def wait_until_connected(timeout=10)
-    return false unless wait_until_running(timeout)
+#   def wait_until_connected(timeout=10)
+#     return false unless wait_until_running(timeout)
 
-    time_to_stop = timeout ? (Time.now + timeout) : nil
+#     time_to_stop = timeout ? (Time.now + timeout) : nil
 
-    until connected? or (time_to_stop and Time.now > time_to_stop)
-      Thread.pass
-    end
+#     until connected? or (time_to_stop and Time.now > time_to_stop)
+#       Thread.pass
+#     end
 
-    connected?
-  end
+#     connected?
+#   end
 
   private
     # will wait until the client has entered the running? state

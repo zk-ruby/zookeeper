@@ -6,6 +6,7 @@ gem 'rake', '~> 0.9.0'
 
 platform :mri_19 do
   gem 'simplecov', :group => :coverage, :require => false
+  gem 'ruby-prof', :group => :development
 end
 
 group :test do

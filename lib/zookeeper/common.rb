@@ -3,17 +3,58 @@ require 'zookeeper/common/queue_with_pipe'
 
 module Zookeeper
 module Common
-  # sigh, i guess define this here?
-  ZKRB_GLOBAL_CB_REQ   = -1
+  def self.const_missing(const)
+    super unless const == :ZKRB_GLOBAL_CB_REQ
+
+    warn "Zookeeper::Common::ZKRB_GLOBAL_CB_REQ is now Zookeeper::Constants::ZKRB_GLOBAL_CB_REQ"
+    Constants::ZKRB_GLOBAL_CB_REQ
+  end
+
+  # @private
+  CONNECTED_EVENT_VALUES = [Constants::ZKRB_GLOBAL_CB_REQ, 
+                            Constants::ZOO_SESSION_EVENT, 
+                            Constants::ZOO_CONNECTED_STATE].freeze
 
   def event_dispatch_thread?
     @dispatcher && (@dispatcher == Thread.current)
   end
 
+  def wait_until_connected(timeout=10)
+#     logger.debug { "entering connected_mutex" }
+    @connected_mutex.synchronize do
+      unless connected?
+#         logger.debug { "about to wait for connected? #{connected?}" }
+        @connected_cond_var.wait(@connected_mutex, timeout) 
+      end
+    end
+    connected?
+  end
+
 protected
+  def common_init
+    @connected_mutex = Mutex.new
+    @connected_cond_var = ConditionVariable.new
+  end
+
+  def notify_connected!
+    @connected_mutex.synchronize do
+      @connected_cond_var.broadcast
+    end
+  end
+
+  # here so that we can do adapter-specific things in repsonse to events
+  # without affecting the user-facing flow (we hope)
+  def raw_event_hook(hash)
+    return unless hash
+    if hash.values_at(:req_id, :type, :state) == CONNECTED_EVENT_VALUES
+      notify_connected!
+    end
+  end
+
   def get_next_event(blocking=true)
     @event_queue.pop(!blocking).tap do |event|
       logger.debug { "#{self.class}##{__method__} delivering event #{event.inspect}" }
+      raw_event_hook(event)
     end
   rescue ThreadError
     nil
@@ -48,7 +89,7 @@ protected
   
   def get_watcher(req_id)
     @mutex.synchronize {
-      (req_id == ZKRB_GLOBAL_CB_REQ) ? @watcher_reqs[req_id] : @watcher_reqs.delete(req_id)
+      (req_id == Constants::ZKRB_GLOBAL_CB_REQ) ? @watcher_reqs[req_id] : @watcher_reqs.delete(req_id)
     }
   end
   
@@ -120,15 +161,15 @@ protected
     
     is_completion = hash.has_key?(:rc)
     
-    hash[:stat] = Zookeeper::Stat.new(hash[:stat]) if hash.has_key?(:stat)
-    hash[:acl] = hash[:acl].map { |acl| Zookeeper::ACLs::ACL.new(acl) } if hash[:acl]
+    hash[:stat] = Stat.new(hash[:stat]) if hash.has_key?(:stat)
+    hash[:acl] = hash[:acl].map { |acl| ACLs::ACL.new(acl) } if hash[:acl]
     
     callback_context = is_completion ? get_completion(hash[:req_id]) : get_watcher(hash[:req_id])
 
     # When connectivity to the server has been lost (as indicated by SESSION_EVENT)
     # we want to rerun the callback at a later time when we eventually do have
     # a valid response.
-    if hash[:type] == Zookeeper::Constants::ZOO_SESSION_EVENT
+    if hash[:type] == Constants::ZOO_SESSION_EVENT
       is_completion ? setup_completion(hash[:req_id], callback_context) : setup_watcher(hash[:req_id], callback_context)
     end
     if callback_context
@@ -150,14 +191,14 @@ protected
 
   def assert_supported_keys(args, supported)
     unless (args.keys - supported).empty?
-      raise Zookeeper::Exceptions::BadArguments,  # this heirarchy is kind of retarded
+      raise Exceptions::BadArguments,  # this heirarchy is kind of retarded
             "Supported arguments are: #{supported.inspect}, but arguments #{args.keys.inspect} were supplied instead"
     end
   end
 
   def assert_required_keys(args, required)
     unless (required - args.keys).empty?
-      raise Zookeeper::Exceptions::BadArguments,
+      raise Exceptions::BadArguments,
             "Required arguments are: #{required.inspect}, but only the arguments #{args.keys.inspect} were supplied."
     end
   end
@@ -166,8 +207,8 @@ private
   def prettify_event(hash)
     hash.dup.tap do |h|
       # pretty up the event display
-      h[:type]    = Zookeeper::Constants::EVENT_TYPE_NAMES.fetch(h[:type]) if h[:type]
-      h[:state]   = Zookeeper::Constants::STATE_NAMES.fetch(h[:state]) if h[:state]
+      h[:type]    = Constants::EVENT_TYPE_NAMES.fetch(h[:type]) if h[:type]
+      h[:state]   = Constants::STATE_NAMES.fetch(h[:state]) if h[:state]
       h[:req_id]  = :global_session if h[:req_id] == -1
     end
   end
