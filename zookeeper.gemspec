@@ -8,16 +8,11 @@ Gem::Specification.new do |s|
 
   s.authors     = ["Phillip Pearson", "Eric Maland", "Evan Weaver", "Brian Wickman", "Neil Conway", "Jonathan D. Simms"]
   s.email       = ["slyphon@gmail.com"]
-  s.summary     = %q{Low level zookeeper client}
+  s.summary     = %q{Apache ZooKeeper driver for Rubies}
   s.description = <<-EOS
-A low-level multi-Ruby wrapper around the ZooKeeper API bindings.
-For a friendlier interface, see http://github.com/slyphon/zk
-
-Currently supported:
-
-MRI: 1.8.7, 1.9.2, 1.9.3
-JRuby: ~> 1.6.7
-Rubinius: 2.0.testing
+A low-level multi-Ruby wrapper around the ZooKeeper API bindings. For a
+friendlier interface, see http://github.com/slyphon/zk. Currently supported:
+MRI: {1.8.7, 1.9.2, 1.9.3}, JRuby: ~> 1.6.7, Rubinius: 2.0.testing, REE 1.8.7.
 
 This library uses version #{Zookeeper::DRIVER_VERSION} of zookeeper bindings.
 
