@@ -77,6 +77,12 @@ stacktrace:
   class ShuttingDownException   < ZookeeperException; end
   class DataTooLargeException   < ZookeeperException; end
 
+  # raised when the user tries to use a connection after a fork()
+  # without calling reopen() in the C client
+  #
+  # (h/t: @pletern http://git.io/zIsq1Q)
+  class InheritedConnectionError < ZookeeperException; end
+
   # yes, make an alias, this is the way zookeeper refers to it
   ExpiredSession = SessionExpired unless defined?(ExpiredSession)
     

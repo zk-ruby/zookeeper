@@ -8,7 +8,7 @@ require 'forwardable'
 module Zookeeper
 class ZookeeperBase
   extend Forwardable
-  include Zookeeper::Common
+  include Zookeeper::Common       # XXX: clean this up, no need to include *everything*
   include Zookeeper::Callbacks
   include Zookeeper::Constants
   include Zookeeper::Exceptions
@@ -54,6 +54,10 @@ class ZookeeperBase
     end
     
     @mutex.synchronize do
+      # keep track of what process we were in to protect
+      # against reuse after fork()
+      @pid = Process.pid
+
       # flushes all outstanding watcher reqs.
       @watcher_reqs.clear
       set_default_global_watcher
@@ -103,6 +107,12 @@ class ZookeeperBase
   def assert_open
     raise ZookeeperException::SessionExpired if state == ZOO_EXPIRED_SESSION_STATE
     raise ZookeeperException::NotConnected   unless connected?
+    unless Process.pid == @pid
+      raise InheritedConnectionError, <<-EOS.gsub(/(?:^|\n)\s*/, ' ').strip
+        You tried to use a connection inherited from another process [#{@pid}]
+        You need to call reopen() after forking
+      EOS
+    end
   end
 
   def close

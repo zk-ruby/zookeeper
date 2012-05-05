@@ -1014,5 +1014,20 @@ shared_examples_for "connection" do
       end
     end
   end
+
+  unless defined?(::JRUBY_VERSION)
+    describe 'fork protection' do
+      it %[should raise an InheritedConnectionError if the current Process.pid is different from the one that created the client] do
+        pid = Process.pid
+        begin
+          Process.stub(:pid => -1)
+          lambda { zk.stat(:path => path) }.should raise_error(Zookeeper::Exceptions::InheritedConnectionError)
+        ensure
+          # ensure we reset this, only want it to fail during the test
+          Process.stub(:pid => pid)
+        end
+      end
+    end
+  end
 end
 
