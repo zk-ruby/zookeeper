@@ -10,3 +10,4 @@ Gemfile.*
 tmp/
 .rvmrc
 .zkserver
+coverage

@@ -4,6 +4,13 @@ $LOAD_PATH.uniq!
 
 require 'rubygems'
 
+release_ops_path = File.expand_path('../../releaseops/lib', __FILE__)
+
+if File.exists?(release_ops_path)
+  require File.join(release_ops_path, 'releaseops')
+  ReleaseOps::SimpleCov.maybe_start
+end
+
 gem 'flexmock', '~> 0.8.11'
 
 require 'flexmock'

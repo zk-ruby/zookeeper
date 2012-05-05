@@ -33,12 +33,31 @@ namespace :mb do
   end
 end
 
+release_ops_path = File.expand_path('../releaseops/lib', __FILE__)
 
-require File.expand_path('../lib/zookeeper/rake_tasks', __FILE__)
+# if the special submodule is availabe, use it
+# we use a submodule because it doesn't depend on anything else (*cough* bundler)
+# and can be shared across projects
+#
+if File.exists?(release_ops_path)
+  require File.join(release_ops_path, 'releaseops')
 
-RUBY_NAMES = %w[1.8.7 1.9.2 jruby rbx 1.9.3]
+  # sets up the multi-ruby zk:test_all rake tasks
+  ReleaseOps::TestTasks.define_for(*%w[1.8.7 1.9.2 jruby rbx ree 1.9.3])
 
-Zookeeper::RakeTasks.define_test_tasks_for(*RUBY_NAMES)
+  # sets up the task :default => 'spec:run' and defines a simple
+  # "run the specs with the current rvm profile" task
+  ReleaseOps::TestTasks.define_simple_default_for_travis
+
+  # Define a task to run code coverage tests
+  ReleaseOps::TestTasks.define_simplecov_tasks
+
+  # set up yard:server, yard:gems, and yard:clean tasks 
+  # for doing documentation stuff
+  ReleaseOps::YardTasks.define
+
+  task :clean => 'yard:clean'
+end
 
 task :clobber do
   rm_rf 'tmp'
@@ -71,23 +90,5 @@ task :build do
   end
 end
 
-namespace :spec do
-  task :define do
-    require 'rubygems'
-    require 'bundler/setup'
-    require 'rspec/core/rake_task'
-
-    RSpec::Core::RakeTask.new('spec:runner') do |t|
-#       t.rspec_opts = '-f d'
-    end
-  end
-
-  task :run => :define do
-    Rake::Task['spec:runner'].invoke
-  end
-end
-
-
 task 'spec:run' => 'build:clean' unless defined?(::JRUBY_VERSION)
-task :default => 'spec:run'
 
