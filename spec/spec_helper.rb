@@ -11,9 +11,6 @@ if File.exists?(release_ops_path)
   ReleaseOps::SimpleCov.maybe_start
 end
 
-gem 'flexmock', '~> 0.8.11'
-
-require 'flexmock'
 require 'zookeeper'
 
 Dir[File.expand_path('../support/**/*.rb', __FILE__)].sort.each { |f| require(f) }
@@ -34,7 +31,7 @@ end
 
 
 RSpec.configure do |config|
-  config.mock_with :flexmock
+  config.mock_with :rspec
   config.include ZookeeperSpecHeleprs
   config.extend ZookeeperSpecHeleprs
 
