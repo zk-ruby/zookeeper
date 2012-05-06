@@ -105,8 +105,8 @@ class ZookeeperBase
   
   # if either of these happen, the user will need to renegotiate a connection via reopen
   def assert_open
-    raise ZookeeperException::SessionExpired if state == ZOO_EXPIRED_SESSION_STATE
-    raise ZookeeperException::NotConnected   unless connected?
+    raise Exceptions::SessionExpired if state == ZOO_EXPIRED_SESSION_STATE
+    raise Exceptions::NotConnected   unless connected?
     unless Process.pid == @pid
       raise InheritedConnectionError, <<-EOS.gsub(/(?:^|\n)\s*/, ' ').strip
         You tried to use a connection inherited from another process [#{@pid}]
@@ -186,7 +186,7 @@ protected
       end
     end
 
-    # pass this along to the ZookeeperCommon implementation
+    # pass this along to the Zookeeper::Common implementation
     super(req_id, meth_name, call_opts)
   end
 
