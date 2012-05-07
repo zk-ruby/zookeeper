@@ -1,3 +1,10 @@
+v0.9.4 Fix shutdown timing bug
+
+  * Because we now release the GIL, ruby may call close while there's still
+    a pending synchronous call (since we give up the interpreter during that
+    time). Protect calls with a mutex so that close can only be called when
+    there isn't an in-flight call.
+
 v0.9.3 Event thread shutdown fix, Windows compatibility fix
 
   * Use a 'shutdown thread' to coordinate cleanup if close is called from the
