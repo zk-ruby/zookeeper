@@ -1,6 +1,3 @@
-# need to releaase under both names until ZK is updated to use just 'zookeeper'
-GEM_NAMES = %w[zookeeper slyphon-zookeeper]
-
 release_ops_path = File.expand_path('../releaseops/lib', __FILE__)
 
 # if the special submodule is availabe, use it
@@ -33,36 +30,36 @@ if File.exists?(release_ops_path)
 
         raise "You must specify a TAG" unless ENV['TAG']
 
-        tmpdir = File.join(Dir.tmpdir, "zookeeper.#{rand(1_000_000)}_#{$$}_#{Time.now.strftime('%Y%m%d%H%M%S')}")
-        tag = ENV['TAG']
+        ReleaseOps.with_tmpdir(:prefix => 'zookeeper') do |tmpdir|
+          tag = ENV['TAG']
 
-        sh "git clone . #{tmpdir}"
+          sh "git clone . #{tmpdir}"
 
-        orig_dir = Dir.getwd
+          orig_dir = Dir.getwd
 
-        cd tmpdir do
-          sh "git co #{tag} && git reset --hard && git clean -fdx"
+          cd tmpdir do
+            sh "git co #{tag} && git reset --hard && git clean -fdx"
 
-          GEM_NAMES.each do |gem_name|
             ENV['JAVA_GEM'] = nil
-            sh "rvm 1.8.7 do env ZOOKEEPER_GEM_NAME='#{gem_name}' gem build zookeeper.gemspec"
-            sh "rvm 1.8.7 do env JAVA_GEM=1 ZOOKEEPER_GEM_NAME='#{gem_name}' gem build zookeeper.gemspec"
-          end
+            sh "rvm 1.8.7 do gem build zookeeper.gemspec"
+            sh "rvm 1.8.7 do env JAVA_GEM=1 gem build zookeeper.gemspec"
 
-          mv ReleaseOps.gem_files, orig_dir
+            mv FileList['*.gem'], orig_dir
+          end
         end
       end
 
       task :push => :build do
-        raise "No gemfiles to push!" if ReleaseOps.gem_files.empty?
+        gems = FileList['*.gem']
+        raise "No gemfiles to push!" if gems.empty?
 
-        ReleaseOps.gem_files.each do |gem|
+        gems.each do |gem|
           sh "gem push #{gem}"
         end
       end
 
       task :clean do
-        rm_rf ReleaseOps.gem_files
+        rm_rf FileList['*.gem']
       end
 
       task :all => [:build, :push, :clean]
