@@ -111,8 +111,6 @@ task "mb:test_all" do
   $stderr.puts "Test run took: #{t} s"
 end
 
-task :default => 'mb:1.9.3'
-
 task :clobber do
   rm_rf 'tmp'
 end
@@ -143,4 +141,24 @@ task :build do
     sh "rake"
   end
 end
+
+namespace :spec do
+  task :define do
+    require 'rubygems'
+    require 'bundler/setup'
+    require 'rspec/core/rake_task'
+
+    RSpec::Core::RakeTask.new('spec:runner') do |t|
+      t.rspec_opts = '-f d' if ENV['TRAVIS']
+    end
+
+    task 'spec:runner' => :build
+  end
+
+  task :run => :define do
+    Rake::Task['spec:runner'].invoke
+  end
+end
+
+task :default => 'spec:run'
 
