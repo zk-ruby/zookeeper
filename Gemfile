@@ -16,6 +16,18 @@ group :test do
   gem 'zk-server', '~> 1.0.0'
 end
 
+platform :mri_19 do
+  gem 'simplecov', :group => :coverage, :require => false
+end
+
+group :docs do
+  gem 'yard', '~> 0.8.0'
+
+  platform :mri_19 do
+    gem 'redcarpet'
+  end
+end
+
 group :development do
   gem 'pry'
 end
