@@ -1,4 +1,10 @@
-warn <<-EOS
+module Zookeeper
+  # @private
+  def self.warn_about_compatability_once!
+    return if @warned_about_compatibility
+    @warned_about_compatibility = true
+
+    warn <<-EOS
 
 -----------------------------------------------------------------------------
 
@@ -14,7 +20,15 @@ warn <<-EOS
   is automatically required. This will *not* be the case in 1.1.
 
 -----------------------------------------------------------------------------
-EOS
+    EOS
+  end
+
+  def self.warned_about_compatability?
+    !!@warned_about_compatability
+  end
+end
+
+Zookeeper.warn_about_compatability_once!
 
 module Zookeeper
   module Compatibility

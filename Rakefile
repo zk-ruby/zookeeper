@@ -1,9 +1,3 @@
-# def gemset_name
-#   ENV.fetch('GEM_HOME').split('@').last
-# end
-
-GEM_FILES = ReleaseOps.gem_files
-
 # need to releaase under both names until ZK is updated to use just 'zookeeper'
 GEM_NAMES = %w[zookeeper slyphon-zookeeper]
 
