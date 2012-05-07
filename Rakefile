@@ -68,7 +68,7 @@ gemset_name = 'zookeeper'
   task clobber_task_name do
     unless rvm_ruby == 'jruby'
       cd 'ext' do
-        sh "rake clobber"
+        sh "bundle exec rake clobber"
       end
     end
   end
@@ -76,7 +76,7 @@ gemset_name = 'zookeeper'
   task clean_task_name do
     unless rvm_ruby == 'jruby'
       cd 'ext' do
-        sh "rake clean"
+        sh "bundle exec rake clean"
       end
     end
   end
@@ -84,7 +84,7 @@ gemset_name = 'zookeeper'
   task build_task_name => [create_gemset_name, clean_task_name] do
     unless rvm_ruby == 'jruby'
       cd 'ext' do
-        sh "rvm #{ruby_with_gemset} do rake build"
+        sh "rvm #{ruby_with_gemset} do bundle exec rake build"
       end
     end
   end
