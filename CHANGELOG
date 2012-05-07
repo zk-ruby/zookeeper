@@ -28,6 +28,16 @@ v1.0.0 Single Zookeeper namespace
 
   * Fix all requires, no longer monkey with $LOAD_PATH, use require_relative
 
+  * Bugfix for C client. 
+  
+    Because we release the GIL, there's the possibilty that in the middle of a
+    synchronous C call, ruby will have switched thread contexts and one of
+    those threads will call close. It seems that during normal operation, this
+    is not a problem, but during shutdown, this causes CPU to spike to 100% and
+    a deadlock. This fix essentially wraps every call to the C layer in a
+    mutex. There may be a slightly less heavyweight optimization in the future,
+    but this is the safest option at the moment.
+
 v0.9.3 Event thread shutdown fix, Windows compatibility fix
 
   * Use a 'shutdown thread' to coordinate cleanup if close is called from the
