@@ -2,6 +2,8 @@ source :rubygems
 
 gemspec
 
+gem 'rake', '~> 0.9.0'
+
 group :test do
   gem "rspec", "~> 2.8.0"
   gem 'flexmock', '~> 0.8.11'
@@ -10,7 +12,6 @@ group :test do
 end
 
 group :development do
-  gem 'rake', '~> 0.9.0'
   gem 'pry'
 end
 
