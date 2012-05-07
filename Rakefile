@@ -2,36 +2,10 @@
 #   ENV.fetch('GEM_HOME').split('@').last
 # end
 
-GEM_FILES = FileList['*zookeeper-*.gem']
+GEM_FILES = ReleaseOps.gem_files
 
 # need to releaase under both names until ZK is updated to use just 'zookeeper'
 GEM_NAMES = %w[zookeeper slyphon-zookeeper]
-
-namespace :mb do
-  namespace :gems do
-    task :build do
-      GEM_NAMES.each do |gem_name|
-        ENV['JAVA_GEM'] = nil
-        sh "rvm 1.8.7 do env ZOOKEEPER_GEM_NAME='#{gem_name}' gem build zookeeper.gemspec"
-        sh "rvm 1.8.7 do env JAVA_GEM=1 ZOOKEEPER_GEM_NAME='#{gem_name}' gem build zookeeper.gemspec"
-      end
-    end
-
-    task :push => :build do
-      raise "No gemfiles to push!" if GEM_FILES.empty?
-
-      GEM_FILES.each do |gem|
-        sh "gem push #{gem}"
-      end
-    end
-
-    task :clean do
-      rm_rf GEM_FILES
-    end
-
-    task :all => [:build, :push, :clean]
-  end
-end
 
 release_ops_path = File.expand_path('../releaseops/lib', __FILE__)
 
@@ -57,6 +31,49 @@ if File.exists?(release_ops_path)
   ReleaseOps::YardTasks.define
 
   task :clean => 'yard:clean'
+
+  namespace :zk do
+    namespace :gems do
+      task :build do
+        require 'tmpdir'
+
+        raise "You must specify a TAG" unless ENV['TAG']
+
+        tmpdir = File.join(Dir.tmpdir, "zookeeper.#{rand(1_000_000)}_#{$$}_#{Time.now.strftime('%Y%m%d%H%M%S')}")
+        tag = ENV['TAG']
+
+        sh "git clone . #{tmpdir}"
+
+        orig_dir = Dir.getwd
+
+        cd tmpdir do
+          sh "git co #{tag} && git reset --hard && git clean -fdx"
+
+          GEM_NAMES.each do |gem_name|
+            ENV['JAVA_GEM'] = nil
+            sh "rvm 1.8.7 do env ZOOKEEPER_GEM_NAME='#{gem_name}' gem build zookeeper.gemspec"
+            sh "rvm 1.8.7 do env JAVA_GEM=1 ZOOKEEPER_GEM_NAME='#{gem_name}' gem build zookeeper.gemspec"
+          end
+
+          mv ReleaseOps.gem_files, orig_dir
+        end
+      end
+
+      task :push => :build do
+        raise "No gemfiles to push!" if ReleaseOps.gem_files.empty?
+
+        ReleaseOps.gem_files.each do |gem|
+          sh "gem push #{gem}"
+        end
+      end
+
+      task :clean do
+        rm_rf ReleaseOps.gem_files
+      end
+
+      task :all => [:build, :push, :clean]
+    end
+  end
 end
 
 task :clobber do
