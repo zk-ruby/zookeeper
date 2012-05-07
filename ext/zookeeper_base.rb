@@ -28,8 +28,29 @@ class ZookeeperBase
   ZOO_LOG_LEVEL_INFO   = 3
   ZOO_LOG_LEVEL_DEBUG  = 4
 
-  def_delegators :czk, 
-    :get_children, :exists, :delete, :get, :set, :set_acl, :get_acl, :client_id, :sync, :selectable_io
+
+  # this is unfortunately necessary to prevent a really horrendous race in
+  # shutdown, where some other thread calls close in the middle of a
+  # synchronous operation (thanks to the GIL-releasing wrappers, we now
+  # have this problem). so we need to make sure only one thread can be calling
+  # a synchronous operation at a time. 
+  #
+  # this might be solved by waiting for a condition where there are no "in flight"
+  # operations (thereby allowing multiple threads to make requests simultaneously),
+  # but this would represent quite a bit of added complexity, and questionable
+  # performance gains.
+  #
+  def self.synchronized_delegation(provider, *syms)
+    syms.each do |sym|
+      class_eval(<<-EOM, __FILE__, __LINE__+1)
+        def #{sym}(*a, &b)
+          @mutex.synchronize { #{provider}.#{sym}(*a, &b) }
+        end
+      EOM
+    end
+  end
+
+  synchronized_delegation :@czk, :get_children, :exists, :delete, :get, :set, :set_acl, :get_acl, :client_id, :sync
 
   # some state methods need to be more paranoid about locking to ensure the correct
   # state is returned
@@ -96,22 +117,18 @@ class ZookeeperBase
 
     reopen(timeout)
   end
-
-  # synchronized accessor to the @czk instance
-  # @private
-  def czk
-    @mutex.synchronize { @czk }
-  end
-  
+ 
   # if either of these happen, the user will need to renegotiate a connection via reopen
   def assert_open
-    raise Exceptions::SessionExpired if state == ZOO_EXPIRED_SESSION_STATE
-    raise Exceptions::NotConnected   unless connected?
-    unless Process.pid == @pid
-      raise InheritedConnectionError, <<-EOS.gsub(/(?:^|\n)\s*/, ' ').strip
-        You tried to use a connection inherited from another process [#{@pid}]
-        You need to call reopen() after forking
-      EOS
+    @mutex.synchronize do
+      raise Exceptions::SessionExpired if state == ZOO_EXPIRED_SESSION_STATE
+      raise Exceptions::NotConnected   unless connected?
+      unless Process.pid == @pid
+        raise InheritedConnectionError, <<-EOS.gsub(/(?:^|\n)\s*/, ' ').strip
+          You tried to use a connection inherited from another process [#{@pid}]
+          You need to call reopen() after forking
+        EOS
+      end
     end
   end
 
@@ -130,7 +147,7 @@ class ZookeeperBase
   # is pretty damn annoying. this is used to clean things up.
   def create(*args)
     # since we don't care about the inputs, just glob args
-    rc, new_path = czk.create(*args)
+    rc, new_path = @mutex.synchronize { @czk.create(*args) }
     [rc, strip_chroot_from(new_path)]
   end
 
@@ -151,15 +168,19 @@ class ZookeeperBase
 
   def state
     return ZOO_CLOSED_STATE if closed?
-    czk.state
+    @mutex.synchronize { @czk.state }
   end
 
   def session_id
-    cid = client_id and cid.session_id
+    @mutex.synchronize do
+      cid = client_id and cid.session_id
+    end
   end
 
   def session_passwd
-    cid = client_id and cid.passwd
+    @mutex.synchronize do
+      cid = client_id and cid.passwd
+    end
   end
 
   # we are closed if there is no @czk instance or @czk.closed?
