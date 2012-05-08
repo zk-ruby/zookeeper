@@ -61,7 +61,8 @@ class JavaBase
   end
 
   # used for internal dispatching
-  module JavaCB #:nodoc:
+  # @private
+  module JavaCB
     class Callback
       attr_reader :req_id
 
@@ -156,14 +157,25 @@ class JavaBase
 
     class WatcherCallback < Callback
       include JZK::Watcher
+      include Zookeeper::Constants
 
-      def initialize(event_queue)
+      attr_reader :client
+
+      def initialize(event_queue, opts={})
         @event_queue = event_queue
-        super(Zookeeper::Constants::ZKRB_GLOBAL_CB_REQ)
+        @client = opts[:client]
+        super(ZKRB_GLOBAL_CB_REQ)
       end
 
       def process(event)
-        logger.debug { "WatcherCallback got event: #{event.to_hash.inspect}" }
+        hash = event.to_hash
+        logger.debug { "WatcherCallback got event: #{hash.inspect}" }
+
+        if client && (hash[:type] == ZOO_SESSION_EVENT) && (hash[:state] == ZOO_CONNECTED_STATE)
+          logger.debug { "#{self.class}##{__method__} notifying client of connected state!" }
+          client.notify_connected! 
+        end
+        
         hash = event.to_hash.merge(:req_id => req_id)
         @event_queue.push(hash)
       end
@@ -188,12 +200,7 @@ class JavaBase
   end
 
   def wait_until_connected(timeout=10)
-    time_to_stop = timeout ? (Time.now + timeout) : nil
-
-    until connected? or (time_to_stop and Time.now > time_to_stop)
-      Thread.pass
-    end
-
+    @connected_latch.await unless connected?
     connected?
   end
 
@@ -204,6 +211,7 @@ class JavaBase
 
     @mutex = Monitor.new
     @dispatch_shutdown_cond = @mutex.new_cond
+    @connected_latch = Latch.new
 
     @watcher_reqs = {}
     @completion_reqs = {}
@@ -421,6 +429,12 @@ class JavaBase
     jzk.session_passwd.to_s
   end
 
+  # called from watcher when we are connected
+  # @private
+  def notify_connected!
+    @connected_latch.release
+  end
+
   protected
     def jzk
       @mutex.synchronize { @jzk }
@@ -443,8 +457,11 @@ class JavaBase
     def create_watcher(req_id, path)
       logger.debug { "creating watcher for req_id: #{req_id} path: #{path}" }
       lambda do |event|
+        ev_type, ev_state = event.type.int_value, event.state.int_value
+
         logger.debug { "watcher for req_id #{req_id}, path: #{path} called back" }
-        h = { :req_id => req_id, :type => event.type.int_value, :state => event.state.int_value, :path => path }
+
+        h = { :req_id => req_id, :type => ev_type, :state => ev_state, :path => path }
         event_queue.push(h)
       end
     end
@@ -458,7 +475,6 @@ class JavaBase
       end
     end
 
-    # TODO: Make all global puts configurable
     def get_default_global_watcher
       Proc.new { |args|
         logger.debug { "Ruby ZK Global CB called type=#{event_by_value(args[:type])} state=#{state_by_value(args[:state])}" }
@@ -469,7 +485,7 @@ class JavaBase
   private
     def replace_jzk!
       orig_jzk = @jzk
-      @jzk = JZK::ZooKeeper.new(@host, DEFAULT_SESSION_TIMEOUT, JavaCB::WatcherCallback.new(event_queue))
+      @jzk = JZK::ZooKeeper.new(@host, DEFAULT_SESSION_TIMEOUT, JavaCB::WatcherCallback.new(event_queue, :client => self))
     ensure
       orig_jzk.close if orig_jzk
     end
