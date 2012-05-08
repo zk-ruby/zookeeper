@@ -49,7 +49,7 @@ if File.exists?(release_ops_path)
         end
       end
 
-      task :push => :build do
+      task :push do
         gems = FileList['*.gem']
         raise "No gemfiles to push!" if gems.empty?
 
