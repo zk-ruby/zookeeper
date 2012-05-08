@@ -73,12 +73,10 @@ class ZookeeperBase
     if watcher and (watcher != @default_watcher)
       raise "You cannot set the watcher to a different value this way anymore!"
     end
-    
-    @mutex.synchronize do
-      # keep track of what process we were in to protect
-      # against reuse after fork()
-      @pid = Process.pid
 
+    fire_after_fork_callbacks! if forked?
+
+    @mutex.synchronize do
       # flushes all outstanding watcher reqs.
       @watcher_reqs.clear
       set_default_global_watcher
@@ -88,6 +86,10 @@ class ZookeeperBase
       orig_czk.close if orig_czk
       
       @czk.wait_until_connected(timeout)
+      
+      # keep track of what process we were in to protect
+      # against reuse after fork()
+      @pid = Process.pid
     end
 
     setup_dispatch_thread!
@@ -98,11 +100,18 @@ class ZookeeperBase
     @watcher_reqs = {}
     @completion_reqs = {}
 
-    @mutex = Monitor.new
-    @dispatch_shutdown_cond = @mutex.new_cond
+    @after_fork_hooks = []
+
+    # this may not hold true if we decide to have an
+    # explicit connect method
+    @pid = Process.pid
 
     @current_req_id = 0
-    @event_queue = QueueWithPipe.new
+
+    # this is gross, but keep this initializtion in one place
+    zookeeper_base_after_fork
+    after_fork(&method(:zookeeper_base_after_fork))
+    
     @czk = nil
     
     # approximate the java behavior of raising java.lang.IllegalArgumentException if the host
@@ -117,13 +126,13 @@ class ZookeeperBase
 
     reopen(timeout)
   end
- 
+
   # if either of these happen, the user will need to renegotiate a connection via reopen
   def assert_open
     @mutex.synchronize do
       raise Exceptions::SessionExpired if state == ZOO_EXPIRED_SESSION_STATE
       raise Exceptions::NotConnected   unless connected?
-      unless Process.pid == @pid
+      if forked?
         raise InheritedConnectionError, <<-EOS.gsub(/(?:^|\n)\s*/, ' ').strip
           You tried to use a connection inherited from another process [#{@pid}]
           You need to call reopen() after forking
@@ -189,6 +198,23 @@ class ZookeeperBase
   end
  
 protected
+  # ugh, this is gross
+  def zookeeper_base_after_fork
+    @mutex = Monitor.new
+    @dispatch_shutdown_cond = @mutex.new_cond
+    @event_queue = @event_queue ? @event_queue.clone_after_fork : QueueWithPipe.new
+
+    if @dispatcher        # this will be nil in the non-fork case
+      @dispatcher = nil
+      setup_dispatch_thread!
+    end
+  end
+
+  # calls back all the registered @after_fork_hooks on this connection
+  def fire_after_fork_callbacks!
+    @after_fork_hooks.each(&:call)
+  end
+
   # this is a hack: to provide consistency between the C and Java drivers when
   # using a chrooted connection, we wrap the callback in a block that will
   # strip the chroot path from the returned path (important in an async create
@@ -239,6 +265,10 @@ protected
     end
 
     @chroot_path
+  end
+  
+  def forked?
+    Process.pid != @pid
   end
 end
 end

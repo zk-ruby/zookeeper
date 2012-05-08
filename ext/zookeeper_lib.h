@@ -103,8 +103,9 @@ typedef struct zkrb_event_ll zkrb_event_ll_t;
 typedef struct {
   zkrb_event_ll_t *head;
   zkrb_event_ll_t *tail;
-  int                     pipe_read;
-  int                     pipe_write;
+  int             pipe_read;
+  int             pipe_write;
+  pthread_mutex_t *mutex;
 } zkrb_queue_t;
 
 zkrb_queue_t * zkrb_queue_alloc(void);

@@ -94,6 +94,7 @@ class CZookeeper
 
     @start_stop_mutex.synchronize do
       if !@_closed and @_data
+        logger.debug { "CALLING CLOSE HANDLE!!" }
         close_handle
       end
     end
@@ -156,7 +157,7 @@ class CZookeeper
 
       logger.debug { "event_thread running: #{@_running}" }
 
-      while true
+      until @_shutting_down
         begin
           _iterate_event_delivery
         rescue GotNilEventException

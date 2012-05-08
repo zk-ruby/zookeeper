@@ -11,6 +11,11 @@ module Common
   end
 
 protected
+  # shared between C and Java
+  def after_fork(&block)
+    @after_fork_hooks << block
+  end
+
   def get_next_event(blocking=true)
     @event_queue.pop(!blocking).tap do |event|
       logger.debug { "#{self.class}##{__method__} delivering event #{event.inspect}" }
@@ -31,8 +36,10 @@ protected
   end
 
   def setup_watcher(req_id, call_opts)
-    @watcher_reqs[req_id] = { :watcher => call_opts[:watcher],
-                              :context => call_opts[:watcher_context] }
+    @mutex.synchronize do
+      @watcher_reqs[req_id] = { :watcher => call_opts[:watcher],
+                                :context => call_opts[:watcher_context] }
+    end
   end
 
   # as a hack, to provide consistency between the java implementation and the C
@@ -42,8 +49,10 @@ protected
   # we don't use meth_name here, but we need it in the C implementation
   #
   def setup_completion(req_id, meth_name, call_opts)
-    @completion_reqs[req_id] = { :callback => call_opts[:callback],
-                                :context => call_opts[:callback_context] }
+    @mutex.synchronize do
+      @completion_reqs[req_id] = { :callback => call_opts[:callback],
+                                  :context => call_opts[:callback_context] }
+    end
   end
   
   def get_watcher(req_id)
@@ -61,7 +70,9 @@ protected
     @dispatcher ||= Thread.new do
       while true
         begin
-          dispatch_next_callback(get_next_event(true))
+          event = get_next_event(true)
+          logger.debug { "got event #{event.inspect} dispatching " }
+          dispatch_next_callback(event)
         rescue QueueWithPipe::ShutdownException
           logger.info { "dispatch thread exiting, got shutdown exception" }
           break
@@ -93,13 +104,11 @@ protected
         # we now release the mutex so that dispatch_next_callback can grab it
         # to do what it needs to do while delivering events
         #
-        # wait for a maximum of 2 sec for dispatcher to signal exit (should be
-        # fast)
-        @dispatch_shutdown_cond.wait(2)
+        @dispatch_shutdown_cond.wait
 
         # wait for another 2 sec for the thread to join
-        unless @dispatcher.join(2)
-          logger.error { "Dispatch thread did not join cleanly, continuing" }
+        until @dispatcher.join(2)
+          logger.error { "Dispatch thread did not join cleanly, waiting" }
         end
         @dispatcher = nil
       end

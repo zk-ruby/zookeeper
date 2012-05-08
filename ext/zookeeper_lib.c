@@ -44,25 +44,31 @@ pthread_mutex_t zkrb_q_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 
 void zkrb_enqueue(zkrb_queue_t *q, zkrb_event_t *elt) {
-  GLOBAL_MUTEX_LOCK("zkrb_enqueue");
+  if (q == NULL) {
+    zkrb_debug("zkrb_enqueue, queue ptr was NULL");
+    return;
+  }
 
-  check_debug(q != NULL && q->tail != NULL,  "zkrb_enqueue: queue ptr or tail was NULL\n");
+  if (q->tail == NULL) {
+    zkrb_debug("zkrb_enqeue, q->tail was NULL");
+    return;
+  }
+
+  pthread_mutex_lock(q->mutex);
 
   q->tail->event = elt;
   q->tail->next = (zkrb_event_ll_t *) malloc(sizeof(zkrb_event_ll_t));
   q->tail = q->tail->next;
   q->tail->event = NULL;
   q->tail->next = NULL;
+
   ssize_t ret = write(q->pipe_write, "0", 1);   /* Wake up Ruby listener */
 
-  // XXX(slyphon): can't raise a ruby exception here as we may not be calling
-  // this from a ruby thread. Calling into the interpreter from a non-ruby
-  // thread is bad, mm'kay?
+  pthread_mutex_unlock(q->mutex);
 
-  check(ret != -1, "write to queue (%p) pipe failed!\n", q);
-
-error:
-  GLOBAL_MUTEX_UNLOCK("zkrb_enqueue");
+  if (ret < 0) {
+    log_err("write to queue (%p) pipe failed!\n", q);
+  }
 }
 
 // NOTE: the zkrb_event_t* returned *is* the same pointer that's part of the
@@ -73,13 +79,16 @@ error:
 zkrb_event_t * zkrb_peek(zkrb_queue_t *q) {
   zkrb_event_t *event = NULL;
 
-  GLOBAL_MUTEX_LOCK("zkrb_peek");
+  if (!q) return event;
+
+  pthread_mutex_lock(q->mutex);
 
   if (q != NULL && q->head != NULL && q->head->event != NULL) {
     event = q->head->event;
   }
 
-  GLOBAL_MUTEX_UNLOCK("zkrb_peek");
+  pthread_mutex_unlock(q->mutex);
+
   return event;
 }
 
@@ -90,7 +99,7 @@ zkrb_event_t* zkrb_dequeue(zkrb_queue_t *q, int need_lock) {
   zkrb_event_ll_t *old_root = NULL;
     
   if (need_lock)
-    GLOBAL_MUTEX_LOCK("zkrb_dequeue");
+    pthread_mutex_lock(q->mutex);
 
   if (!ZKRB_QUEUE_EMPTY(q)) {
     old_root = q->head;
@@ -99,19 +108,21 @@ zkrb_event_t* zkrb_dequeue(zkrb_queue_t *q, int need_lock) {
   }
 
   if (need_lock)
-    GLOBAL_MUTEX_UNLOCK("zkrb_dequeue");
+    pthread_mutex_unlock(q->mutex);
 
   free(old_root);
   return rv;
 }
 
 void zkrb_signal(zkrb_queue_t *q) {
-  GLOBAL_MUTEX_LOCK("zkrb_signal");
+  if (!q) return NULL;
+
+  pthread_mutex_lock(q->mutex);
 
   if (!write(q->pipe_write, "0", 1))      /* Wake up Ruby listener */
     log_err("zkrb_signal: write to pipe failed, could not wake");
 
-  GLOBAL_MUTEX_UNLOCK("zkrb_signal");
+  pthread_mutex_unlock(q->mutex);
 }
 
 zkrb_event_ll_t *zkrb_event_ll_t_alloc(void) {
@@ -126,10 +137,6 @@ zkrb_event_ll_t *zkrb_event_ll_t_alloc(void) {
 }
 
 zkrb_queue_t *zkrb_queue_alloc(void) {
-  // some of the locking is a little coarse, but it 
-  // eases the logic of releasing in case of error.
-  GLOBAL_MUTEX_LOCK("zkrb_queue_alloc"); 
-
   int pfd[2];
   zkrb_queue_t *rq = NULL;
  
@@ -138,6 +145,11 @@ zkrb_queue_t *zkrb_queue_alloc(void) {
   rq = malloc(sizeof(zkrb_queue_t));
   check_mem(rq);
 
+  rq->mutex = malloc(sizeof(rq->mutex));
+  check_mem(rq->mutex);
+
+  pthread_mutex_init(rq->mutex, NULL);
+
   rq->head = zkrb_event_ll_t_alloc();
   check_mem(rq->head);
 
@@ -145,18 +157,15 @@ zkrb_queue_t *zkrb_queue_alloc(void) {
   rq->pipe_read = pfd[0];
   rq->pipe_write = pfd[1];
 
-  GLOBAL_MUTEX_UNLOCK("zkrb_queue_alloc");
   return rq;
 
 error:
-  GLOBAL_MUTEX_UNLOCK("zkrb_queue_alloc");
   free(rq);
   return NULL;
 }
 
 void zkrb_queue_free(zkrb_queue_t *queue) {
-  GLOBAL_MUTEX_LOCK("zkrb_queue_free");
-  check_debug(queue != NULL, "zkrb_queue_free: queue was NULL");
+  if (!queue) return NULL;
 
   zkrb_event_t *elt;
   while ((elt = zkrb_dequeue(queue, 0)) != NULL) {
@@ -165,10 +174,9 @@ void zkrb_queue_free(zkrb_queue_t *queue) {
   free(queue->head);
   close(queue->pipe_read);
   close(queue->pipe_write);
-  free(queue);
+  pthread_mutex_destroy(queue->mutex);
 
-error:
-  GLOBAL_MUTEX_UNLOCK("zkrb_queue_free");
+  free(queue);
 }
 
 zkrb_event_t *zkrb_event_alloc(void) {
