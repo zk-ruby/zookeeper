@@ -138,6 +138,15 @@ class ZookeeperBase
     end
   end
 
+  # do not lock, do not mutex, just close the underlying handle this is
+  # potentially dangerous and should only be called after a fork() to close
+  # this instance
+  def close!
+    @czk && @czk.close
+  end
+
+  # close the connection normally, stops the dispatch thread and closes the
+  # underlying connection cleanly
   def close
     shutdown_thread = Thread.new do
       @mutex.synchronize do
