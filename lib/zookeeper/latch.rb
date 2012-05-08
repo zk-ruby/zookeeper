@@ -14,10 +14,20 @@ module Zookeeper
       }
     end
 
-    def await
-      @mutex.synchronize {
-        @cond.wait_while { @count > 0 }
-      }
+    def await(timeout=nil)
+      @mutex.synchronize do
+        if timeout
+          time_to_stop = Time.now + timeout
+
+          while @count > 0
+            @cond.wait(timeout)
+            
+            break if (Time.now > time_to_stop)
+          end
+        else
+          @cond.wait_while { @count > 0 }
+        end
+      end
     end
   end
 end

@@ -200,7 +200,7 @@ class JavaBase
   end
 
   def wait_until_connected(timeout=10)
-    @connected_latch.await unless connected?
+    @connected_latch.await(timeout) unless connected?
     connected?
   end
 
@@ -415,6 +415,8 @@ class JavaBase
   # XXX: this code needs to be duplicated from ext/zookeeper_base.rb because
   # it's called from the initializer, and because of the C impl. we can't have
   # the two decend from a common base, and a module wouldn't work
+  #
+  # XXX: this is probably a relic?
   def set_default_global_watcher
     @mutex.synchronize do
       @watcher_reqs[ZKRB_GLOBAL_CB_REQ] = { :watcher => @default_watcher, :watcher_context => nil }
@@ -463,15 +465,6 @@ class JavaBase
 
         h = { :req_id => req_id, :type => ev_type, :state => ev_state, :path => path }
         event_queue.push(h)
-      end
-    end
-
-    # method to wait until block passed returns true or timeout (default is 10 seconds) is reached 
-    def wait_until(timeout=10, &block)
-      time_to_stop = Time.now + timeout
-      until yield do 
-        break if Time.now > time_to_stop
-        sleep 0.1
       end
     end
 
