@@ -29,7 +29,7 @@ module Zookeeper
   include Constants
 
   unless defined?(@@logger)
-    @@logger = Logger.new($stderr).tap { |l| l.level = Logger::ERROR } 
+    @@logger = Logger.new($stderr).tap { |l| l.level = ENV['ZOOKEEPER_DEBUG'] ? Logger::DEBUG : Logger::ERROR } 
   end
 
   def self.logger
@@ -84,4 +84,8 @@ end
 
 # just for first test, get rid of this soon
 require_relative 'zookeeper/compatibility'
+
+if ENV['ZKRB_DEBUG']
+  Zookeeper.debug_level = Zookeeper::Constants::ZOO_LOG_LEVEL_DEBUG
+end
 
