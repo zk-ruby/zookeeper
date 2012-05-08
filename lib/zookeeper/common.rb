@@ -37,8 +37,10 @@ protected
 
   def setup_watcher(req_id, call_opts)
     @mutex.synchronize do
-      @watcher_reqs[req_id] = { :watcher => call_opts[:watcher],
-                                :context => call_opts[:watcher_context] }
+      @watcher_reqs[req_id] = { 
+        :watcher => call_opts[:watcher],
+        :context => call_opts[:watcher_context] 
+      }
     end
   end
 
@@ -50,8 +52,10 @@ protected
   #
   def setup_completion(req_id, meth_name, call_opts)
     @mutex.synchronize do
-      @completion_reqs[req_id] = { :callback => call_opts[:callback],
-                                  :context => call_opts[:callback_context] }
+      @completion_reqs[req_id] = { 
+        :callback => call_opts[:callback],
+        :context => call_opts[:callback_context]
+      }
     end
   end
   
