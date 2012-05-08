@@ -38,6 +38,7 @@ struct zkrb_instance_data {
   clientid_t          myid;
   zkrb_queue_t      *queue;
   long              object_id; // the ruby object this instance data is associated with
+  pid_t             orig_pid;
 };
 
 typedef enum {
@@ -159,7 +160,6 @@ static VALUE method_zkrb_init(int argc, VALUE* argv, VALUE self) {
     zoo_set_debug_level((int)log_level);
   }
 
-
   VALUE data;
   struct zkrb_instance_data *zk_local_ctx;
   data = Data_Make_Struct(CZookeeper, struct zkrb_instance_data, 0, free_zkrb_instance_data, zk_local_ctx);
@@ -188,6 +188,8 @@ static VALUE method_zkrb_init(int argc, VALUE* argv, VALUE self) {
   if (!zk_local_ctx->zh) {
     rb_raise(rb_eRuntimeError, "error connecting to zookeeper: %d", errno);
   }
+
+  zk_local_ctx->orig_pid = getpid();
 
   rb_iv_set(self, "@_data", data);
   rb_funcall(self, rb_intern("zkc_set_running_and_notify!"), 0);

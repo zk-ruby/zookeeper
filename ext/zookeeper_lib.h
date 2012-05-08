@@ -6,6 +6,7 @@
 #include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <unistd.h>
 
 #define ZK_TRUE 1
 #define ZK_FALSE 0
@@ -106,6 +107,7 @@ typedef struct {
   int             pipe_read;
   int             pipe_write;
   pthread_mutex_t mutex;
+  pid_t           orig_pid;
 } zkrb_queue_t;
 
 zkrb_queue_t * zkrb_queue_alloc(void);

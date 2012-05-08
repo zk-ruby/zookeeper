@@ -145,7 +145,9 @@ zkrb_queue_t *zkrb_queue_alloc(void) {
   rq = malloc(sizeof(zkrb_queue_t));
   check_mem(rq);
 
-  pthread_mutex_init(&rq->mutex, NULL);
+  rq->orig_pid = getpid();
+
+  check(pthread_mutex_init(&rq->mutex, NULL) == 0, "pthread_mutex_init failed");
 
   rq->head = zkrb_event_ll_t_alloc();
   check_mem(rq->head);
@@ -168,9 +170,11 @@ void zkrb_queue_free(zkrb_queue_t *queue) {
   while ((elt = zkrb_dequeue(queue, 0)) != NULL) {
     zkrb_event_free(elt);
   }
+
   free(queue->head);
   close(queue->pipe_read);
   close(queue->pipe_write);
+
   pthread_mutex_destroy(&queue->mutex);
 
   free(queue);
