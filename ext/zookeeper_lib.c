@@ -54,7 +54,7 @@ void zkrb_enqueue(zkrb_queue_t *q, zkrb_event_t *elt) {
     return;
   }
 
-  pthread_mutex_lock(q->mutex);
+  pthread_mutex_lock(&q->mutex);
 
   q->tail->event = elt;
   q->tail->next = (zkrb_event_ll_t *) malloc(sizeof(zkrb_event_ll_t));
@@ -64,7 +64,7 @@ void zkrb_enqueue(zkrb_queue_t *q, zkrb_event_t *elt) {
 
   ssize_t ret = write(q->pipe_write, "0", 1);   /* Wake up Ruby listener */
 
-  pthread_mutex_unlock(q->mutex);
+  pthread_mutex_unlock(&q->mutex);
 
   if (ret < 0) {
     log_err("write to queue (%p) pipe failed!\n", q);
@@ -81,13 +81,13 @@ zkrb_event_t * zkrb_peek(zkrb_queue_t *q) {
 
   if (!q) return event;
 
-  pthread_mutex_lock(q->mutex);
+  pthread_mutex_lock(&q->mutex);
 
   if (q != NULL && q->head != NULL && q->head->event != NULL) {
     event = q->head->event;
   }
 
-  pthread_mutex_unlock(q->mutex);
+  pthread_mutex_unlock(&q->mutex);
 
   return event;
 }
@@ -99,7 +99,7 @@ zkrb_event_t* zkrb_dequeue(zkrb_queue_t *q, int need_lock) {
   zkrb_event_ll_t *old_root = NULL;
     
   if (need_lock)
-    pthread_mutex_lock(q->mutex);
+    pthread_mutex_lock(&q->mutex);
 
   if (!ZKRB_QUEUE_EMPTY(q)) {
     old_root = q->head;
@@ -108,21 +108,21 @@ zkrb_event_t* zkrb_dequeue(zkrb_queue_t *q, int need_lock) {
   }
 
   if (need_lock)
-    pthread_mutex_unlock(q->mutex);
+    pthread_mutex_unlock(&q->mutex);
 
   free(old_root);
   return rv;
 }
 
 void zkrb_signal(zkrb_queue_t *q) {
-  if (!q) return NULL;
+  if (!q) return;
 
-  pthread_mutex_lock(q->mutex);
+  pthread_mutex_lock(&q->mutex);
 
   if (!write(q->pipe_write, "0", 1))      /* Wake up Ruby listener */
     log_err("zkrb_signal: write to pipe failed, could not wake");
 
-  pthread_mutex_unlock(q->mutex);
+  pthread_mutex_unlock(&q->mutex);
 }
 
 zkrb_event_ll_t *zkrb_event_ll_t_alloc(void) {
@@ -145,10 +145,7 @@ zkrb_queue_t *zkrb_queue_alloc(void) {
   rq = malloc(sizeof(zkrb_queue_t));
   check_mem(rq);
 
-  rq->mutex = malloc(sizeof(rq->mutex));
-  check_mem(rq->mutex);
-
-  pthread_mutex_init(rq->mutex, NULL);
+  pthread_mutex_init(&rq->mutex, NULL);
 
   rq->head = zkrb_event_ll_t_alloc();
   check_mem(rq->head);
@@ -165,7 +162,7 @@ error:
 }
 
 void zkrb_queue_free(zkrb_queue_t *queue) {
-  if (!queue) return NULL;
+  if (!queue) return;
 
   zkrb_event_t *elt;
   while ((elt = zkrb_dequeue(queue, 0)) != NULL) {
@@ -174,7 +171,7 @@ void zkrb_queue_free(zkrb_queue_t *queue) {
   free(queue->head);
   close(queue->pipe_read);
   close(queue->pipe_write);
-  pthread_mutex_destroy(queue->mutex);
+  pthread_mutex_destroy(&queue->mutex);
 
   free(queue);
 }
