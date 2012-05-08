@@ -58,6 +58,11 @@ module Constants
 
   ZKRB_GLOBAL_CB_REQ = -1
 
+  # @private
+  CONNECTED_EVENT_VALUES = [Constants::ZKRB_GLOBAL_CB_REQ, 
+                            Constants::ZOO_SESSION_EVENT, 
+                            Constants::ZOO_CONNECTED_STATE].freeze
+
   # used to find the name for a numeric event
   # @private
   EVENT_TYPE_NAMES = {

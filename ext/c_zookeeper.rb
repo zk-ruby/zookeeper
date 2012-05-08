@@ -8,13 +8,15 @@ require_relative 'zookeeper_c'
 #       when we're garbage collected
 module Zookeeper
 class CZookeeper
-  include Zookeeper::Common
+  include Zookeeper::Forked
   include Zookeeper::Constants
   include Zookeeper::Exceptions
 
   DEFAULT_SESSION_TIMEOUT_MSEC = 10000
 
   class GotNilEventException < StandardError; end
+
+  attr_accessor :original_pid
 
   # assume we're at debug level
   def self.get_debug_level
@@ -29,6 +31,9 @@ class CZookeeper
   def initialize(host, event_queue, opts={})
     @host = host
     @event_queue = event_queue
+
+    # keep track of the pid that created us
+    update_pid!
     
     # used by the C layer. CZookeeper sets this to true when the init method
     # has completed. once this is set to true, it stays true.
@@ -52,6 +57,9 @@ class CZookeeper
     
     # used to signal that we're running
     @running_cond = @start_stop_mutex.new_cond
+
+    # used to signal we've received the connected event
+    @connected_cond = @start_stop_mutex.new_cond
     
     @event_thread = nil
 
@@ -89,14 +97,19 @@ class CZookeeper
   def close
     return if closed?
 
-    shut_down!
-    stop_event_thread!
-
-    @start_stop_mutex.synchronize do
+    fn_close = proc do
       if !@_closed and @_data
         logger.debug { "CALLING CLOSE HANDLE!!" }
         close_handle
       end
+    end
+
+    if forked?
+      fn_close.call
+    else
+      shut_down!
+      stop_event_thread!
+      @start_stop_mutex.synchronize(&fn_close)
     end
 
     nil
@@ -115,12 +128,9 @@ class CZookeeper
   # if timeout is nil, we never time out, and wait forever for CONNECTED state
   #
   def wait_until_connected(timeout=10)
-    return false unless wait_until_running(timeout)
-
-    time_to_stop = timeout ? (Time.now + timeout) : nil
-
-    until connected? or (time_to_stop and Time.now > time_to_stop)
-      Thread.pass
+    @start_stop_mutex.synchronize do
+      wait_until_running(timeout)
+      @connected_cond.wait(timeout) unless connected?
     end
 
     connected?
@@ -170,6 +180,12 @@ class CZookeeper
     def _iterate_event_delivery
       get_next_event(true).tap do |hash|
         raise GotNilEventException if hash.nil?
+
+        # TODO: should push notify_connected! down so that it's common to both java and C impl.
+        if hash.values_at(:req_id, :type, :state) == CONNECTED_EVENT_VALUES
+          notify_connected!
+        end
+
         @event_queue.push(hash)
       end
     end
@@ -211,6 +227,12 @@ class CZookeeper
       @start_stop_mutex.synchronize do
         @_running = true
         @running_cond.broadcast
+      end
+    end
+
+    def notify_connected!
+      @start_stop_mutex.synchronize do
+        @connected_cond.broadcast
       end
     end
 end

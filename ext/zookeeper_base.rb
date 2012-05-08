@@ -8,11 +8,14 @@ require 'forwardable'
 module Zookeeper
 class ZookeeperBase
   extend Forwardable
+  include Zookeeper::Forked
   include Zookeeper::Common       # XXX: clean this up, no need to include *everything*
   include Zookeeper::Callbacks
   include Zookeeper::Constants
   include Zookeeper::Exceptions
   include Zookeeper::ACLs
+
+  attr_accessor :original_pid
 
   # @private
   class ClientShutdownException < StandardError; end
@@ -50,7 +53,8 @@ class ZookeeperBase
     end
   end
 
-  synchronized_delegation :@czk, :get_children, :exists, :delete, :get, :set, :set_acl, :get_acl, :client_id, :sync
+  synchronized_delegation :@czk, :get_children, :exists, :delete, :get, :set,
+    :set_acl, :get_acl, :client_id, :sync, :wait_until_connected
 
   # some state methods need to be more paranoid about locking to ensure the correct
   # state is returned
@@ -74,7 +78,7 @@ class ZookeeperBase
       raise "You cannot set the watcher to a different value this way anymore!"
     end
 
-    fire_after_fork_callbacks! if forked?
+    reopen_after_fork! if forked?
 
     @mutex.synchronize do
       # flushes all outstanding watcher reqs.
@@ -86,10 +90,6 @@ class ZookeeperBase
       orig_czk.close if orig_czk
       
       @czk.wait_until_connected(timeout)
-      
-      # keep track of what process we were in to protect
-      # against reuse after fork()
-      @pid = Process.pid
     end
 
     setup_dispatch_thread!
@@ -102,15 +102,12 @@ class ZookeeperBase
 
     @after_fork_hooks = []
 
-    # this may not hold true if we decide to have an
-    # explicit connect method
-    @pid = Process.pid
+    update_pid!  # from Forked
 
     @current_req_id = 0
 
-    # this is gross, but keep this initializtion in one place
-    zookeeper_base_after_fork
-    after_fork(&method(:zookeeper_base_after_fork))
+    # set up state that also needs to be re-setup after a fork()
+    reopen_after_fork!
     
     @czk = nil
     
@@ -198,21 +195,22 @@ class ZookeeperBase
   end
  
 protected
-  # ugh, this is gross
-  def zookeeper_base_after_fork
+  # this method may be called in either the fork case, or from the constructor
+  # to set up this state initially (so all of this is in one location). we rely
+  # on the forked? method to determine which it is
+  def reopen_after_fork!
+    logger.debug { "#{self.class}##{__method__}" }
     @mutex = Monitor.new
     @dispatch_shutdown_cond = @mutex.new_cond
     @event_queue = @event_queue ? @event_queue.clone_after_fork : QueueWithPipe.new
 
-    if @dispatcher        # this will be nil in the non-fork case
+    if @dispatcher and not @dispatcher.alive?
+      logger.debug { "#{self.class}##{__method__} re-starting dispatch thread" }
       @dispatcher = nil
       setup_dispatch_thread!
     end
-  end
 
-  # calls back all the registered @after_fork_hooks on this connection
-  def fire_after_fork_callbacks!
-    @after_fork_hooks.each(&:call)
+    update_pid!
   end
 
   # this is a hack: to provide consistency between the C and Java drivers when
@@ -265,10 +263,6 @@ protected
     end
 
     @chroot_path
-  end
-  
-  def forked?
-    Process.pid != @pid
   end
 end
 end

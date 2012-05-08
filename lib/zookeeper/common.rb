@@ -66,21 +66,27 @@ protected
   end
 
   def setup_dispatch_thread!
-    logger.debug {  "starting dispatch thread" }
-    @dispatcher ||= Thread.new do
-      while true
-        begin
-          event = get_next_event(true)
-          logger.debug { "got event #{event.inspect} dispatching " }
-          dispatch_next_callback(event)
-        rescue QueueWithPipe::ShutdownException
-          logger.info { "dispatch thread exiting, got shutdown exception" }
-          break
-        rescue Exception => e
-          $stderr.puts ["#{e.class}: #{e.message}", e.backtrace.map { |n| "\t#{n}" }.join("\n")].join("\n")
-        end
+    @mutex.synchronize do
+      if @dispatcher
+        logger.debug { "dispatcher already running" }
+        return
       end
-      signal_dispatch_thread_exit!
+
+      logger.debug {  "starting dispatch thread" }
+
+      @dispatcher = Thread.new do
+        while true
+          begin
+            dispatch_next_callback(get_next_event(true))
+          rescue QueueWithPipe::ShutdownException
+            logger.info { "dispatch thread exiting, got shutdown exception" }
+            break
+          rescue Exception => e
+            $stderr.puts ["#{e.class}: #{e.message}", e.backtrace.map { |n| "\t#{n}" }.join("\n")].join("\n")
+          end
+        end
+        signal_dispatch_thread_exit!
+      end
     end
   end
   

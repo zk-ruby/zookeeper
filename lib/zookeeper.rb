@@ -11,6 +11,8 @@ module Zookeeper
   # establishes the namespace
 end
 
+require_relative 'zookeeper/forked'
+require_relative 'zookeeper/latch'
 require_relative 'zookeeper/acls'
 require_relative 'zookeeper/constants'
 require_relative 'zookeeper/exceptions'
