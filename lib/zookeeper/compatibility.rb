@@ -28,7 +28,8 @@ module Zookeeper
   end
 end
 
-Zookeeper.warn_about_compatability_once!
+# at request of @eric
+#Zookeeper.warn_about_compatability_once!
 
 module Zookeeper
   module Compatibility
