@@ -79,7 +79,7 @@ void zkrb_enqueue(zkrb_queue_t *q, zkrb_event_t *elt) {
 zkrb_event_t * zkrb_peek(zkrb_queue_t *q) {
   zkrb_event_t *event = NULL;
 
-  if (!q) return event;
+  if (!q) return NULL;
 
   pthread_mutex_lock(&q->mutex);
 
