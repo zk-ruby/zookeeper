@@ -122,6 +122,8 @@ module Zookeeper
         Zookeeper::Callbacks
       end
 
+    super unless candidate
+
     if candidate.const_defined?(sym)
       warn "\n#{self.name}::#{sym} is now located in #{candidate}::#{sym}, please update your code!\n#{clean_backtrace}"
 
