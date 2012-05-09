@@ -72,6 +72,25 @@ class ZookeeperBase
   threadsafe_inquisitor :connected?, :connecting?, :associating?, :running?
 
   attr_reader :event_queue
+  
+  # this method may be called in either the fork case, or from the constructor
+  # to set up this state initially (so all of this is in one location). we rely
+  # on the forked? method to determine which it is
+  def reopen_after_fork!
+    logger.debug { "#{self.class}##{__method__} fork detected!" } if forked?
+
+    @mutex = Monitor.new
+    @dispatch_shutdown_cond = @mutex.new_cond
+    @event_queue = QueueWithPipe.new
+
+    if @dispatcher and not @dispatcher.alive?
+      logger.debug { "#{self.class}##{__method__} re-starting dispatch thread" }
+      @dispatcher = nil
+    end
+
+    update_pid!  # from Forked
+  end
+  protected :reopen_after_fork!
  
   def reopen(timeout = 10, watcher=nil)
     if watcher and (watcher != @default_watcher)
@@ -81,13 +100,16 @@ class ZookeeperBase
     reopen_after_fork! if forked?
 
     @mutex.synchronize do
+      if @czk 
+        @czk.close
+        @czk = nil
+      end
+
+      @czk = CZookeeper.new(@host, @event_queue)
+
       # flushes all outstanding watcher reqs.
       @watcher_reqs.clear
       set_default_global_watcher
-
-      orig_czk, @czk = @czk, CZookeeper.new(@host, @event_queue)
-
-      orig_czk.close if orig_czk
       
       @czk.wait_until_connected(timeout)
     end
@@ -100,14 +122,11 @@ class ZookeeperBase
     @watcher_reqs = {}
     @completion_reqs = {}
 
-    update_pid!  # from Forked
-
     @current_req_id = 0
 
-    # set up state that also needs to be re-setup after a fork()
+    @dispatcher = @czk = nil
+
     reopen_after_fork!
-    
-    @czk = nil
     
     # approximate the java behavior of raising java.lang.IllegalArgumentException if the host
     # argument ends with '/'
@@ -202,24 +221,6 @@ class ZookeeperBase
   end
  
 protected
-  # this method may be called in either the fork case, or from the constructor
-  # to set up this state initially (so all of this is in one location). we rely
-  # on the forked? method to determine which it is
-  def reopen_after_fork!
-    logger.debug { "#{self.class}##{__method__}" }
-    @mutex = Monitor.new
-    @dispatch_shutdown_cond = @mutex.new_cond
-    @event_queue = QueueWithPipe.new
-
-    if @dispatcher and not @dispatcher.alive?
-      logger.debug { "#{self.class}##{__method__} re-starting dispatch thread" }
-      @dispatcher = nil
-      setup_dispatch_thread!
-    end
-
-    update_pid!
-  end
-
   # this is a hack: to provide consistency between the C and Java drivers when
   # using a chrooted connection, we wrap the callback in a block that will
   # strip the chroot path from the returned path (important in an async create

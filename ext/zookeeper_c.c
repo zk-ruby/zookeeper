@@ -55,6 +55,8 @@ typedef enum {
 static int destroy_zkrb_instance(struct zkrb_instance_data* ptr) {
   int rv = ZOK;
 
+  zkrb_debug("destroy_zkrb_instance, zk_local_ctx: %p, zh: %p, queue: %p", ptr, ptr->zh, ptr->queue);
+
   if (ptr->zh) {
     const void *ctx = zoo_get_context(ptr->zh);
     /* Note that after zookeeper_close() returns, ZK handle is invalid */
@@ -163,6 +165,7 @@ static VALUE method_zkrb_init(int argc, VALUE* argv, VALUE self) {
   VALUE data;
   struct zkrb_instance_data *zk_local_ctx;
   data = Data_Make_Struct(CZookeeper, struct zkrb_instance_data, 0, free_zkrb_instance_data, zk_local_ctx);
+
   zk_local_ctx->queue = zkrb_queue_alloc();
 
   if (zk_local_ctx->queue == NULL)
@@ -183,6 +186,9 @@ static VALUE method_zkrb_init(int argc, VALUE* argv, VALUE self) {
           &zk_local_ctx->myid,
           ctx,
           0);
+
+  zkrb_debug("method_zkrb_init, zk_local_ctx: %p, zh: %p, queue: %p, calling_ctx: %p",
+      zk_local_ctx, zk_local_ctx->zh, zk_local_ctx->queue, ctx);
 
 #warning [wickman] TODO handle this properly on the Ruby side rather than C side
   if (!zk_local_ctx->zh) {

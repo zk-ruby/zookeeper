@@ -54,6 +54,8 @@ unless defined?(::JRUBY_VERSION)
 
       @zk.stat(:path => "#{pids_root}/child", :watcher => cb)
 
+      logger.debug { "------------------->   FORK   <---------------------------" }
+
       @pid = fork do
         logger.debug { "reopening connection in child: #{$$}" }
         @zk.reopen
