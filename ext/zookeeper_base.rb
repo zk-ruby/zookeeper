@@ -100,8 +100,6 @@ class ZookeeperBase
     @watcher_reqs = {}
     @completion_reqs = {}
 
-    @after_fork_hooks = []
-
     update_pid!  # from Forked
 
     @current_req_id = 0

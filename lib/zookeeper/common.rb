@@ -11,11 +11,6 @@ module Common
   end
 
 protected
-  # shared between C and Java
-  def after_fork(&block)
-    @after_fork_hooks << block
-  end
-
   def get_next_event(blocking=true)
     @event_queue.pop(!blocking).tap do |event|
       logger.debug { "#{self.class}##{__method__} delivering event #{event.inspect}" }
