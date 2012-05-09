@@ -1,3 +1,9 @@
+v1.0.3 Linux: Fix hang on reopen after fork
+
+  * Linux users relying on fork() should upgrade to 1.0.3, as it
+    fixes a bug in the reopen code that would cause a hang in the child.
+    If you're running on linux, you *really* should upgrade
+
 v1.0.0 Single Zookeeper namespace
 
   * The top level Zookeeper class is now a module, the former Zookeeper
