@@ -123,6 +123,7 @@ class ZookeeperBase
 
     @dispatcher = @czk = nil
 
+    update_pid!
     reopen_after_fork!
     
     # approximate the java behavior of raising java.lang.IllegalArgumentException if the host
@@ -165,7 +166,7 @@ class ZookeeperBase
     shutdown_thread = Thread.new do
       @mutex.synchronize do
         stop_dispatch_thread!
-        @czk.close
+        close!
       end
     end
 
