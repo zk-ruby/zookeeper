@@ -71,7 +71,6 @@ unless defined?(::JRUBY_VERSION)
       logger.debug { "waiting on child #{@pid}" }
 
       @latch.await until @event 
-      p @event
 
       _, status = Process.wait2(@pid)
 
