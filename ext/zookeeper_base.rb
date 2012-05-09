@@ -83,14 +83,11 @@ class ZookeeperBase
     @dispatch_shutdown_cond = @mutex.new_cond
     @event_queue = QueueWithPipe.new
 
-    if @dispatcher and not @dispatcher.alive?
-      logger.debug { "#{self.class}##{__method__} re-starting dispatch thread" }
-      @dispatcher = nil
-    end
+    @dispatcher = nil if @dispatcher and not @dispatcher.alive?
 
     update_pid!  # from Forked
   end
-  protected :reopen_after_fork!
+  private :reopen_after_fork!
  
   def reopen(timeout = 10, watcher=nil)
     if watcher and (watcher != @default_watcher)

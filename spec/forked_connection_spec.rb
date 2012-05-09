@@ -17,8 +17,8 @@ unless defined?(::JRUBY_VERSION)
     before do
       if defined?(::Rubinius)
         pending("this test is currently broken in rbx")
-      elsif ENV['TRAVIS']
-        pending("this test is currently hanging in travis")
+#       elsif ENV['TRAVIS']
+#         pending("this test is currently hanging in travis")
       else
         @zk = Zookeeper.new(connection_string)
         rm_rf(@zk, path)
