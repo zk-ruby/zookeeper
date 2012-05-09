@@ -39,17 +39,6 @@ module Common
       rv
     end
 
-    # after a fork, we construct a new one of these with the state preserved
-    # but with new locks and a new queue instance
-    # @private
-    def clone_after_fork
-      self.class.new.tap do |qwf|
-        @queue.instance_variable_get(:@que).each do |i|
-          qwf.push(i)
-        end
-      end
-    end
-
     # close the queue and causes ShutdownException to be raised on waiting threads
     def graceful_close!
       @mutex.synchronize do
