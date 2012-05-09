@@ -1,6 +1,6 @@
 require 'spec_helper'
 
-# this is a simple sanity check of my timout addition
+# this is a simple sanity check of my timeout addition
 
 describe Zookeeper::Latch do
   subject { described_class.new }
