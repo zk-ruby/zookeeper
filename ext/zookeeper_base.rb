@@ -211,7 +211,7 @@ protected
     logger.debug { "#{self.class}##{__method__}" }
     @mutex = Monitor.new
     @dispatch_shutdown_cond = @mutex.new_cond
-    @event_queue = @event_queue ? @event_queue.clone_after_fork : QueueWithPipe.new
+    @event_queue = QueueWithPipe.new
 
     if @dispatcher and not @dispatcher.alive?
       logger.debug { "#{self.class}##{__method__} re-starting dispatch thread" }
