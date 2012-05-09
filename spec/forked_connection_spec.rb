@@ -7,16 +7,20 @@ unless defined?(::JRUBY_VERSION)
     let(:data) { "underpants" } 
     let(:connection_string) { Zookeeper.default_cnx_str }
 
-    before do
-      @zk = Zookeeper.new(connection_string)
-      rm_rf(@zk, path)
-    end
-
     def process_alive?(pid)
       Process.kill(0, @pid)
       true
     rescue Errno::ESRCH
       false
+    end
+
+    before do
+      if defined?(::Rubinius)
+        pending("this test is currently broken in rbx")
+      else
+        @zk = Zookeeper.new(connection_string)
+        rm_rf(@zk, path)
+      end
     end
 
     after do
