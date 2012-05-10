@@ -106,7 +106,6 @@ typedef struct {
   zkrb_event_ll_t *tail;
   int             pipe_read;
   int             pipe_write;
-  pthread_mutex_t mutex;
   pid_t           orig_pid;
 } zkrb_queue_t;
 

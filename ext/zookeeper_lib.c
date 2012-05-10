@@ -37,11 +37,17 @@ int ZKRBDebugging;
 // XXX(slyphon): need to check these for error, but what to do if they fail?
 pthread_mutex_t zkrb_q_mutex = PTHREAD_MUTEX_INITIALIZER;
 
-#define LOG_PTHREAD_ERR(A, M, ...) if (A) { log_err(M, ##__VA_ARGS__); errno=0; }
+inline static int global_mutex_lock() {
+  int rv = pthread_mutex_lock(&zkrb_q_mutex);
+  if (rv != 0) log_err("global_mutex_lock error");
+  return rv;
+}
 
-#define GLOBAL_MUTEX_LOCK(F)   LOG_PTHREAD_ERR(pthread_mutex_lock(&zkrb_q_mutex), F)
-#define GLOBAL_MUTEX_UNLOCK(F) LOG_PTHREAD_ERR(pthread_mutex_unlock(&zkrb_q_mutex), F)
-
+inline static int global_mutex_unlock() {
+  int rv = pthread_mutex_unlock(&zkrb_q_mutex);
+  if (rv != 0) log_err("global_mutex_unlock error");
+  return rv;
+}
 
 void zkrb_enqueue(zkrb_queue_t *q, zkrb_event_t *elt) {
   if (q == NULL) {
@@ -54,7 +60,7 @@ void zkrb_enqueue(zkrb_queue_t *q, zkrb_event_t *elt) {
     return;
   }
 
-  pthread_mutex_lock(&q->mutex);
+  global_mutex_lock();
 
   q->tail->event = elt;
   q->tail->next = (zkrb_event_ll_t *) malloc(sizeof(zkrb_event_ll_t));
@@ -64,7 +70,7 @@ void zkrb_enqueue(zkrb_queue_t *q, zkrb_event_t *elt) {
 
   ssize_t ret = write(q->pipe_write, "0", 1);   /* Wake up Ruby listener */
 
-  pthread_mutex_unlock(&q->mutex);
+  global_mutex_unlock();
 
   if (ret < 0) {
     log_err("write to queue (%p) pipe failed!\n", q);
@@ -81,13 +87,13 @@ zkrb_event_t * zkrb_peek(zkrb_queue_t *q) {
 
   if (!q) return NULL;
 
-  pthread_mutex_lock(&q->mutex);
+  global_mutex_lock();
 
   if (q != NULL && q->head != NULL && q->head->event != NULL) {
     event = q->head->event;
   }
 
-  pthread_mutex_unlock(&q->mutex);
+  global_mutex_unlock();
 
   return event;
 }
@@ -99,7 +105,7 @@ zkrb_event_t* zkrb_dequeue(zkrb_queue_t *q, int need_lock) {
   zkrb_event_ll_t *old_root = NULL;
     
   if (need_lock)
-    pthread_mutex_lock(&q->mutex);
+    global_mutex_lock();
 
   if (!ZKRB_QUEUE_EMPTY(q)) {
     old_root = q->head;
@@ -108,7 +114,7 @@ zkrb_event_t* zkrb_dequeue(zkrb_queue_t *q, int need_lock) {
   }
 
   if (need_lock)
-    pthread_mutex_unlock(&q->mutex);
+    global_mutex_unlock();
 
   free(old_root);
   return rv;
@@ -117,12 +123,12 @@ zkrb_event_t* zkrb_dequeue(zkrb_queue_t *q, int need_lock) {
 void zkrb_signal(zkrb_queue_t *q) {
   if (!q) return;
 
-  pthread_mutex_lock(&q->mutex);
+  global_mutex_lock();
 
   if (!write(q->pipe_write, "0", 1))      /* Wake up Ruby listener */
     log_err("zkrb_signal: write to pipe failed, could not wake");
 
-  pthread_mutex_unlock(&q->mutex);
+  global_mutex_unlock();
 }
 
 zkrb_event_ll_t *zkrb_event_ll_t_alloc(void) {
@@ -146,8 +152,6 @@ zkrb_queue_t *zkrb_queue_alloc(void) {
   check_mem(rq);
 
   rq->orig_pid = getpid();
-
-  check(pthread_mutex_init(&rq->mutex, NULL) == 0, "pthread_mutex_init failed");
 
   rq->head = zkrb_event_ll_t_alloc();
   check_mem(rq->head);
@@ -174,8 +178,6 @@ void zkrb_queue_free(zkrb_queue_t *queue) {
   free(queue->head);
   close(queue->pipe_read);
   close(queue->pipe_write);
-
-  pthread_mutex_destroy(&queue->mutex);
 
   free(queue);
 }
