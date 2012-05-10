@@ -95,7 +95,8 @@ class CZookeeper
   end
 
   def close
-    return if closed?
+    # don't use closed? here as after a fork, the @start_stop_mutex may be hosed
+    return if @_closed
 
     fn_close = proc do
       if !@_closed and @_data

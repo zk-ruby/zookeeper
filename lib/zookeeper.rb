@@ -5,14 +5,14 @@ require 'monitor'
 require 'forwardable'
 require 'logger'
 
+module Zookeeper
+  # establishes the namespace
+end
+
 require File.expand_path('../zookeeper/core_ext', __FILE__)
 
 silence_warnings do
   require 'backports'
-end
-
-module Zookeeper
-  # establishes the namespace
 end
 
 require_relative 'zookeeper/forked'

@@ -88,6 +88,15 @@ class ZookeeperBase
     update_pid!  # from Forked
   end
   private :reopen_after_fork!
+
+  def after_fork_hook
+    logger.debug { "after_fork_hook called, @after_fork_sub: #{@after_fork_sub}" }
+
+    afs, @after_fork_sub = @after_fork_sub, nil
+    afs.unregister if afs
+
+    @czk.close if @czk
+  end
  
   def reopen(timeout = 10, watcher=nil)
     if watcher and (watcher != @default_watcher)
@@ -97,10 +106,9 @@ class ZookeeperBase
     reopen_after_fork! if forked?
 
     @mutex.synchronize do
-      if @czk 
-        @czk.close
-        @czk = nil
-      end
+      after_fork_hook
+
+      @after_fork_sub = Zookeeper.after_fork_in_child(&method(:after_fork_hook))
 
       @czk = CZookeeper.new(@host, @event_queue)
 
