@@ -1,15 +1,21 @@
 module Zookeeper
   module Forked
-    @after_hooks = [] unless @after_hooks
+    @hooks = {
+      :prepare      => [],
+      :after_child  => [],
+      :after_parent => [] 
+    } unless @hooks
 
     class Subscription
-      def initialize(block)
+      def initialize(hook_type, block)
+        @hook_type = hook_type
         @block = block
       end
 
       def unregister
-        Forked.unregister(@block)
+        Forked.unregister(@hook_type, @block)
       end
+      alias unsubscribe unregister
 
       def call
         @block.call
@@ -17,20 +23,42 @@ module Zookeeper
     end
 
     class << self
-      attr_reader :after_hooks
+      attr_reader :hooks
 
-      def reopen_after_fork!
-        @after_hooks.each(&:call)
+      def fire_prepare_hooks!
+        @hooks[:prepare].each(&:call)
+      end
+
+      def fire_after_child_hooks!
+        @hooks[:after_child].each(&:call)
+      end
+
+      def fire_after_parent_hooks!
+        @hooks[:after_parent].each(&:call)
       end
 
       # called when a block should be removed from the hooks
-      def unregister(block)
-        @after_hooks.delete(block)
+      def unregister(hook_type, block)
+        @hooks.fetch(hook_type).delete(block)
       end
 
       # used by tests
       def clear!
-        @after_hooks.clear
+        @hooks.values(&:clear)
+      end
+
+      def register(hook_type, block)
+        unless hooks.has_key?(hook_type)
+          raise "Invalid hook type specified: #{hook.inspect}" 
+        end
+
+        unless block.respond_to?(:call)
+          raise ArgumentError, "You must provide either a callable an argument or a block"
+        end
+
+        Subscription.new(hook_type, block).tap do |sub|
+          @hooks[hook_type] << sub
+        end
       end
     end
     
@@ -49,18 +77,20 @@ module Zookeeper
       self.original_pid = Process.pid
     end
   end # Forked
-  
-  # called in the *child* process after a fork
-  # returns a Subscription that may be used to unregister a hook
-  def self.after_fork_in_child(callable=nil, &blk)
-    callable ||= blk
 
-    unless callable.respond_to?(:call)
-      raise ArgumentError, "You must provide either a callable an argument or a block"
+  class << self
+    def prepare_for_fork(callable=nil, &blk)
+      Forked.register(:prepare, callable||blk)
     end
 
-    Forked::Subscription.new(callable).tap do |sub|
-      Forked.after_hooks << sub
+    def after_fork_in_parent(callable=nil, &blk)
+      Forked.register(:after_parent, callable||blk)
+    end
+    
+    # called in the *child* process after a fork
+    # returns a Subscription that may be used to unregister a hook
+    def after_fork_in_child(callable=nil, &blk)
+      Forked.register(:after_child, callable||blk)
     end
   end
 end # Zookeeper
@@ -71,18 +101,23 @@ module ::Kernel
 
     if block
       new_block = proc do
-        Zookeeper::Forked.reopen_after_fork!
+        ::Zookeeper::Forked.fire_after_child_hooks!
         block.call
       end
 
-      fork_without_zookeeper_hooks(&new_block)
+      ::Zookeeper::Forked.fire_prepare_hooks!
+      fork_without_zookeeper_hooks(&new_block).tap do
+        ::Zookeeper::Forked.fire_after_parent_hooks!
+      end
     else
+      ::Zookeeper::Forked.fire_prepare_hooks!
       if pid = fork_without_zookeeper_hooks
+        ::Zookeeper::Forked.fire_after_parent_hooks!
         # we're in the parent
         return pid
       else
         # we're in the child
-        Zookeeper::Forked.reopen_after_fork!
+        ::Zookeeper::Forked.fire_after_child_hooks!
         return nil
       end
     end

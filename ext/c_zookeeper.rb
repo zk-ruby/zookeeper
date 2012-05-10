@@ -63,6 +63,12 @@ class CZookeeper
     
     @event_thread = nil
 
+    @subscriptions = [
+      Zookeeper.prepare_for_fork { @start_stop_mutex.mon_enter },
+      Zookeeper.after_fork_in_parent { @start_stop_mutex.mon_exit },
+      Zookeeper.after_fork_in_child { @start_stop_mutex.mon_exit },
+    ]
+
     setup_event_thread!
 
     zkrb_init(@host)
@@ -95,8 +101,7 @@ class CZookeeper
   end
 
   def close
-    # don't use closed? here as after a fork, the @start_stop_mutex may be hosed
-    return if @_closed
+    return if closed?
 
     fn_close = proc do
       if !@_closed and @_data
@@ -112,6 +117,8 @@ class CZookeeper
       stop_event_thread!
       @start_stop_mutex.synchronize(&fn_close)
     end
+
+    @subscriptions.each(&:unregister)
 
     nil
   end

@@ -17,19 +17,34 @@ describe 'fork hooks' do
 
   describe 'fork with a block' do
     it %[should call the after_fork_in_child hooks in the child] do
-      called_back = false
+      child_hook_called = false
 
-      Zookeeper.after_fork_in_child { called_back = true }
+      hook_order = []
+
+      Zookeeper.prepare_for_fork { hook_order << :prepare }
+      Zookeeper.after_fork_in_parent { hook_order << :parent }
+      Zookeeper.after_fork_in_child { hook_order << :child }
 
       @pid = fork do
-        if called_back
-          exit! 0
-        else
-          exit! 1
+        unless hook_order.first == :prepare
+          $stderr.puts "hook order wrong! #{hook_order.inspect}"
+          exit! 2
         end
+
+        unless hook_order.last == :child
+          $stderr.puts "hook order wrong! #{hook_order.inspect}"
+          exit! 3
+        end
+
+        exit! 0
       end
 
+      hook_order.first.should == :prepare
+      hook_order.last.should == :parent
+
       _, st = Process.wait2(@pid)
+      st.exitstatus.should == 0
+
       st.should be_exited
       st.should be_success
     end
