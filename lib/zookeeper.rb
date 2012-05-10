@@ -5,7 +5,11 @@ require 'monitor'
 require 'forwardable'
 require 'logger'
 
-require 'backports'
+require_relative 'zookeeper/core_ext'
+
+silence_warnings do
+  require 'backports'
+end
 
 module Zookeeper
   # establishes the namespace
