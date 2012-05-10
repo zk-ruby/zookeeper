@@ -5,7 +5,7 @@ require 'monitor'
 require 'forwardable'
 require 'logger'
 
-require_relative 'zookeeper/core_ext'
+require File.expand_path('../zookeeper/core_ext', __FILE__)
 
 silence_warnings do
   require 'backports'
