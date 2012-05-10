@@ -49,6 +49,24 @@ inline static int global_mutex_unlock() {
   return rv;
 }
 
+void atfork_prepare() {
+  global_mutex_lock();
+}
+
+void atfork_parent() {
+  global_mutex_unlock();
+}
+
+void atfork_child() {
+  global_mutex_unlock();
+}
+
+// set up handlers to make sure the thread being forked holds the lock at the 
+// time the process is copied, then immediately unlock the mutex in both parent
+// and children
+pthread_atfork(atfork_prepare, atfork_parent, atfork_child);
+
+
 void zkrb_enqueue(zkrb_queue_t *q, zkrb_event_t *elt) {
   if (q == NULL) {
     zkrb_debug("zkrb_enqueue, queue ptr was NULL");
