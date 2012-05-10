@@ -27,12 +27,29 @@ unless defined?(::JRUBY_VERSION)
 
     after do
       if @pid and process_alive?(@pid)
-        Process.kill('TERM', @pid)
-        p Process.wait2(@pid)
+        begin
+          Process.kill('KILL', @pid)
+          p Process.wait2(@pid)
+        rescue Errno::ESRCH
+        end
       end
 
       @zk.close if @zk and !@zk.closed?
       with_open_zk(connection_string) { |z| rm_rf(z, path) }
+    end
+
+    def wait_for_child_safely(pid, timeout=5)
+      time_to_stop = Time.now + timeout
+
+      until Time.now > time_to_stop
+        if a = Process.wait2(@pid, Process::WNOHANG)
+          return a.last
+        else
+          sleep(0.01)
+        end
+      end
+
+      nil
     end
 
     it %[should do the right thing and not fail] do
@@ -68,13 +85,21 @@ unless defined?(::JRUBY_VERSION)
         exit!(0)
       end
 
+      event_waiter_th = Thread.new do
+        @latch.await(10) unless @event 
+        @event
+      end
+
       logger.debug { "waiting on child #{@pid}" }
 
-      @latch.await until @event 
+      status = wait_for_child_safely(@pid)
+      raise "Child process did not exit, likely hung"  unless status
 
-      _, status = Process.wait2(@pid)
-
+      status.should_not be_signaled
       status.should be_success
+
+      event_waiter_th.join(5).should == event_waiter_th
+      @event.should_not be nil
     end
   end
 end
