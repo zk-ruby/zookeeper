@@ -89,15 +89,7 @@ class ZookeeperBase
   end
   private :reopen_after_fork!
 
-  def after_fork_hook
-    logger.debug { "after_fork_hook called, @after_fork_sub: #{@after_fork_sub}" }
 
-    afs, @after_fork_sub = @after_fork_sub, nil
-    afs.unregister if afs
-
-    @czk.close if @czk
-  end
- 
   def reopen(timeout = 10, watcher=nil)
     if watcher and (watcher != @default_watcher)
       raise "You cannot set the watcher to a different value this way anymore!"
@@ -106,10 +98,7 @@ class ZookeeperBase
     reopen_after_fork! if forked?
 
     @mutex.synchronize do
-      after_fork_hook
-
-      @after_fork_sub = Zookeeper.after_fork_in_child(&method(:after_fork_hook))
-
+      @czk.close if @czk
       @czk = CZookeeper.new(@host, @event_queue)
 
       # flushes all outstanding watcher reqs.
@@ -138,7 +127,7 @@ class ZookeeperBase
     # argument ends with '/'
     raise ArgumentError, "Host argument #{host.inspect} may not end with /" if host.end_with?('/')
 
-    @host = host
+    @host = host.dup
 
     @default_watcher = (watcher or get_default_global_watcher)
 

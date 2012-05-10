@@ -53,6 +53,13 @@ class CZookeeper
 
     @_session_timeout_msec = DEFAULT_SESSION_TIMEOUT_MSEC
 
+    if cid = opts[:client_id]
+      raise ArgumentError, "opts[:client_id] must be a CZookeeper::ClientId" unless cid.kind_of?(ClientId)
+      raise ArgumentError, "session_id must not be nil" if cid.session_id.nil?
+    end
+
+    @_client_id = opts[:client_id]
+
     @start_stop_mutex = Monitor.new
     
     # used to signal that we're running
@@ -62,12 +69,6 @@ class CZookeeper
     @connected_cond = @start_stop_mutex.new_cond
     
     @event_thread = nil
-
-    @subscriptions = [
-      Zookeeper.prepare_for_fork { @start_stop_mutex.mon_enter },
-      Zookeeper.after_fork_in_parent { @start_stop_mutex.mon_exit },
-      Zookeeper.after_fork_in_child { @start_stop_mutex.mon_exit },
-    ]
 
     setup_event_thread!
 
@@ -117,8 +118,6 @@ class CZookeeper
       stop_event_thread!
       @start_stop_mutex.synchronize(&fn_close)
     end
-
-    @subscriptions.each(&:unregister)
 
     nil
   end
