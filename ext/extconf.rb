@@ -4,7 +4,7 @@ require 'rbconfig'
 
 HERE = File.expand_path(File.dirname(__FILE__))
 BUNDLE = Dir.glob("zkc-*.tar.gz").first
-BUNDLE_PATH = "c"
+BUNDLE_PATH = "apache-zookeeper/src/c"
 
 $EXTRA_CONF = ''
 
@@ -54,14 +54,13 @@ Dir.chdir(HERE) do
   else
     puts "Building zkc."
 
-    unless File.exists?('c')
-      puts(cmd = "tar xzf #{BUNDLE} 2>&1")
-      raise "'#{cmd}' failed" unless system(cmd)
-    end
+#     unless File.exists?('c')
+#       puts(cmd = "tar xzf #{BUNDLE} 2>&1")
+#       raise "'#{cmd}' failed" unless system(cmd)
+#     end
 
     Dir.chdir(BUNDLE_PATH) do        
       configure = "./configure --prefix=#{HERE} --with-pic --without-cppunit --disable-dependency-tracking #{$EXTRA_CONF} 2>&1"
-      
       configure = "env CFLAGS='#{DEBUG_CFLAGS}' #{configure}" if ZK_DEBUG
 
       safe_sh(configure)
@@ -69,7 +68,7 @@ Dir.chdir(HERE) do
       safe_sh("make install 2>&1")
     end
 
-    system("rm -rf #{BUNDLE_PATH}") unless ENV['DEBUG'] or ENV['DEV']
+#     system("rm -rf #{BUNDLE_PATH}") unless ENV['DEBUG'] or ENV['DEV']
   end
 end
 
@@ -80,6 +79,6 @@ Dir.chdir("#{HERE}/lib") do
 end
 $LIBS << " -lzookeeper_mt_gem"
 
-
+$CFLAGS << ' -Wall'
 create_makefile 'zookeeper_c'
 

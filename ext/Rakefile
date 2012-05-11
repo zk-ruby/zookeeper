@@ -1,3 +1,23 @@
+AZK_ROOT  = 'apache-zookeeper'
+AZK_SRC   = File.join(AZK_ROOT, 'src')
+AZK_C_SRC = File.join(AZK_SRC, 'c')
+
+GENERATED_DIR = File.join(AZK_C_SRC, 'generated')
+
+CONFIGURE_PATH = File.join(AZK_C_SRC, 'configure')
+
+file GENERATED_DIR do
+  cd AZK_C_SRC do
+    sh 'ant compile_jute'
+  end
+end
+
+file CONFIGURE_PATH => GENERATED_DIR do
+  cd AZK_C_SRC do
+    sh 'autoreconf -if'
+  end
+end
+
 
 task :clean do
   if File.exists?('Makefile')
@@ -9,15 +29,15 @@ end
 
 GENERATE_GVL_CODE_RB = 'generate_gvl_code.rb'
 
-file 'c' do
-  if tarball = Dir['zkc-*.tar.gz'].first
-    sh "tar -zxf #{tarball}"
-  else
-    raise "couldn't find the tarball! wtf?!"
-  end
-end
+# file 'c' do
+#   if tarball = Dir['zkc-*.tar.gz'].first
+#     sh "tar -zxf #{tarball}"
+#   else
+#     raise "couldn't find the tarball! wtf?!"
+#   end
+# end
 
-file GENERATE_GVL_CODE_RB => 'c'
+file GENERATE_GVL_CODE_RB 
 
 file 'zkrb_wrapper.c' => GENERATE_GVL_CODE_RB do
   sh "ruby generate_gvl_code.rb code"
@@ -32,12 +52,11 @@ ZKRB_WRAPPER = %w[zkrb_wrapper.c zkrb_wrapper.h]
 
 task :wrappers => ZKRB_WRAPPER
 
-
 task :clobber => :clean do
   rm_rf %w[Makefile c lib bin include]
 end
 
-task :build_zkc do
+task :build_zkc => CONFIGURE_PATH do
   sh 'ruby extconf.rb'
 end
 
