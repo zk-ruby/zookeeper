@@ -37,7 +37,7 @@ namespace :azk do
 
   task :clobber => :clean do
     cd AZK_C_SRC do
-      sh "git -Xd"
+      sh "git clean -Xd"
     end
   end
 
