@@ -8,12 +8,13 @@ require 'forwardable'
 module Zookeeper
 class ZookeeperBase
   extend Forwardable
-  include Zookeeper::Forked
-  include Zookeeper::Common       # XXX: clean this up, no need to include *everything*
-  include Zookeeper::Callbacks
-  include Zookeeper::Constants
-  include Zookeeper::Exceptions
-  include Zookeeper::ACLs
+  include Forked
+  include Common       # XXX: clean this up, no need to include *everything*
+  include Callbacks
+  include Constants
+  include Exceptions
+  include ACLs
+  include Logger
 
   attr_accessor :original_pid
 

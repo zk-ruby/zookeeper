@@ -2,10 +2,7 @@ module Zookeeper
   module SpecHeleprs
     class TimeoutError < StandardError; end
     include Zookeeper::Constants
-
-    def logger
-      Zookeeper.logger
-    end
+    include Zookeeper::Logger
 
     def ensure_node(zk, path, data)
       return if zk.closed?

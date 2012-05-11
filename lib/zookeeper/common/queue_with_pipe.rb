@@ -3,6 +3,7 @@ module Common
   # Ceci n'est pas une pipe
   class QueueWithPipe
     extend Forwardable
+    include Logger
 
     def_delegators :@queue, :clear
     
@@ -64,10 +65,6 @@ module Common
     private
       def clear_reads_on_pop?
         @clear_reads_on_pop
-      end
-
-      def logger
-        Zookeeper.logger
       end
   end
 end

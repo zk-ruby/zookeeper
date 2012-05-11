@@ -15,6 +15,7 @@ silence_warnings do
   require 'backports'
 end
 
+require_relative 'zookeeper/logger'
 require_relative 'zookeeper/forked'
 require_relative 'zookeeper/latch'
 require_relative 'zookeeper/acls'
@@ -33,7 +34,7 @@ module Zookeeper
   include Constants
 
   unless defined?(@@logger)
-    @@logger = Logger.new($stderr).tap { |l| l.level = ENV['ZOOKEEPER_DEBUG'] ? Logger::DEBUG : Logger::ERROR } 
+    @@logger = ::Logger.new($stderr).tap { |l| l.level = ENV['ZOOKEEPER_DEBUG'] ? ::Logger::DEBUG : ::Logger::ERROR } 
   end
 
   def self.logger
