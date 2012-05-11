@@ -1,5 +1,6 @@
 require 'mkmf'
 require 'rbconfig'
+require 'fileutils'
 
 HERE = File.expand_path(File.dirname(__FILE__))
 BUNDLE = Dir.glob("zkc-*.tar.gz").first
@@ -24,6 +25,7 @@ if RUBY_VERSION == '1.8.7'
 end
 
 ZK_DEBUG = (ENV['DEBUG'] or ARGV.any? { |arg| arg == '--debug' })
+ZK_DEV = ENV['ZK_DEV']
 DEBUG_CFLAGS = " -O0 -ggdb3 -DHAVE_DEBUG"
 
 if ZK_DEBUG
@@ -68,17 +70,20 @@ Dir.chdir(HERE) do
       safe_sh("make install 2>&1")
     end
 
-    system("rm -rf #{BUNDLE_PATH}") unless ENV['DEBUG'] or ENV['DEV']
+    system("rm -rf #{BUNDLE_PATH}") unless ZK_DEBUG or ZK_DEV
   end
 end
 
 # Absolutely prevent the linker from picking up any other zookeeper_mt
 Dir.chdir("#{HERE}/lib") do
-  system("cp -f libzookeeper_mt.a libzookeeper_mt_gem.a") 
-  system("cp -f libzookeeper_mt.la libzookeeper_mt_gem.la") 
+  %w[st mt].each do |stmt|
+    %w[a la].each do |ext|
+      system("cp -f libzookeeper_#{stmt}.#{ext} libzookeeper_#{stmt}_gem.#{ext}") 
+    end
+  end
 end
 $LIBS << " -lzookeeper_mt_gem"
 
-$CFLAGS << ' -Wall'
+$CFLAGS << ' -Wall' if ZK_DEV
 create_makefile 'zookeeper_c'
 

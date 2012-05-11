@@ -105,15 +105,13 @@ class CZookeeper
     state == ZOO_ASSOCIATING_STATE
   end
 
-  def close(opts={})
+  def close
     return if closed?
-
-    close_session = !!opts.fetch(:close_session, true)
 
     fn_close = proc do
       if !@_closed and @_data
         logger.debug { "CALLING CLOSE HANDLE!!" }
-        close_handle(close_session)
+        close_handle
       end
     end
 

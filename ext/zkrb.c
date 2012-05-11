@@ -62,7 +62,7 @@ static void hexbufify(char *dest, const char *src, int len) {
   }
 }
 
-static int destroy_zkrb_instance(struct zkrb_instance_data* ptr, int close_session) {
+static int destroy_zkrb_instance(struct zkrb_instance_data* ptr) {
   int rv = ZOK;
 
   zkrb_debug("destroy_zkrb_instance, zk_local_ctx: %p, zh: %p, queue: %p", ptr, ptr->zh, ptr->queue);
@@ -72,11 +72,7 @@ static int destroy_zkrb_instance(struct zkrb_instance_data* ptr, int close_sessi
     /* Note that after zookeeper_close() returns, ZK handle is invalid */
     zkrb_debug("obj_id: %lx, calling zookeeper_close", ptr->object_id);
 
-    if (close_session) {
-      rv = zookeeper_close(ptr->zh);
-    } else {
-      rv = zookeeper_drop(ptr->zh);
-    }
+    rv = zookeeper_close(ptr->zh);
 
     zkrb_debug("obj_id: %lx, zookeeper_close returned %d", ptr->object_id, rv); 
     free((void *) ctx);
@@ -96,7 +92,7 @@ static int destroy_zkrb_instance(struct zkrb_instance_data* ptr, int close_sessi
 }
 
 static void free_zkrb_instance_data(struct zkrb_instance_data* ptr) {
-  destroy_zkrb_instance(ptr, 1);
+  destroy_zkrb_instance(ptr);
 }
 
 static void print_zkrb_instance_data(struct zkrb_instance_data* ptr) {
@@ -608,10 +604,8 @@ static VALUE method_close_handle(VALUE self, VALUE yn) {
   // has been called
   rb_iv_set(self, "@_closed", Qtrue);
 
-  zkrb_debug_inst(self, "calling destroy_zkrb_instance, close_handle: %d", close_handle);
-
   /* Note that after zookeeper_close() returns, ZK handle is invalid */
-  int rc = destroy_zkrb_instance(zk, close_handle);
+  int rc = destroy_zkrb_instance(zk);
 
   zkrb_debug("destroy_zkrb_instance returned: %d", rc);
 

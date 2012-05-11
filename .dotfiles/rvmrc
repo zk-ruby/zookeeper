@@ -1,2 +1,2 @@
 rvm ruby-1.9.3@zookeeper --create
-export DEV=1
+export ZK_DEV=1
