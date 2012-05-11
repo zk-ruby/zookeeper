@@ -100,3 +100,6 @@ end
 
 task 'spec:run' => 'build:clean' unless defined?(::JRUBY_VERSION)
 
+# because i'm a creature of habit
+task 'mb:test_all' => 'zk:test_all'
+
