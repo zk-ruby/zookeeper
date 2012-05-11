@@ -77,7 +77,7 @@ static int destroy_zkrb_instance(struct zkrb_instance_data* ptr) {
     free((void *) ctx);
   }
 
-#warning [wickman] TODO: fire off warning if queue is not empty
+// [wickman] TODO: fire off warning if queue is not empty
   if (ptr->queue) {
     zkrb_debug("obj_id: %lx, freeing queue pointer: %p", ptr->object_id, ptr->queue);
     zkrb_queue_free(ptr->queue);
@@ -219,7 +219,7 @@ static VALUE method_zkrb_init(int argc, VALUE* argv, VALUE self) {
   zkrb_debug("method_zkrb_init, zk_local_ctx: %p, zh: %p, queue: %p, calling_ctx: %p",
       zk_local_ctx, zk_local_ctx->zh, zk_local_ctx->queue, ctx);
 
-#warning [wickman] TODO handle this properly on the Ruby side rather than C side
+// [wickman] TODO handle this properly on the Ruby side rather than C side
   if (!zk_local_ctx->zh) {
     rb_raise(rb_eRuntimeError, "error connecting to zookeeper: %d", errno);
   }

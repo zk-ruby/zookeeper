@@ -574,8 +574,8 @@ VALUE zkrb_acl_to_ruby(struct ACL *acl) {
   return hash;
 }
 
-#warning [wickman] TODO test zkrb_ruby_to_aclvector
-#warning [slyphon] TODO size checking on acl_ary (cast to int)
+// [wickman] TODO test zkrb_ruby_to_aclvector
+// [slyphon] TODO size checking on acl_ary (cast to int)
 struct ACL_vector * zkrb_ruby_to_aclvector(VALUE acl_ary) {
   Check_Type(acl_ary, T_ARRAY);
 
@@ -591,7 +591,7 @@ struct ACL_vector * zkrb_ruby_to_aclvector(VALUE acl_ary) {
   return v;
 }
 
-#warning [wickman] TODO test zkrb_ruby_to_aclvector
+// [wickman] TODO test zkrb_ruby_to_aclvector
 struct ACL zkrb_ruby_to_acl(VALUE rubyacl) {
   struct ACL acl;
 
@@ -603,7 +603,7 @@ struct ACL zkrb_ruby_to_acl(VALUE rubyacl) {
   return acl;
 }
 
-#warning [wickman] TODO zkrb_ruby_to_id error checking? test
+// [wickman] TODO zkrb_ruby_to_id error checking? test
 struct Id zkrb_ruby_to_id(VALUE rubyid) {
   struct Id id;
 
@@ -678,7 +678,7 @@ VALUE zkrb_stat_to_rhash(const struct Stat *stat) {
   return ary;
 }
 
-#warning [wickman] TODO test zkrb_clone_acl_vector
+// [wickman] TODO test zkrb_clone_acl_vector
 struct ACL_vector * zkrb_clone_acl_vector(struct ACL_vector * src) {
   struct ACL_vector * dst = malloc(sizeof(struct ACL_vector));
   allocate_ACL_vector(dst, src->count);
@@ -692,7 +692,7 @@ struct ACL_vector * zkrb_clone_acl_vector(struct ACL_vector * src) {
   return dst;
 }
 
-#warning [wickman] TODO test zkrb_clone_string_vector
+// [wickman] TODO test zkrb_clone_string_vector
 struct String_vector * zkrb_clone_string_vector(const struct String_vector * src) {
   struct String_vector * dst = malloc(sizeof(struct String_vector));
   allocate_String_vector(dst, src->count);
