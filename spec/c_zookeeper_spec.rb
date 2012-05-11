@@ -32,6 +32,26 @@ unless defined?(::JRUBY_VERSION)
         wait_until_connected.should be_true
       end
 
+      it %[should be able to re-establish a session] do
+        wait_until_connected.should be_true
+        
+        orig_czk = @czk
+
+        client_id = orig_czk.client_id.dup
+        client_id.session_id.should be > 0
+
+        # something is fucked with the 'equal?' matcher
+        client_id.passwd.object_id.should_not == orig_czk.client_id.passwd.object_id
+
+
+        orig_czk.close
+        @czk = Zookeeper::CZookeeper.new(Zookeeper.default_cnx_str, @event_queue, :client_id => client_id)
+
+        wait_until_connected.should be_true
+
+        @czk.client_id.session_id.should == client_id.session_id
+      end
+
       describe :after_connected do
         before do
           wait_until_connected.should be_true

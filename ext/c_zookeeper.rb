@@ -53,12 +53,16 @@ class CZookeeper
 
     @_session_timeout_msec = DEFAULT_SESSION_TIMEOUT_MSEC
 
+    # if client_id is given and is valid, we will try to establish a session
+    # using those credentials
+    #
     if cid = opts[:client_id]
       raise ArgumentError, "opts[:client_id] must be a CZookeeper::ClientId" unless cid.kind_of?(ClientId)
-      raise ArgumentError, "session_id must not be nil" if cid.session_id.nil?
-    end
+      raise ArgumentError, "client_id.session_id must be an Integer" unless cid.session_id.kind_of?(Integer)
+      raise ArgumentError, "client_id.passwd must be a string" unless cid.passwd.kind_of?(String)
 
-    @_client_id = opts[:client_id]
+      @_client_id = cid.dup
+    end
 
     @start_stop_mutex = Monitor.new
     
@@ -72,7 +76,7 @@ class CZookeeper
 
     setup_event_thread!
 
-    zkrb_init(@host)
+    zkrb_init(@host, :zkc_log_level => Constants::ZOO_LOG_LEVEL_DEBUG)
 
     logger.debug { "init returned!" }
   end

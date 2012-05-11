@@ -64,7 +64,7 @@ void atfork_child() {
 // set up handlers to make sure the thread being forked holds the lock at the 
 // time the process is copied, then immediately unlock the mutex in both parent
 // and children
-pthread_atfork(atfork_prepare, atfork_parent, atfork_child);
+/*pthread_atfork(atfork_prepare, atfork_parent, atfork_child);*/
 
 
 void zkrb_enqueue(zkrb_queue_t *q, zkrb_event_t *elt) {

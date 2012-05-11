@@ -26,6 +26,9 @@
 #include "zkrb_wrapper.h"
 #include "dbg.h"
 
+// yes, this may be bad in the future if they change the passwd size
+#define ZK_PASSWD_SIZE 16
+#define ZK_PASSWD_SIZE_STR "16"
 
 static VALUE mZookeeper = Qnil;         // the Zookeeper module
 static VALUE CZookeeper = Qnil;         // the Zookeeper::CZookeeper class
@@ -50,6 +53,14 @@ typedef enum {
 
 #define IS_SYNC(zkrbcall) ((zkrbcall)==SYNC || (zkrbcall)==SYNC_WATCH)
 #define IS_ASYNC(zkrbcall) ((zkrbcall)==ASYNC || (zkrbcall)==ASYNC_WATCH)
+
+static void hexbufify(char *dest, const char *src, int len) {
+  int i=0;
+
+  for (i=0; i < len; i++) {
+    sprintf(&dest[i*2], "%x", src[i]);
+  }
+}
 
 
 static int destroy_zkrb_instance(struct zkrb_instance_data* ptr) {
@@ -115,29 +126,45 @@ static int zkrb_dup(int orig) {
     return fd;
 }
 
-#if 0
-static VALUE create_selectable_io(zkrb_queue_t *q) {
-  // rb_cIO is the ruby IO class?
-
-  int pipe, state, read_fd;
-  VALUE args[3], reader;
-
-  read_fd = zkrb_dup(q->pipe_read);
-
-  args[0] = rb_cIO;
-  args[1] = INT2NUM(read_fd);
-  args[2] = INT2FIX(O_RDONLY);
-  reader = rb_protect(zkrb_new_instance, (VALUE)args, &state);
-
-  if (state) {
-    rb_jump_tag(state);
-  }
-
-  return reader;
-}
-#endif
-
 #define session_timeout_msec(self) rb_iv_get(self, "@_session_timeout_msec")
+
+static void zkrb_debug_clientid_t(const clientid_t *cid) {
+  int pass_len = sizeof(cid->passwd);
+  int hex_len = 2 * pass_len;
+  char buf[hex_len];
+  hexbufify(buf, cid->passwd, pass_len);
+
+  zkrb_debug("myid, client_id: %"PRId64", passwd: %*s", cid->client_id, hex_len, buf);
+}
+
+/* sets up myid from the @_client_id object so we can resume a session 
+ * if @_client_id isn't avaliable, then we just leave it uninitialized
+ *
+ * we assume that the values have been vetted by the ruby side of this class
+*/
+static VALUE setup_myid(VALUE self, clientid_t *cid) {
+  char buf[32];
+
+  VALUE client_id = Qnil, session_id = Qnil, passwd = Qnil;
+
+  client_id = rb_iv_get(self, "@_client_id");
+
+  if (client_id == Qnil) return Qnil;
+
+  session_id = rb_iv_get(client_id, "@session_id");
+  passwd = rb_iv_get(client_id, "@passwd");
+
+  Check_Type(session_id, T_FIXNUM);
+  Check_Type(passwd, T_STRING);
+
+  cid->client_id = NUM2LL(session_id);
+  memcpy(cid->passwd, RSTRING_PTR(passwd), RSTRING_LEN(passwd));
+
+  hexbufify(buf, cid->passwd, 16);
+  zkrb_debug("password in hex is: %s", buf);
+
+  return Qtrue;
+}
 
 static VALUE method_zkrb_init(int argc, VALUE* argv, VALUE self) {
   VALUE hostPort;
@@ -167,6 +194,8 @@ static VALUE method_zkrb_init(int argc, VALUE* argv, VALUE self) {
   data = Data_Make_Struct(CZookeeper, struct zkrb_instance_data, 0, free_zkrb_instance_data, zk_local_ctx);
 
   zk_local_ctx->queue = zkrb_queue_alloc();
+
+  setup_myid(self, &zk_local_ctx->myid);
 
   if (zk_local_ctx->queue == NULL)
     rb_raise(rb_eRuntimeError, "could not allocate zkrb queue!");
@@ -634,11 +663,18 @@ static VALUE method_recv_timeout(VALUE self) {
 /*  return UINT2NUM(id->client_id);*/
 /*}*/
 
-
 // returns a CZookeeper::ClientId object with the values set for session_id and passwd
 static VALUE method_client_id(VALUE self) {
   FETCH_DATA_PTR(self, zk);
+  char buf[32];
   const clientid_t *cid = zoo_client_id(zk->zh);
+
+  if (strlen(cid->passwd) != 16) { 
+    zkrb_debug("passwd is not null-termniated");
+  } else {
+    hexbufify(buf, cid->passwd, 16);
+    zkrb_debug("password in hex is: %s", buf);
+  }
 
   VALUE session_id = LL2NUM(cid->client_id);
   VALUE passwd = rb_str_new2(cid->passwd);
