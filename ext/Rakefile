@@ -1,10 +1,18 @@
+require 'rbconfig'
+
 AZK_ROOT  = 'apache-zookeeper'
 AZK_SRC   = File.join(AZK_ROOT, 'src')
 AZK_C_SRC = File.join(AZK_SRC, 'c')
 
-GENERATED_DIR = File.join(AZK_C_SRC, 'generated')
+AZK_C_SRC_FILES = FileList["#{AZK_C_SRC}/{include,src}/**/*.{h,c}"]
 
+LIB_ZK_SO = 'lib/libzookeeper_mt_gem.la'
+
+GENERATED_DIR = File.join(AZK_C_SRC, 'generated')
 CONFIGURE_PATH = File.join(AZK_C_SRC, 'configure')
+
+file LIB_ZK_SO => CONFIGURE_PATH
+file LIB_ZK_SO => AZK_C_SRC_FILES
 
 file GENERATED_DIR do
   cd AZK_C_SRC do
@@ -18,14 +26,46 @@ file CONFIGURE_PATH => GENERATED_DIR do
   end
 end
 
+namespace :azk do
+  task :clean do
+    cd AZK_C_SRC do
+      if File.exists?('Makefile')
+        sh 'make clean'
+      end
+    end
+  end
 
-task :clean do
-  if File.exists?('Makefile')
-    sh 'make clean'
-  else
-    $stderr.puts "nothing to clean, no Makefile"
+  task :clobber => :clean do
+    cd AZK_C_SRC do
+      sh "git -Xd"
+    end
+  end
+
+  task :build => LIB_ZK_SO do
+    sh "ruby extconf.rb"
   end
 end
+
+task :clean   => 'azk:clean'
+task :clobber => 'azk:clobber'
+
+namespace :zkrb do
+  task :clean do
+    if File.exists?('Makefile')
+      sh 'make clean'
+      rm 'Makefile' # yep, regenerate this
+    else
+      $stderr.puts "nothing to clean, no Makefile"
+    end
+  end
+
+  task :clobber => :clean do
+    rm_rf %w[Makefile c lib bin include]
+  end
+end
+
+task :clean   => 'zkrb:clean'
+task :clobber => 'zkrb:clobber'
 
 GENERATE_GVL_CODE_RB = 'generate_gvl_code.rb'
 
@@ -49,18 +89,9 @@ end
 
 ZKRB_WRAPPER = %w[zkrb_wrapper.c zkrb_wrapper.h]
 
-
 task :wrappers => ZKRB_WRAPPER
 
-task :clobber => :clean do
-  rm_rf %w[Makefile c lib bin include]
-end
-
-task :build_zkc => CONFIGURE_PATH do
-  sh 'ruby extconf.rb'
-end
-
-file 'Makefile' => :build_zkc
+file 'Makefile' => 'azk:build'
 
 task :build => [ZKRB_WRAPPER, 'Makefile'].flatten do
   sh 'make'

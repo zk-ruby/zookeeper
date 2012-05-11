@@ -20,7 +20,7 @@ slyphon@gmail.com
 */
 
 #include "ruby.h"
-#include "zookeeper_lib.h"
+#include "event_lib.h"
 #include "c-client-src/zookeeper.h"
 #include <errno.h>
 #include <stdio.h>

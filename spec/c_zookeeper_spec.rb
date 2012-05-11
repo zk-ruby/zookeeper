@@ -44,7 +44,7 @@ unless defined?(::JRUBY_VERSION)
         client_id.passwd.object_id.should_not == orig_czk.client_id.passwd.object_id
 
 
-        orig_czk.close
+        orig_czk.close(:close_session => false) 
         @czk = Zookeeper::CZookeeper.new(Zookeeper.default_cnx_str, @event_queue, :client_id => client_id)
 
         wait_until_connected.should be_true

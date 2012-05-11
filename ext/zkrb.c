@@ -22,7 +22,7 @@
 #include <pthread.h>
 #include <inttypes.h>
 
-#include "zookeeper_lib.h"
+#include "event_lib.h"
 #include "zkrb_wrapper.h"
 #include "dbg.h"
 
@@ -62,8 +62,7 @@ static void hexbufify(char *dest, const char *src, int len) {
   }
 }
 
-
-static int destroy_zkrb_instance(struct zkrb_instance_data* ptr) {
+static int destroy_zkrb_instance(struct zkrb_instance_data* ptr, int close_session) {
   int rv = ZOK;
 
   zkrb_debug("destroy_zkrb_instance, zk_local_ctx: %p, zh: %p, queue: %p", ptr, ptr->zh, ptr->queue);
@@ -72,10 +71,18 @@ static int destroy_zkrb_instance(struct zkrb_instance_data* ptr) {
     const void *ctx = zoo_get_context(ptr->zh);
     /* Note that after zookeeper_close() returns, ZK handle is invalid */
     zkrb_debug("obj_id: %lx, calling zookeeper_close", ptr->object_id);
-    rv = zookeeper_close(ptr->zh);
+
+    if (close_session) {
+      rv = zookeeper_close(ptr->zh);
+    } else {
+      rv = zookeeper_drop(ptr->zh);
+    }
+
     zkrb_debug("obj_id: %lx, zookeeper_close returned %d", ptr->object_id, rv); 
     free((void *) ctx);
   }
+
+  ptr->zh = NULL;
 
 // [wickman] TODO: fire off warning if queue is not empty
   if (ptr->queue) {
@@ -83,14 +90,13 @@ static int destroy_zkrb_instance(struct zkrb_instance_data* ptr) {
     zkrb_queue_free(ptr->queue);
   }
 
-  ptr->zh = NULL;
   ptr->queue = NULL;
 
   return rv;
 }
 
 static void free_zkrb_instance_data(struct zkrb_instance_data* ptr) {
-  destroy_zkrb_instance(ptr);
+  destroy_zkrb_instance(ptr, 1);
 }
 
 static void print_zkrb_instance_data(struct zkrb_instance_data* ptr) {
@@ -103,32 +109,10 @@ static void print_zkrb_instance_data(struct zkrb_instance_data* ptr) {
   fprintf(stderr, "}\n");
 }
 
-// cargo culted from io.c
-static VALUE zkrb_new_instance _((VALUE));
-
-static VALUE zkrb_new_instance(VALUE args) {
-    return rb_class_new_instance(2, (VALUE*)args+1, *(VALUE*)args);
-}
-
-static int zkrb_dup(int orig) {
-    int fd;
-
-    fd = dup(orig);
-    if (fd < 0) {
-        if (errno == EMFILE || errno == ENFILE || errno == ENOMEM) {
-            rb_gc();
-            fd = dup(orig);
-        }
-        if (fd < 0) {
-            rb_sys_fail(0);
-        }
-    }
-    return fd;
-}
 
 #define session_timeout_msec(self) rb_iv_get(self, "@_session_timeout_msec")
 
-static void zkrb_debug_clientid_t(const clientid_t *cid) {
+inline static void zkrb_debug_clientid_t(const clientid_t *cid) {
   int pass_len = sizeof(cid->passwd);
   int hex_len = 2 * pass_len;
   char buf[hex_len];
@@ -143,8 +127,6 @@ static void zkrb_debug_clientid_t(const clientid_t *cid) {
  * we assume that the values have been vetted by the ruby side of this class
 */
 static VALUE setup_myid(VALUE self, clientid_t *cid) {
-  char buf[32];
-
   VALUE client_id = Qnil, session_id = Qnil, passwd = Qnil;
 
   client_id = rb_iv_get(self, "@_client_id");
@@ -160,8 +142,7 @@ static VALUE setup_myid(VALUE self, clientid_t *cid) {
   cid->client_id = NUM2LL(session_id);
   memcpy(cid->passwd, RSTRING_PTR(passwd), RSTRING_LEN(passwd));
 
-  hexbufify(buf, cid->passwd, 16);
-  zkrb_debug("password in hex is: %s", buf);
+  zkrb_debug_clientid_t(cid);
 
   return Qtrue;
 }
@@ -229,7 +210,6 @@ static VALUE method_zkrb_init(int argc, VALUE* argv, VALUE self) {
   rb_iv_set(self, "@_data", data);
   rb_funcall(self, rb_intern("zkc_set_running_and_notify!"), 0);
 
-error:
   return Qnil;
 }
 
@@ -613,8 +593,10 @@ static VALUE method_wake_event_loop_bang(VALUE self) {
   return Qnil;
 };
 
-static VALUE method_close_handle(VALUE self) {
+static VALUE method_close_handle(VALUE self, VALUE yn) {
   FETCH_DATA_PTR(self, zk);
+
+  int close_handle = RTEST(yn);
 
   if (ZKRBDebugging) {
 /*    fprintf(stderr, "CLOSING ZK INSTANCE: obj_id %lx", FIX2LONG(rb_obj_id(self)));*/
@@ -626,15 +608,15 @@ static VALUE method_close_handle(VALUE self) {
   // has been called
   rb_iv_set(self, "@_closed", Qtrue);
 
-  zkrb_debug_inst(self, "calling destroy_zkrb_instance");
+  zkrb_debug_inst(self, "calling destroy_zkrb_instance, close_handle: %d", close_handle);
 
   /* Note that after zookeeper_close() returns, ZK handle is invalid */
-  int rc = destroy_zkrb_instance(zk);
+  int rc = destroy_zkrb_instance(zk, close_handle);
 
   zkrb_debug("destroy_zkrb_instance returned: %d", rc);
 
-  return Qnil;
-/*  return INT2FIX(rc);*/
+/*  return Qnil;*/
+  return INT2FIX(rc);
 }
 
 static VALUE method_deterministic_conn_order(VALUE self, VALUE yn) {
@@ -715,7 +697,7 @@ static void zkrb_define_methods(void) {
   DEFINE_METHOD(set_acl, 5);
   DEFINE_METHOD(get_acl, 3);
   DEFINE_METHOD(client_id, 0);
-  DEFINE_METHOD(close_handle, 0);
+  DEFINE_METHOD(close_handle, 1);
   DEFINE_METHOD(deterministic_conn_order, 1);
   DEFINE_METHOD(is_unrecoverable, 0);
   DEFINE_METHOD(recv_timeout, 1);

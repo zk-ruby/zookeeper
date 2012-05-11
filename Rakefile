@@ -100,3 +100,7 @@ end
 
 task 'spec:run' => 'build:clean' unless defined?(::JRUBY_VERSION)
 
+task 'ctags' do
+  sh 'bundle-ctags'
+end
+
