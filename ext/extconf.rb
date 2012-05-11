@@ -82,7 +82,7 @@ Dir.chdir("#{HERE}/lib") do
     end
   end
 end
-$LIBS << " -lzookeeper_mt_gem"
+$LIBS << " -lzookeeper_st_gem"
 
 $CFLAGS << ' -Wall' if ZK_DEV
 create_makefile 'zookeeper_c'

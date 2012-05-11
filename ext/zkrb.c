@@ -10,7 +10,8 @@
  * actually works on MRI 1.8.
  */
 
-#define THREADED
+//#define THREADED
+#undef THREADED
 
 #include "ruby.h"
 #include "c-client-src/zookeeper.h"
@@ -21,14 +22,11 @@
 #include <sys/fcntl.h>
 #include <pthread.h>
 #include <inttypes.h>
+#include <time.h>
 
 #include "event_lib.h"
 #include "zkrb_wrapper.h"
 #include "dbg.h"
-
-// yes, this may be bad in the future if they change the passwd size
-#define ZK_PASSWD_SIZE 16
-#define ZK_PASSWD_SIZE_STR "16"
 
 static VALUE mZookeeper = Qnil;         // the Zookeeper module
 static VALUE CZookeeper = Qnil;         // the Zookeeper::CZookeeper class
@@ -43,6 +41,8 @@ struct zkrb_instance_data {
   long              object_id; // the ruby object this instance data is associated with
   pid_t             orig_pid;
 };
+
+typedef struct zkrb_instance_data zkrb_instance_data_t;
 
 typedef enum {
   SYNC  = 0,
@@ -62,7 +62,7 @@ static void hexbufify(char *dest, const char *src, int len) {
   }
 }
 
-static int destroy_zkrb_instance(struct zkrb_instance_data* ptr) {
+static int destroy_zkrb_instance(zkrb_instance_data_t* ptr) {
   int rv = ZOK;
 
   zkrb_debug("destroy_zkrb_instance, zk_local_ctx: %p, zh: %p, queue: %p", ptr, ptr->zh, ptr->queue);
@@ -91,11 +91,11 @@ static int destroy_zkrb_instance(struct zkrb_instance_data* ptr) {
   return rv;
 }
 
-static void free_zkrb_instance_data(struct zkrb_instance_data* ptr) {
+static void free_zkrb_instance_data(zkrb_instance_data_t* ptr) {
   destroy_zkrb_instance(ptr);
 }
 
-static void print_zkrb_instance_data(struct zkrb_instance_data* ptr) {
+static void print_zkrb_instance_data(zkrb_instance_data_t* ptr) {
   fprintf(stderr, "zkrb_instance_data (%p) {\n", ptr);
   fprintf(stderr, "      zh = %p\n",           ptr->zh);
   fprintf(stderr, "        { state = %d }\n",  zoo_state(ptr->zh));
@@ -115,32 +115,6 @@ inline static void zkrb_debug_clientid_t(const clientid_t *cid) {
   hexbufify(buf, cid->passwd, pass_len);
 
   zkrb_debug("myid, client_id: %"PRId64", passwd: %*s", cid->client_id, hex_len, buf);
-}
-
-/* sets up myid from the @_client_id object so we can resume a session 
- * if @_client_id isn't avaliable, then we just leave it uninitialized
- *
- * we assume that the values have been vetted by the ruby side of this class
-*/
-static VALUE setup_myid(VALUE self, clientid_t *cid) {
-  VALUE client_id = Qnil, session_id = Qnil, passwd = Qnil;
-
-  client_id = rb_iv_get(self, "@_client_id");
-
-  if (client_id == Qnil) return Qnil;
-
-  session_id = rb_iv_get(client_id, "@session_id");
-  passwd = rb_iv_get(client_id, "@passwd");
-
-  Check_Type(session_id, T_FIXNUM);
-  Check_Type(passwd, T_STRING);
-
-  cid->client_id = NUM2LL(session_id);
-  memcpy(cid->passwd, RSTRING_PTR(passwd), RSTRING_LEN(passwd));
-
-  zkrb_debug_clientid_t(cid);
-
-  return Qtrue;
 }
 
 static VALUE method_zkrb_init(int argc, VALUE* argv, VALUE self) {
@@ -167,12 +141,10 @@ static VALUE method_zkrb_init(int argc, VALUE* argv, VALUE self) {
   }
 
   VALUE data;
-  struct zkrb_instance_data *zk_local_ctx;
-  data = Data_Make_Struct(CZookeeper, struct zkrb_instance_data, 0, free_zkrb_instance_data, zk_local_ctx);
+  zkrb_instance_data_t *zk_local_ctx;
+  data = Data_Make_Struct(CZookeeper, zkrb_instance_data_t, 0, free_zkrb_instance_data, zk_local_ctx);
 
   zk_local_ctx->queue = zkrb_queue_alloc();
-
-  setup_myid(self, &zk_local_ctx->myid);
 
   if (zk_local_ctx->queue == NULL)
     rb_raise(rb_eRuntimeError, "could not allocate zkrb queue!");
@@ -210,8 +182,8 @@ static VALUE method_zkrb_init(int argc, VALUE* argv, VALUE self) {
 }
 
 #define FETCH_DATA_PTR(X, Y)                                             \
-  struct zkrb_instance_data * Y;                                         \
-  Data_Get_Struct(rb_iv_get(X, "@_data"), struct zkrb_instance_data, Y); \
+  zkrb_instance_data_t * Y;                                         \
+  Data_Get_Struct(rb_iv_get(X, "@_data"), zkrb_instance_data_t, Y); \
   if ((Y)->zh == NULL)                                                   \
     rb_raise(rb_eRuntimeError, "zookeeper handle is closed")
 
@@ -221,8 +193,8 @@ static VALUE method_zkrb_init(int argc, VALUE* argv, VALUE self) {
     return Qnil;                                                              \
   }                                                                           \
   Check_Type(path, T_STRING);                                                 \
-  struct zkrb_instance_data * zk;                                             \
-  Data_Get_Struct(rb_iv_get(self, "@_data"), struct zkrb_instance_data, zk);  \
+  zkrb_instance_data_t * zk;                                             \
+  Data_Get_Struct(rb_iv_get(self, "@_data"), zkrb_instance_data_t, zk);  \
   if (!zk->zh)                                                                \
     rb_raise(rb_eRuntimeError, "zookeeper handle is closed");                 \
   zkrb_calling_context* cb_ctx =                                              \
@@ -520,7 +492,7 @@ static VALUE method_get_acl(VALUE self, VALUE reqid, VALUE path, VALUE async) {
 #define is_closed(self) RTEST(rb_iv_get(self, "@_closed"))
 #define is_shutting_down(self) RTEST(rb_iv_get(self, "@_shutting_down"))
 
-static VALUE method_get_next_event(VALUE self, VALUE blocking) {
+static VALUE method_zkrb_get_next_event(VALUE self, VALUE blocking) {
   // dbg.h 
   check_debug(!is_closed(self), "we are closed, not trying to get event");
 
@@ -528,7 +500,7 @@ static VALUE method_get_next_event(VALUE self, VALUE blocking) {
   FETCH_DATA_PTR(self, zk);
 
   for (;;) {
-    check_debug(!is_closed(self), "we're closed in the middle of method_get_next_event, bailing");
+    check_debug(!is_closed(self), "we're closed in the middle of method_zkrb_get_next_event, bailing");
 
     zkrb_event_t *event = zkrb_dequeue(zk->queue, 1);
 
@@ -539,7 +511,7 @@ static VALUE method_get_next_event(VALUE self, VALUE blocking) {
       } 
       else {
         // if we're shutting down, don't enter this section, we don't want to block
-        check_debug(!is_shutting_down(self), "method_get_next_event, we're shutting down, don't enter blocking section");
+        check_debug(!is_shutting_down(self), "method_zkrb_get_next_event, we're shutting down, don't enter blocking section");
 
         int fd = zk->queue->pipe_read;
         ssize_t bytes_read = 0;
@@ -570,6 +542,77 @@ static VALUE method_get_next_event(VALUE self, VALUE blocking) {
     return Qnil;
 }
 
+// the single threaded version of this call. will go away when we do direct
+// event delivery (soon)
+static VALUE method_zkrb_get_next_event_st(VALUE self) {
+  VALUE rval = Qnil;
+
+  if (is_closed(self)) {
+    zkrb_debug("we are closed, not gonna try to get an event");
+    return Qnil;
+  }
+
+  FETCH_DATA_PTR(self, zk);
+
+  zkrb_event_t *event = zkrb_dequeue(zk->queue, 0);
+
+  if (event != NULL) {
+    rval = zkrb_event_to_ruby(event);
+    zkrb_event_free(event);
+  }
+
+  return rval;
+}
+
+static VALUE method_zkrb_iterate_event_loop(VALUE self) {
+  FETCH_DATA_PTR(self, zk);
+
+  fd_set rfds, wfds, efds;
+  FD_ZERO(&rfds); FD_ZERO(&wfds); FD_ZERO(&efds); 
+
+  int fd=0, interest=0, events=0, rc=0;
+  struct timeval tv;
+  
+  zookeeper_interest(zk->zh, &fd, &interest, &tv);
+
+  if (fd != -1) {
+    if (interest & ZOOKEEPER_READ) {
+      FD_SET(fd, &rfds);
+    } else {
+      FD_CLR(fd, &rfds);
+    }
+    if (interest & ZOOKEEPER_WRITE) {
+      FD_SET(fd, &wfds);
+    } else {
+      FD_CLR(fd, &wfds);
+    }
+  } else {
+    fd = 0;
+  }
+
+  zkrb_debug("zookeeper_interest set timeval to %ld.%06d sec", tv.tv_sec, tv.tv_usec);
+
+  // this is 0.001s, more reasonable when we're trying to loop through this and
+  // also respond to stuff like shutdown
+  tv.tv_sec = 0;
+  tv.tv_usec = 1000;
+
+  rc = rb_thread_select(fd+1, &rfds, &wfds, &efds, &tv);
+
+  if (rc > 0) {
+    if (FD_ISSET(fd, &rfds)) {
+      events |= ZOOKEEPER_READ;
+    } 
+    if (FD_ISSET(fd, &wfds)) {
+      events |= ZOOKEEPER_WRITE;
+    }
+  }
+
+  rc = zookeeper_process(zk->zh, events);
+  return INT2FIX(rc);
+}
+
+
 static VALUE method_has_events(VALUE self) {
   VALUE rb_event;
   FETCH_DATA_PTR(self, zk);
@@ -589,13 +632,10 @@ static VALUE method_wake_event_loop_bang(VALUE self) {
   return Qnil;
 };
 
-static VALUE method_close_handle(VALUE self, VALUE yn) {
+static VALUE method_close_handle(VALUE self) {
   FETCH_DATA_PTR(self, zk);
 
-  int close_handle = RTEST(yn);
-
   if (ZKRBDebugging) {
-/*    fprintf(stderr, "CLOSING ZK INSTANCE: obj_id %lx", FIX2LONG(rb_obj_id(self)));*/
     zkrb_debug_inst(self, "CLOSING_ZK_INSTANCE");
     print_zkrb_instance_data(zk);
   }
@@ -609,7 +649,6 @@ static VALUE method_close_handle(VALUE self, VALUE yn) {
 
   zkrb_debug("destroy_zkrb_instance returned: %d", rc);
 
-/*  return Qnil;*/
   return INT2FIX(rc);
 }
 
@@ -691,18 +730,21 @@ static void zkrb_define_methods(void) {
   DEFINE_METHOD(set_acl, 5);
   DEFINE_METHOD(get_acl, 3);
   DEFINE_METHOD(client_id, 0);
-  DEFINE_METHOD(close_handle, 1);
+  DEFINE_METHOD(close_handle, 0);
   DEFINE_METHOD(deterministic_conn_order, 1);
   DEFINE_METHOD(is_unrecoverable, 0);
   DEFINE_METHOD(recv_timeout, 1);
   DEFINE_METHOD(zkrb_state, 0);
   DEFINE_METHOD(sync, 2);
+  DEFINE_METHOD(zkrb_iterate_event_loop, 0);
+  DEFINE_METHOD(zkrb_get_next_event_st, 0);
 
   // TODO
   // DEFINE_METHOD(add_auth, 3);
 
   // methods for the ruby-side event manager
-  DEFINE_METHOD(get_next_event, 1);
+  DEFINE_METHOD(zkrb_get_next_event, 1);
+  DEFINE_METHOD(zkrb_get_next_event_st, 0);
   DEFINE_METHOD(has_events, 0);
 
   // Make these class methods?

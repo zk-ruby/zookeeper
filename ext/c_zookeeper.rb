@@ -16,6 +16,24 @@ class CZookeeper
 
   class GotNilEventException < StandardError; end
 
+  class Pipe < Struct.new(:io_pipe)
+    def initialize
+      self.io_pipe = IO.pipe
+    end
+
+    def reader
+      io_pipe.first
+    end
+
+    def writer
+      io_pipe.last
+    end
+
+    def close
+      io_pipe.each { |i| i.close unless i.closed? }
+    end
+  end
+
   attr_accessor :original_pid
 
   # assume we're at debug level
@@ -53,17 +71,6 @@ class CZookeeper
 
     @_session_timeout_msec = DEFAULT_SESSION_TIMEOUT_MSEC
 
-    # if client_id is given and is valid, we will try to establish a session
-    # using those credentials
-    #
-    if cid = opts[:client_id]
-      raise ArgumentError, "opts[:client_id] must be a CZookeeper::ClientId" unless cid.kind_of?(ClientId)
-      raise ArgumentError, "client_id.session_id must be an Integer" unless cid.session_id.kind_of?(Integer)
-      raise ArgumentError, "client_id.passwd must be a string" unless cid.passwd.kind_of?(String)
-
-      @_client_id = cid.dup
-    end
-
     @start_stop_mutex = Monitor.new
     
     # used to signal that we're running
@@ -74,9 +81,11 @@ class CZookeeper
     
     @event_thread = nil
 
-    setup_event_thread!
+    @pipe = Pipe.new
 
     zkrb_init(@host, :zkc_log_level => Constants::ZOO_LOG_LEVEL_DEBUG)
+
+    setup_event_thread!
 
     logger.debug { "init returned!" }
   end
@@ -118,7 +127,7 @@ class CZookeeper
     if forked?
       fn_close.call
     else
-      shut_down!
+#       shut_down!
       stop_event_thread!
       @start_stop_mutex.synchronize(&fn_close)
     end
@@ -165,6 +174,8 @@ class CZookeeper
     end
 
     def _event_thread_body
+      Thread.current.abort_on_exception = true
+
       logger.debug { "event_thread waiting until running: #{@_running}" }
 
       @start_stop_mutex.synchronize do
@@ -179,20 +190,15 @@ class CZookeeper
       logger.debug { "event_thread running: #{@_running}" }
 
       until @_shutting_down
-        begin
-          _iterate_event_delivery
-        rescue GotNilEventException
-          logger.debug { "#{self.class}##{__method__}: event delivery thread is exiting" }
-          break
-        end
+        zkrb_iterate_event_loop # XXX: check rc here
+        _iterate_event_delivery
       end
     end
 
     def _iterate_event_delivery
-      get_next_event(true).tap do |hash|
-        raise GotNilEventException if hash.nil?
+      if hash = zkrb_get_next_event_st()
 
-        # TODO: should push notify_connected! down so that it's common to both java and C impl.
+        # TODO: should push notify_connected! up so that it's common to both java and C impl.
         if hash.values_at(:req_id, :type, :state) == CONNECTED_EVENT_VALUES
           notify_connected!
         end
@@ -219,9 +225,10 @@ class CZookeeper
       logger.debug { "#{self.class}##{__method__}" }
 
       if @event_thread
-        unless @_closed
-          wake_event_loop! # this is a C method
-        end
+#         unless @_closed
+#           wake_event_loop! # this is a C method
+#         end
+        shut_down!
         @event_thread.join 
         @event_thread = nil
       end
