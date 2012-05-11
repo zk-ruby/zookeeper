@@ -143,14 +143,15 @@ protected
     # we want to rerun the callback at a later time when we eventually do have
     # a valid response.
     if hash[:type] == Zookeeper::Constants::ZOO_SESSION_EVENT
+      # XXX: setup_completion changed arity, is this setup_completion necessary anymore?
       is_completion ? setup_completion(hash[:req_id], callback_context) : setup_watcher(hash[:req_id], callback_context)
     end
+
     if callback_context
       callback = is_completion ? callback_context[:callback] : callback_context[:watcher]
 
       hash[:context] = callback_context[:context]
 
-      # TODO: Eventually enforce derivation from Zookeeper::Callback
       if callback.respond_to?(:call)
         callback.call(hash)
       else
@@ -164,7 +165,7 @@ protected
 
   def assert_supported_keys(args, supported)
     unless (args.keys - supported).empty?
-      raise Zookeeper::Exceptions::BadArguments,  # this heirarchy is kind of retarded
+      raise Zookeeper::Exceptions::BadArguments,
             "Supported arguments are: #{supported.inspect}, but arguments #{args.keys.inspect} were supplied instead"
     end
   end
