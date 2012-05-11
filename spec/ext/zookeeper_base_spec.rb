@@ -1,6 +1,6 @@
 require 'spec_helper'
 
-unless defined?(::JAVA_VERSION)
+unless defined?(::JRUBY_VERSION)
   describe Zookeeper::ZookeeperBase do
     before do
       @zk = described_class.new(Zookeeper.default_cnx_str)
