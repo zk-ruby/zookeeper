@@ -1,3 +1,9 @@
+v1.0.5 Minor cleanup
+
+  * Fix the InheritedConnectionError message
+
+  * Clean up the module includes
+
 v1.0.3 Linux: Fix hang on reopen after fork
 
   * Linux users relying on fork() should upgrade to 1.0.3, as it
