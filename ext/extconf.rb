@@ -1,10 +1,10 @@
-
 require 'mkmf'
 require 'rbconfig'
 
 HERE = File.expand_path(File.dirname(__FILE__))
 BUNDLE = Dir.glob("zkc-*.tar.gz").first
-BUNDLE_PATH = "apache-zookeeper/src/c"
+
+BUNDLE_PATH = File.join(HERE, 'c')
 
 $EXTRA_CONF = ''
 
@@ -54,10 +54,10 @@ Dir.chdir(HERE) do
   else
     puts "Building zkc."
 
-#     unless File.exists?('c')
-#       puts(cmd = "tar xzf #{BUNDLE} 2>&1")
-#       raise "'#{cmd}' failed" unless system(cmd)
-#     end
+    unless File.exists?('c')
+      puts(cmd = "tar xzf #{BUNDLE} 2>&1")
+      raise "'#{cmd}' failed" unless system(cmd)
+    end
 
     Dir.chdir(BUNDLE_PATH) do        
       configure = "./configure --prefix=#{HERE} --with-pic --without-cppunit --disable-dependency-tracking #{$EXTRA_CONF} 2>&1"
@@ -68,7 +68,7 @@ Dir.chdir(HERE) do
       safe_sh("make install 2>&1")
     end
 
-#     system("rm -rf #{BUNDLE_PATH}") unless ENV['DEBUG'] or ENV['DEV']
+    system("rm -rf #{BUNDLE_PATH}") unless ENV['DEBUG'] or ENV['DEV']
   end
 end
 
