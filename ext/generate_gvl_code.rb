@@ -59,6 +59,8 @@ REGEXP = /^ZOOAPI int (zoo_[^(]+)\(([^)]+)\);$/m
 require 'forwardable'
 require 'stringio'
 
+THIS_DIR = File.expand_path('..', __FILE__)
+
 ZKRB_WRAPPER_H_PATH = File.expand_path('../zkrb_wrapper.h', __FILE__)
 ZKRB_WRAPPER_C_PATH = File.expand_path('../zkrb_wrapper.c', __FILE__)
 
@@ -292,8 +294,13 @@ end
 
 def main
   help! if ARGV.empty?
-  
-  text = File.read('c/include/zookeeper.h')
+  opts = []
+
+  zookeeper_h_path = Dir[File.join(THIS_DIR, "**/zookeeper.h")].first
+
+  raise "Could not locate zookeeper.h!" unless zookeeper_h_path
+
+  text = File.read(zookeeper_h_path)
   code = GeneratedCode.from_zookeeper_h(text)
 
   cmd = ARGV.first
