@@ -143,7 +143,8 @@ class ZookeeperBase
       raise Exceptions::NotConnected   unless connected?
       if forked?
         raise InheritedConnectionError, <<-EOS.gsub(/(?:^|\n)\s*/, ' ').strip
-          You tried to use a connection inherited from another process [#{@pid}]
+          You tried to use a connection inherited from another process 
+          (original pid: #{original_pid}, your pid: #{Process.pid})
           You need to call reopen() after forking
         EOS
       end
