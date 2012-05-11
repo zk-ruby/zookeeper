@@ -11,9 +11,7 @@ end
 
 require File.expand_path('../zookeeper/core_ext', __FILE__)
 
-silence_warnings do
-  require 'backports'
-end
+require 'backports' if RUBY_VERSION =~ /\A1\.8\./
 
 require_relative 'zookeeper/logger'
 require_relative 'zookeeper/forked'
