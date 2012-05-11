@@ -1,3 +1,6 @@
 [submodule "releaseops"]
 	path = releaseops
 	url = git://github.com/slyphon/releaseops.git
+[submodule "ext/apache-zookeeper"]
+	path = ext/apache-zookeeper
+	url = git://github.com/slyphon/apache-zookeeper.git
