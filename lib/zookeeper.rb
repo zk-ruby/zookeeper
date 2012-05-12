@@ -11,11 +11,10 @@ end
 
 require File.expand_path('../zookeeper/core_ext', __FILE__)
 
-silence_warnings do
-  require 'backports'
-end
+require 'backports' if RUBY_VERSION =~ /\A1\.8\./
 
 require_relative 'zookeeper/monitor'
+require_relative 'zookeeper/logger'
 require_relative 'zookeeper/forked'
 require_relative 'zookeeper/latch'
 require_relative 'zookeeper/acls'
@@ -35,7 +34,7 @@ module Zookeeper
   include Constants
 
   unless defined?(@@logger)
-    @@logger = Logger.new($stderr).tap { |l| l.level = ENV['ZOOKEEPER_DEBUG'] ? Logger::DEBUG : Logger::ERROR } 
+    @@logger = ::Logger.new($stderr).tap { |l| l.level = ENV['ZOOKEEPER_DEBUG'] ? ::Logger::DEBUG : ::Logger::ERROR } 
   end
 
   def self.logger

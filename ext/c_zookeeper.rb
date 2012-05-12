@@ -1,3 +1,4 @@
+require_relative '../lib/zookeeper/logger'
 require_relative '../lib/zookeeper/common'
 require_relative '../lib/zookeeper/constants'
 require_relative 'zookeeper_c'
@@ -7,9 +8,10 @@ require_relative 'zookeeper_c'
 module Zookeeper
 # NOTE: this class extending (opening) the class defined in zkrb.c
 class CZookeeper
-  include Zookeeper::Forked
-  include Zookeeper::Constants
-  include Zookeeper::Exceptions
+  include Forked
+  include Constants
+  include Exceptions
+  include Logger
 
   DEFAULT_SESSION_TIMEOUT_MSEC = 10000
 
@@ -263,10 +265,6 @@ class CZookeeper
         @event_thread.join 
         @event_thread = nil
       end
-    end
-
-    def logger
-      Zookeeper.logger
     end
 
     # called by underlying C code to signal we're running

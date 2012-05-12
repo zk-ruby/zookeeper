@@ -2,6 +2,7 @@ module Zookeeper
 module ClientMethods
   include Constants
   include ACLs
+  include Logger
 
   def reopen(timeout=10, watcher=nil)
     warn "WARN: ZookeeperBase#reopen watcher argument is now ignored" if watcher
@@ -206,10 +207,6 @@ protected
   # TODO: describe what this does
   def get_default_global_watcher
     super
-  end
-
-  def logger
-    Zookeeper.logger
   end
 
   def assert_valid_data_size!(data)

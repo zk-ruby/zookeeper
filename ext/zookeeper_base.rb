@@ -8,12 +8,13 @@ require 'forwardable'
 module Zookeeper
 class ZookeeperBase
   extend Forwardable
-  include Zookeeper::Forked
-  include Zookeeper::Common       # XXX: clean this up, no need to include *everything*
-  include Zookeeper::Callbacks
-  include Zookeeper::Constants
-  include Zookeeper::Exceptions
-  include Zookeeper::ACLs
+  include Forked
+  include Common       # XXX: clean this up, no need to include *everything*
+  include Callbacks
+  include Constants
+  include Exceptions
+  include ACLs
+  include Logger
 
   attr_accessor :original_pid
 
@@ -143,7 +144,8 @@ class ZookeeperBase
       raise Exceptions::NotConnected   unless connected?
       if forked?
         raise InheritedConnectionError, <<-EOS.gsub(/(?:^|\n)\s*/, ' ').strip
-          You tried to use a connection inherited from another process [#{@pid}]
+          You tried to use a connection inherited from another process 
+          (original pid: #{original_pid}, your pid: #{Process.pid})
           You need to call reopen() after forking
         EOS
       end

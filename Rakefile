@@ -104,3 +104,7 @@ task 'ctags' do
   sh 'bundle-ctags'
 end
 
+# because i'm a creature of habit
+task 'mb:test_all' => 'zk:test_all'
+
+

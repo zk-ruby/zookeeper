@@ -16,11 +16,12 @@ module Zookeeper
 # subclassed by the top-level Zookeeper class
 class JavaBase
   include Java
-  include Zookeeper::Common
-  include Zookeeper::Constants
-  include Zookeeper::Callbacks
-  include Zookeeper::Exceptions
-  include Zookeeper::ACLs
+  include Common
+  include Constants
+  include Callbacks
+  include Exceptions
+  include ACLs
+  include Logger
 
   JZK   = org.apache.zookeeper
   JZKD  = org.apache.zookeeper.data
@@ -64,15 +65,12 @@ class JavaBase
   # @private
   module JavaCB
     class Callback
+      include Logger
+
       attr_reader :req_id
 
       def initialize(req_id)
         @req_id = req_id
-      end
-
-    protected
-      def logger
-        Zookeeper.logger
       end
     end
 

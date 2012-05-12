@@ -1,3 +1,13 @@
+v1.0.6 Only include backports if RUBY_VERSION is 1.8.x
+
+  * 'backports' pollutes too much, use sparingly
+
+v1.0.5 Minor cleanup
+
+  * Fix the InheritedConnectionError message
+
+  * Clean up the module includes
+
 v1.0.3 Linux: Fix hang on reopen after fork
 
   * Linux users relying on fork() should upgrade to 1.0.3, as it
