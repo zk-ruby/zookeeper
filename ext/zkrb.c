@@ -590,12 +590,12 @@ static VALUE method_zkrb_iterate_event_loop(VALUE self) {
     fd = 0;
   }
 
-  zkrb_debug("zookeeper_interest set timeval to %ld.%06d sec", tv.tv_sec, tv.tv_usec);
+/*  zkrb_debug("zookeeper_interest set timeval to %ld.%06d sec", tv.tv_sec, tv.tv_usec);*/
 
   // this is 0.001s, more reasonable when we're trying to loop through this and
   // also respond to stuff like shutdown
   tv.tv_sec = 0;
-  tv.tv_usec = 1000;
+  tv.tv_usec = 10000;
 
   rc = rb_thread_select(fd+1, &rfds, &wfds, &efds, &tv);
 

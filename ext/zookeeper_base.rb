@@ -57,6 +57,10 @@ class ZookeeperBase
 #   synchronized_delegation :@czk, :get_children, :exists, :delete, :get, :set,
 #     :set_acl, :get_acl, :client_id, :sync, :wait_until_connected
 
+
+  def_delegators :@czk, :get_children, :exists, :delete, :get, :set,
+    :set_acl, :get_acl, :client_id, :sync, :wait_until_connected 
+
   # some state methods need to be more paranoid about locking to ensure the correct
   # state is returned
   # 
@@ -224,6 +228,9 @@ protected
   # strip the chroot path from the returned path (important in an async create
   # sequential call). This is the only place where we can hook *just* the C
   # version. The non-async manipulation is handled in ZookeeperBase#create.
+  # 
+  # TODO: need to move the continuation setup into here, so that it can get 
+  #       added to the callback hash
   # 
   def setup_completion(req_id, meth_name, call_opts)
     if (meth_name == :create) and cb = call_opts[:callback]

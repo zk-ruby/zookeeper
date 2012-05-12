@@ -57,6 +57,7 @@ module Constants
   ZSESSIONMOVED             = -118
 
   ZKRB_GLOBAL_CB_REQ = -1
+  ZKRB_ASYNC_CONTN_ID = -2
 
   # @private
   CONNECTED_EVENT_VALUES = [Constants::ZKRB_GLOBAL_CB_REQ, 

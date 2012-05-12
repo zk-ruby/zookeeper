@@ -30,14 +30,13 @@ class CZookeeper
   end
 
   # wrap these calls in our sync->async special sauce
-  %w[get set exists create delete get_acl set_acl get_children].each do |meth|
+  %w[get set exists create delete get_acl set_acl get_children].each do |sym|
     class_eval(<<-EOS, __FILE__, __LINE__+1)
       def #{sym}(*args)
         submit_and_block(:#{sym}, *args)
       end
     EOS
   end
-
 
   def initialize(host, event_queue, opts={})
     @host = host
@@ -162,8 +161,6 @@ class CZookeeper
       cnt = Continuation.new(meth, *args)
       @reg.synchronized { |r| r.pending << cnt }
       cnt.value
-    ensure
-      @reg.synchronized { |r| r.in_flight.delete(cnt) }
     end
 
     # will wait until the client has entered the running? state
@@ -192,22 +189,51 @@ class CZookeeper
 
       until @_shutting_down
         zkrb_iterate_event_loop # XXX: check rc here
+        submit_pending_calls    if @reg.pending?
         iterate_event_delivery
-        submit_pending_calls if @reg.pending?
       end
     rescue ShuttingDownException
       logger.error { "event thread saw @_shutting_down, bailing without entering loop" }
     end
 
     def submit_pending_calls
+      # this is ok, because the calling thread only ever *adds* to this hash,
+      # and the keys are always unique
+
+      pending = nil
+
       @reg.lock
       begin
-        while cntn = @reg.pending.shift
-          cntn.submit(self)
-          @reg.in_flight << cntn
-        end
+        pending, @reg.pending = @reg.pending, []
       ensure
         @reg.unlock
+      end
+
+      return if pending.empty?
+
+      while cntn = pending.shift
+        @reg.in_flight[cntn.req_id] = cntn   # in_flight is only ever touched by us
+        cntn.submit(self)
+      end
+    end
+
+    def iterate_event_delivery
+      while hash = zkrb_get_next_event_st()
+
+        # notify when we get this event so we know we're connected
+        if hash.values_at(:req_id, :type, :state) == CONNECTED_EVENT_VALUES[1..2]
+          notify_connected!
+        end
+
+        # this is one of "our" continuations, so we handle delivering it and
+        # don't hand it off to the event dispatcher
+
+        if cntn = @reg.in_flight.delete(hash[:req_id])
+          cntn.call(hash)
+          next # skip adding this to the queue below  TODO: REFACTOR THIS! GAH! ICK!
+        else
+          @event_queue.push(hash)
+        end
       end
     end
 
@@ -225,17 +251,6 @@ class CZookeeper
       end
     end
 
-    def iterate_event_delivery
-      if hash = zkrb_get_next_event_st()
-
-        # TODO: should push notify_connected! up so that it's common to both java and C impl.
-        if hash.values_at(:req_id, :type, :state) == CONNECTED_EVENT_VALUES
-          notify_connected!
-        end
-
-        @event_queue.push(hash)
-      end
-    end
 
     # use this method to set the @_shutting_down flag to true
     def shut_down!

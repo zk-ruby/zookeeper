@@ -4,7 +4,7 @@ module Zookeeper
   # provides sync call semantics around an async api
   class Continuation
     include Constants
-    include Zookeeper::Logger
+    include Logger
 
     # for keeping track of which continuations are pending, and which ones have
     # been submitted and are awaiting a repsonse
@@ -14,10 +14,8 @@ module Zookeeper
       def_delegators :@mutex, :lock, :unlock
 
       def initialize
-        super([], [])
+        super([], {})
         @mutex = Mutex.new
-        self.pending   ||= []
-        self.in_flight ||= []
       end
 
       def synchronized
@@ -119,7 +117,15 @@ module Zookeeper
       # callback provided, we don't handle delivering the end result
       def async_args
         ary = @args.dup
-        ary[callback_arg_idx] ||= self
+
+        # this is not already an async call
+        # so we replace the req_id with the ZKRB_ASYNC_CONTN_ID so the 
+        # event thread knows to dispatch it itself
+        #
+        unless user_callback
+          ary[callback_arg_idx] = self
+        end
+
         ary
       end
 

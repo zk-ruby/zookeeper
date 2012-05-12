@@ -289,6 +289,7 @@ VALUE zkrb_event_to_ruby(zkrb_event_t *event) {
 
   switch (event->type) {
     case ZKRB_DATA: {
+      zkrb_debug("zkrb_event_to_ruby ZKRB_DATA\n");
       struct zkrb_data_completion *data_ctx = event->completion.data_completion;
       if (ZKRBDebugging) zkrb_print_stat(data_ctx->stat);
       rb_hash_aset(hash, GET_SYM("data"), data_ctx->data ? rb_str_new(data_ctx->data, data_ctx->data_len) : Qnil);
