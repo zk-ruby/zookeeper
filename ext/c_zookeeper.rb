@@ -142,14 +142,10 @@ class CZookeeper
   def wait_until_connected(timeout=10)
     # this begin/ensure/end style is recommended by tarceri
     # no need to create a context for every mutex grab
-    @mutex.lock
-    begin
-      wait_until_running(timeout)
-      @connected_cond.wait(timeout) unless connected?
-    ensure
-      @mutex.unlock
-    end
 
+    wait_until_running(timeout)
+
+    Thread.pass until connected? or is_unrecoverable
     connected?
   end
 

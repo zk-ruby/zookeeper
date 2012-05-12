@@ -79,7 +79,12 @@ module Zookeeper
       begin
         @cond.wait(@mutex) until @rval
 
-        return @rval
+        case @rval.length
+        when 1
+          return @rval.first
+        else
+          return @rval
+        end
       ensure
         @mutex.unlock
       end
@@ -87,7 +92,9 @@ module Zookeeper
 
     # receive the response from the server, set @rval, notify caller
     def call(hash)
-      @rval = hash.values_at(METH_TO_ASYNC_RESULT_KEYS.fetch(meth))
+      logger.debug { "continuation req_id #{req_id}, got hash: #{hash.inspect}" }
+      @rval = hash.values_at(*METH_TO_ASYNC_RESULT_KEYS.fetch(meth))
+      logger.debug { "delivering result #{@rval.inspect}" }
       deliver!
     end
 

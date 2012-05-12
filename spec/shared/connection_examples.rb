@@ -21,7 +21,7 @@ shared_examples_for "connection" do
   # unfortunately, we can't test w/o exercising other parts of the driver, so
   # if "set" is broken, this test will fail as well (but whaddyagonnado?)
   describe :get do
-    describe :sync do
+    describe :sync, :sync => true do
       it_should_behave_like "all success return values"
 
       before do
@@ -38,7 +38,7 @@ shared_examples_for "connection" do
       end
     end
 
-    describe :sync_watch do
+    describe :sync_watch, :sync => true do
       it_should_behave_like "all success return values"
 
       before do
@@ -140,7 +140,7 @@ shared_examples_for "connection" do
       @stat = zk.stat(:path => path)[:stat]
     end
 
-    describe :sync do
+    describe :sync, :sync => true do
       describe 'without version' do
         it_should_behave_like "all success return values"
 
@@ -286,7 +286,7 @@ shared_examples_for "connection" do
       end
     end
 
-    describe :sync do
+    describe :sync, :sync => true do
       it_should_behave_like "all success return values"
 
       before do
@@ -308,7 +308,7 @@ shared_examples_for "connection" do
       end
     end
 
-    describe :sync_watch do
+    describe :sync_watch, :sync => true do
       it_should_behave_like "all success return values"
 
       before do
@@ -429,7 +429,7 @@ shared_examples_for "connection" do
   # NOTE: the jruby version of stat on non-existent node will have a
   # return_code of 0, but the C version will have a return_code of -101
   describe :stat do
-    describe :sync do
+    describe :sync, :sync => true do
       it_should_behave_like "all success return values"
 
       before do
@@ -441,7 +441,7 @@ shared_examples_for "connection" do
       end
     end
 
-    describe :sync_watch do
+    describe :sync_watch, :sync => true do
       it_should_behave_like "all success return values"
 
       before do
@@ -536,7 +536,7 @@ shared_examples_for "connection" do
       zk.delete(:path => path)
     end
 
-    describe :sync do
+    describe :sync, :sync => true do
       describe 'error' do
         it %[should barf if the data size is too large], :input_size => true do
           large_data = '0' * (1024 ** 2)
@@ -775,7 +775,7 @@ shared_examples_for "connection" do
   end # create
 
   describe :delete do
-    describe :sync do
+    describe :sync, :sync => true do
       describe 'without version' do
         it_should_behave_like "all success return values"
 
@@ -878,7 +878,7 @@ shared_examples_for "connection" do
   end # delete
 
   describe :get_acl do
-    describe :sync do
+    describe :sync, :sync => true do
       it_should_behave_like "all success return values"
 
       before do
@@ -939,7 +939,7 @@ shared_examples_for "connection" do
       pending("No idea how to set ACLs")
     end
 
-    describe :sync do
+    describe :sync, :sync => true do
       it_should_behave_like "all success return values"
 
       before do
@@ -960,7 +960,7 @@ shared_examples_for "connection" do
     end
   end
 
-  describe :sync do
+  describe :sync, :sync => true do
     describe :success do
       it_should_behave_like "all success return values"
 

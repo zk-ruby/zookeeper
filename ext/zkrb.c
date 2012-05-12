@@ -559,6 +559,16 @@ static VALUE method_zkrb_get_next_event_st(VALUE self) {
   if (event != NULL) {
     rval = zkrb_event_to_ruby(event);
     zkrb_event_free(event);
+
+    char buf[1];
+    int fd = zk->queue->pipe_read;
+    ssize_t bytes_read = 0;
+
+    bytes_read = read(fd, buf, sizeof(buf));
+
+    if (bytes_read == -1) {
+      rb_raise(rb_eRuntimeError, "read failed: %d", errno);
+    }
   }
 
   return rval;
