@@ -4,9 +4,8 @@ require_relative 'zookeeper_c'
 
 # require File.expand_path('../zookeeper_c', __FILE__)
 
-# TODO: see if we can get the destructor to handle thread/event queue teardown
-#       when we're garbage collected
 module Zookeeper
+# NOTE: this class extending (opening) the class defined in zkrb.c
 class CZookeeper
   include Zookeeper::Forked
   include Zookeeper::Constants
@@ -15,24 +14,6 @@ class CZookeeper
   DEFAULT_SESSION_TIMEOUT_MSEC = 10000
 
   class GotNilEventException < StandardError; end
-
-  class Pipe < Struct.new(:io_pipe)
-    def initialize
-      self.io_pipe = IO.pipe
-    end
-
-    def reader
-      io_pipe.first
-    end
-
-    def writer
-      io_pipe.last
-    end
-
-    def close
-      io_pipe.each { |i| i.close unless i.closed? }
-    end
-  end
 
   attr_accessor :original_pid
 
@@ -56,7 +37,7 @@ class CZookeeper
     # used by the C layer. CZookeeper sets this to true when the init method
     # has completed. once this is set to true, it stays true.
     #
-    # you should grab the @start_stop_mutex before messing with this flag
+    # you should grab the @mutex before messing with this flag
     @_running = nil
 
     # This is set to true after destroy_zkrb_instance has been called and all
@@ -71,17 +52,15 @@ class CZookeeper
 
     @_session_timeout_msec = DEFAULT_SESSION_TIMEOUT_MSEC
 
-    @start_stop_mutex = Monitor.new
+    @mutex = Monitor.new
     
     # used to signal that we're running
-    @running_cond = @start_stop_mutex.new_cond
+    @running_cond = @mutex.new_cond
 
     # used to signal we've received the connected event
-    @connected_cond = @start_stop_mutex.new_cond
+    @connected_cond = @mutex.new_cond
     
     @event_thread = nil
-
-    @pipe = Pipe.new
 
     zkrb_init(@host, :zkc_log_level => Constants::ZOO_LOG_LEVEL_DEBUG)
 
@@ -91,15 +70,15 @@ class CZookeeper
   end
 
   def closed?
-    @start_stop_mutex.synchronize { !!@_closed }
+    @mutex.synchronize { !!@_closed }
   end
 
   def running?
-    @start_stop_mutex.synchronize { !!@_running }
+    @mutex.synchronize { !!@_running }
   end
 
   def shutting_down?
-    @start_stop_mutex.synchronize { !!@_shutting_down }
+    @mutex.synchronize { !!@_shutting_down }
   end
 
   def connected?
@@ -127,9 +106,8 @@ class CZookeeper
     if forked?
       fn_close.call
     else
-#       shut_down!
       stop_event_thread!
-      @start_stop_mutex.synchronize(&fn_close)
+      @mutex.synchronize(&fn_close)
     end
 
     nil
@@ -148,12 +126,22 @@ class CZookeeper
   # if timeout is nil, we never time out, and wait forever for CONNECTED state
   #
   def wait_until_connected(timeout=10)
-    @start_stop_mutex.synchronize do
+    # this begin/ensure/end style is recommended by tarceri
+    # no need to create a context for every mutex grab
+    @mutex.lock
+    begin
       wait_until_running(timeout)
       @connected_cond.wait(timeout) unless connected?
+    ensure
+      @mutex.unlock
     end
 
     connected?
+  end
+
+  # submits a job for processing 
+  def async_call(continuation)
+
   end
 
   private
@@ -161,11 +149,14 @@ class CZookeeper
     # or until timeout seconds have passed.
     #
     # returns true if we're running, false if we timed out
-    def wait_until_running(timeout=5)
-      @start_stop_mutex.synchronize do
+    def wait_until_running(timeout=5) 
+      @mutex.lock
+      begin
         return true if @_running
         @running_cond.wait(timeout)
         !!@_running
+      ensure
+        @mutex.unlock
       end
     end
 
@@ -178,13 +169,16 @@ class CZookeeper
 
       logger.debug { "event_thread waiting until running: #{@_running}" }
 
-      @start_stop_mutex.synchronize do
-        @running_cond.wait_until { @_running }
+      @mutex.lock
+      begin
+        @running_cond.wait_until { @_running or @_shutting_down }
 
         if @_shutting_down
           logger.error { "event thread saw @_shutting_down, bailing without entering loop" }
           return
         end
+      ensure
+        @mutex.unlock
       end
 
       logger.debug { "event_thread running: #{@_running}" }
@@ -211,8 +205,11 @@ class CZookeeper
     def shut_down!
       logger.debug { "#{self.class}##{__method__}" }
 
-      @start_stop_mutex.synchronize do
+      @mutex.lock
+      begin
         @_shutting_down = true
+      ensure
+        @mutex.unlock
       end
     end
 
@@ -242,15 +239,21 @@ class CZookeeper
     def zkc_set_running_and_notify!
       logger.debug { "#{self.class}##{__method__}" }
 
-      @start_stop_mutex.synchronize do
+      @mutex.lock
+      begin
         @_running = true
         @running_cond.broadcast
+      ensure
+        @mutex.unlock
       end
     end
 
     def notify_connected!
-      @start_stop_mutex.synchronize do
+      @mutex.lock
+      begin
         @connected_cond.broadcast
+      ensure
+        @mutex.unlock
       end
     end
 end

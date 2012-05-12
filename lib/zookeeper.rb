@@ -15,6 +15,7 @@ silence_warnings do
   require 'backports'
 end
 
+require_relative 'zookeeper/monitor'
 require_relative 'zookeeper/forked'
 require_relative 'zookeeper/latch'
 require_relative 'zookeeper/acls'

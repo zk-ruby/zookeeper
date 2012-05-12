@@ -43,18 +43,18 @@ class ZookeeperBase
   # but this would represent quite a bit of added complexity, and questionable
   # performance gains.
   #
-  def self.synchronized_delegation(provider, *syms)
-    syms.each do |sym|
-      class_eval(<<-EOM, __FILE__, __LINE__+1)
-        def #{sym}(*a, &b)
-          @mutex.synchronize { #{provider}.#{sym}(*a, &b) }
-        end
-      EOM
-    end
-  end
+#   def self.synchronized_delegation(provider, *syms)
+#     syms.each do |sym|
+#       class_eval(<<-EOM, __FILE__, __LINE__+1)
+#         def #{sym}(*a, &b)
+#           @mutex.synchronize { #{provider}.#{sym}(*a, &b) }
+#         end
+#       EOM
+#     end
+#   end
 
-  synchronized_delegation :@czk, :get_children, :exists, :delete, :get, :set,
-    :set_acl, :get_acl, :client_id, :sync, :wait_until_connected
+#   synchronized_delegation :@czk, :get_children, :exists, :delete, :get, :set,
+#     :set_acl, :get_acl, :client_id, :sync, :wait_until_connected
 
   # some state methods need to be more paranoid about locking to ensure the correct
   # state is returned
@@ -213,6 +213,9 @@ class ZookeeperBase
   # we are closed if there is no @czk instance or @czk.closed?
   def closed?
     @mutex.synchronize { !@czk or @czk.closed? } 
+  end
+
+  def get(req_id, path, callback, watcher)
   end
  
 protected
