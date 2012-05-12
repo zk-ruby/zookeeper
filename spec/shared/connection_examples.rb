@@ -65,10 +65,11 @@ shared_examples_for "connection" do
       end
     end
 
-    describe :async do
+    describe :async, :async => true do
       before do
         @cb = Zookeeper::Callbacks::DataCallback.new
 
+        logger.debug { "-----------------> MAKING ASYNC GET REQUEST <--------------------" }
         @rv = zk.get(:path => path, :callback => @cb, :callback_context => path)
         wait_until(1.0) { @cb.completed? }
         @cb.should be_completed
@@ -90,7 +91,7 @@ shared_examples_for "connection" do
       end
     end
 
-    describe :async_watch do
+    describe :async_watch, :async => true do
       it_should_behave_like "all success return values"
 
       before do
@@ -195,7 +196,7 @@ shared_examples_for "connection" do
       end
     end   # sync
 
-    describe :async do
+    describe :async, :async => true do
       before do
         @cb = Zookeeper::Callbacks::StatCallback.new
       end
@@ -349,7 +350,7 @@ shared_examples_for "connection" do
       end
     end
 
-    describe :async do
+    describe :async, :async => true do
       it_should_behave_like "all success return values"
 
       before do
@@ -377,7 +378,7 @@ shared_examples_for "connection" do
       end
     end
 
-    describe :async_watch do
+    describe :async_watch, :async => true do
       it_should_behave_like "all success return values"
 
       before do
@@ -468,7 +469,7 @@ shared_examples_for "connection" do
       end
     end
 
-    describe :async do
+    describe :async, :async => true do
       it_should_behave_like "all success return values"
 
       before do
@@ -488,7 +489,7 @@ shared_examples_for "connection" do
       end
     end
 
-    describe :async_watch do
+    describe :async_watch, :async => true do
       it_should_behave_like "all success return values"
 
       before do
@@ -640,7 +641,7 @@ shared_examples_for "connection" do
       end
     end
 
-    describe :async do
+    describe :async, :async => true do
       before do
         @cb = Zookeeper::Callbacks::StringCallback.new
       end
@@ -819,7 +820,7 @@ shared_examples_for "connection" do
       end
     end # sync
 
-    describe :async do
+    describe :async, :async => true do
       before do
         @cb = Zookeeper::Callbacks::VoidCallback.new
       end
@@ -902,7 +903,7 @@ shared_examples_for "connection" do
       end
     end
 
-    describe :async do
+    describe :async, :async => true do
       it_should_behave_like "all success return values"
 
       before do

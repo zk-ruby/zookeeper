@@ -238,14 +238,16 @@ class CZookeeper
           notify_connected!
         end
 
-        # this is one of "our" continuations, so we handle delivering it and
-        # don't hand it off to the event dispatcher
+        cntn = @reg.in_flight.delete(hash[:req_id])
 
-        if cntn = @reg.in_flight.delete(hash[:req_id])
-          cntn.call(hash)
-        else
-          @event_queue.push(hash)
+        if cntn and not cntn.user_callback?     # this is one of "our" continuations 
+          cntn.call(hash)                       # so we handle delivering it
+          next                                  # and skip handing it to the dispatcher
         end
+
+        # otherwise, the event was a session event (ZKRB_GLOBAL_CB_REQ)
+        # or a user-provided callback
+        @event_queue.push(hash)
       end
     end
 

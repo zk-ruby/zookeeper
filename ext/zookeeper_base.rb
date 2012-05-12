@@ -1,5 +1,3 @@
-# require File.expand_path('../c_zookeeper', __FILE__)
-
 require_relative 'c_zookeeper'
 require 'forwardable'
 
@@ -31,31 +29,6 @@ class ZookeeperBase
   ZOO_LOG_LEVEL_WARN   = 2
   ZOO_LOG_LEVEL_INFO   = 3
   ZOO_LOG_LEVEL_DEBUG  = 4
-
-
-  # this is unfortunately necessary to prevent a really horrendous race in
-  # shutdown, where some other thread calls close in the middle of a
-  # synchronous operation (thanks to the GIL-releasing wrappers, we now
-  # have this problem). so we need to make sure only one thread can be calling
-  # a synchronous operation at a time. 
-  #
-  # this might be solved by waiting for a condition where there are no "in flight"
-  # operations (thereby allowing multiple threads to make requests simultaneously),
-  # but this would represent quite a bit of added complexity, and questionable
-  # performance gains.
-  #
-#   def self.synchronized_delegation(provider, *syms)
-#     syms.each do |sym|
-#       class_eval(<<-EOM, __FILE__, __LINE__+1)
-#         def #{sym}(*a, &b)
-#           @mutex.synchronize { #{provider}.#{sym}(*a, &b) }
-#         end
-#       EOM
-#     end
-#   end
-
-#   synchronized_delegation :@czk, :get_children, :exists, :delete, :get, :set,
-#     :set_acl, :get_acl, :client_id, :sync, :wait_until_connected
 
 
   def_delegators :@czk, :get_children, :exists, :delete, :get, :set,

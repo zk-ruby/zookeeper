@@ -58,7 +58,6 @@ module Zookeeper
       :get_children => [:rc, :strings, :stat],
     }
 
-
     attr_accessor :meth, :block, :rval
 
     def initialize(meth, *args)
@@ -98,6 +97,10 @@ module Zookeeper
       deliver!
     end
 
+    def user_callback?
+      !!@args.at(callback_arg_idx)
+    end
+
     # this method is called by the event thread to submit the request
     # passed the CZookeeper instance, makes the async call and deals with the results
     #
@@ -108,7 +111,7 @@ module Zookeeper
     def submit(czk)
       rc, *_ = czk.__send__(:"zkrb_#{@meth}", *async_args)
       
-      if user_callback or (rc != ZOK)       # if this is an async call, or we failed to submit it
+      if user_callback? or (rc != ZOK)      # if this is an async call, or we failed to submit it
         @rval = [rc]                        # create the repsonse
         deliver!                            # wake the caller and we're out
       end
@@ -128,16 +131,11 @@ module Zookeeper
         # this is not already an async call
         # so we replace the req_id with the ZKRB_ASYNC_CONTN_ID so the 
         # event thread knows to dispatch it itself
-        #
-        unless user_callback
-          ary[callback_arg_idx] = self
-        end
+        ary[callback_arg_idx] ||= self
+
+        logger.debug { "async_args, ary: #{ary.inspect}, #{callback_arg_idx}" }
 
         ary
-      end
-
-      def user_callback
-        @args.at(callback_arg_idx)
       end
 
       def callback_arg_idx
