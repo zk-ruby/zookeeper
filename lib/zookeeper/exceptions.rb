@@ -77,6 +77,9 @@ stacktrace:
   class ShuttingDownException   < ZookeeperException; end
   class DataTooLargeException   < ZookeeperException; end
 
+  # maybe use this for continuation
+  class InterruptedException  < ZookeeperException ; end
+
   # raised when the user tries to use a connection after a fork()
   # without calling reopen() in the C client
   #

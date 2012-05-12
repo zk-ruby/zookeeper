@@ -20,3 +20,8 @@ rvm:
 
 bundler_args: --without development docs coverage
 
+# blacklist
+branches:
+  except:
+    - dev/zookeeper-st
+

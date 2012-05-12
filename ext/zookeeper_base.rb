@@ -215,9 +215,7 @@ class ZookeeperBase
     @mutex.synchronize { !@czk or @czk.closed? } 
   end
 
-  def get(req_id, path, callback, watcher)
-  end
- 
+
 protected
   # this is a hack: to provide consistency between the C and Java drivers when
   # using a chrooted connection, we wrap the callback in a block that will
