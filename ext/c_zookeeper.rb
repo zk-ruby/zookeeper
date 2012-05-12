@@ -27,6 +27,16 @@ class CZookeeper
     set_zkrb_debug_level(value)
   end
 
+  # wrap these calls in our sync->async special sauce
+  %w[get set exists create delete get_acl set_acl get_children].each do |meth|
+    class_eval(<<-EOS, __FILE__, __LINE__+1)
+      def #{sym}(*args)
+        submit_and_block(:#{sym}, *args)
+      end
+    EOS
+  end
+
+
   def initialize(host, event_queue, opts={})
     @host = host
     @event_queue = event_queue
@@ -61,6 +71,9 @@ class CZookeeper
     @connected_cond = @mutex.new_cond
     
     @event_thread = nil
+
+    # hash of in-flight Continuation instances
+    @reg = Continuation::Registry.new
 
     zkrb_init(@host, :zkc_log_level => Constants::ZOO_LOG_LEVEL_DEBUG)
 
@@ -139,12 +152,18 @@ class CZookeeper
     connected?
   end
 
-  # submits a job for processing 
-  def async_call(continuation)
-
-  end
 
   private
+    # submits a job for processing 
+    # blocks the caller until result has returned
+    def submit_and_block(meth, *args)
+      cnt = Continuation.new(meth, *args)
+      @reg.synchronized { |r| r.pending << cnt }
+      cnt.value
+    ensure
+      @reg.synchronized { |r| r.in_flight.delete(cnt) }
+    end
+
     # will wait until the client has entered the running? state
     # or until timeout seconds have passed.
     #
@@ -161,35 +180,50 @@ class CZookeeper
     end
 
     def setup_event_thread!
-      @event_thread ||= Thread.new(&method(:_event_thread_body))
+      @event_thread ||= Thread.new(&method(:event_thread_body))
     end
 
-    def _event_thread_body
+    def event_thread_body
       Thread.current.abort_on_exception = true
 
+      event_thread_await_running
+
+      until @_shutting_down
+        zkrb_iterate_event_loop # XXX: check rc here
+        iterate_event_delivery
+        submit_pending_calls if @reg.pending?
+      end
+    rescue ShuttingDownException
+      logger.error { "event thread saw @_shutting_down, bailing without entering loop" }
+    end
+
+    def submit_pending_calls
+      @reg.lock
+      begin
+        while cntn = @reg.pending.shift
+          cntn.submit(self)
+          @reg.in_flight << cntn
+        end
+      ensure
+        @reg.unlock
+      end
+    end
+
+    def event_thread_await_running
       logger.debug { "event_thread waiting until running: #{@_running}" }
 
       @mutex.lock
       begin
         @running_cond.wait_until { @_running or @_shutting_down }
+        logger.debug { "event_thread running: #{@_running}" }
 
-        if @_shutting_down
-          logger.error { "event thread saw @_shutting_down, bailing without entering loop" }
-          return
-        end
+        raise ShuttingDownException if @_shutting_down
       ensure
         @mutex.unlock
       end
-
-      logger.debug { "event_thread running: #{@_running}" }
-
-      until @_shutting_down
-        zkrb_iterate_event_loop # XXX: check rc here
-        _iterate_event_delivery
-      end
     end
 
-    def _iterate_event_delivery
+    def iterate_event_delivery
       if hash = zkrb_get_next_event_st()
 
         # TODO: should push notify_connected! up so that it's common to both java and C impl.

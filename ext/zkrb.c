@@ -714,21 +714,29 @@ static VALUE method_zerror(VALUE self, VALUE errc) {
 }
 
 static void zkrb_define_methods(void) {
-#define DEFINE_METHOD(method, args) { \
-    rb_define_method(CZookeeper, #method, method_ ## method, args); }
-#define DEFINE_CLASS_METHOD(method, args) { \
-    rb_define_singleton_method(CZookeeper, #method, method_ ## method, args); }
+#define DEFINE_METHOD(M, ARGS) { \
+    rb_define_method(CZookeeper, #M, method_ ## M, ARGS); }
+
+#define DEFINE_CLASS_METHOD(M, ARGS) { \
+    rb_define_singleton_method(CZookeeper, #M, method_ ## M, ARGS); }
+
+// defines a method with a zkrb_ prefix, the actual C method does not have this prefix
+#define DEFINE_ZKRB_METHOD(M, ARGS) { \
+    rb_define_method(CZookeeper, zkrb_ ## M, method_ ## M, ARGS); }
 
   // the number after the method name should be actual arity of C function - 1
   DEFINE_METHOD(zkrb_init, -1);
-  DEFINE_METHOD(get_children, 4);
-  DEFINE_METHOD(exists, 4);
-  DEFINE_METHOD(create, 6);
-  DEFINE_METHOD(delete, 4);
-  DEFINE_METHOD(get, 4);
-  DEFINE_METHOD(set, 5);
-  DEFINE_METHOD(set_acl, 5);
-  DEFINE_METHOD(get_acl, 3);
+
+  rb_define_method(CZookeeper, "zkrb_get_children", method_get_children,  4);
+  rb_define_method(CZookeeper, "zkrb_exists",       method_exists,        4);
+  rb_define_method(CZookeeper, "zkrb_create",       method_create,        6);
+  rb_define_method(CZookeeper, "zkrb_delete",       method_delete,        4);
+  rb_define_method(CZookeeper, "zkrb_get",          method_get,           4);
+  rb_define_method(CZookeeper, "zkrb_set",          method_set,           5);
+  rb_define_method(CZookeeper, "zkrb_set_acl",      method_set_acl,       5);
+  rb_define_method(CZookeeper, "zkrb_get_acl",      method_get_acl,       3);
+
+
   DEFINE_METHOD(client_id, 0);
   DEFINE_METHOD(close_handle, 0);
   DEFINE_METHOD(deterministic_conn_order, 1);
