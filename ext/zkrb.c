@@ -14,6 +14,7 @@
 #undef THREADED
 
 #include "ruby.h"
+#include "ruby/io.h"
 #include "c-client-src/zookeeper.h"
 #include <errno.h>
 #include <stdio.h>
@@ -560,18 +561,29 @@ static VALUE method_zkrb_get_next_event_st(VALUE self) {
     rval = zkrb_event_to_ruby(event);
     zkrb_event_free(event);
 
-    char buf[1];
     int fd = zk->queue->pipe_read;
-    ssize_t bytes_read = 0;
 
-    bytes_read = read(fd, buf, sizeof(buf));
-
-    if (bytes_read == -1) {
-      rb_raise(rb_eRuntimeError, "read failed: %d", errno);
-    }
+    // we don't care in this case. this is just until i can remove the self
+    // pipe from the queue
+    char b[128];
+    while(read(fd, b, sizeof(b)) == sizeof(b)){}
   }
 
   return rval;
+}
+
+inline static int get_self_pipe_read_fd(VALUE self) {
+  rb_io_t *fptr;
+  VALUE pipe_read = rb_iv_get(self, "@pipe_read");
+
+  if NIL_P(pipe_read)
+      rb_raise(rb_eRuntimeError, "@pipe_read was nil!");
+
+  GetOpenFile(pipe_read, fptr);
+
+  rb_io_check_readable(fptr);
+
+  return fptr->fd;
 }
 
 static VALUE method_zkrb_iterate_event_loop(VALUE self) {
@@ -580,7 +592,7 @@ static VALUE method_zkrb_iterate_event_loop(VALUE self) {
   fd_set rfds, wfds, efds;
   FD_ZERO(&rfds); FD_ZERO(&wfds); FD_ZERO(&efds); 
 
-  int fd=0, interest=0, events=0, rc=0;
+  int fd=0, interest=0, events=0, rc=0, maxfd=0;
   struct timeval tv;
   
   zookeeper_interest(zk->zh, &fd, &interest, &tv);
@@ -604,10 +616,17 @@ static VALUE method_zkrb_iterate_event_loop(VALUE self) {
 
   // this is 0.001s, more reasonable when we're trying to loop through this and
   // also respond to stuff like shutdown
-  tv.tv_sec = 0;
-  tv.tv_usec = 10000;
+/*  tv.tv_sec = 0;*/
+/*  tv.tv_usec = 10000;*/
 
-  rc = rb_thread_select(fd+1, &rfds, &wfds, &efds, &tv);
+  // add our self-pipe to the read set, allow us to wake up in case our attention is needed
+  int pipe_r_fd = get_self_pipe_read_fd(self);
+
+  FD_SET(pipe_r_fd, &rfds);
+
+  maxfd = (pipe_r_fd > fd) ? pipe_r_fd : fd;
+
+  rc = rb_thread_select(maxfd+1, &rfds, &wfds, &efds, &tv);
 
   if (rc > 0) {
     if (FD_ISSET(fd, &rfds)) {
@@ -615,6 +634,13 @@ static VALUE method_zkrb_iterate_event_loop(VALUE self) {
     } 
     if (FD_ISSET(fd, &wfds)) {
       events |= ZOOKEEPER_WRITE;
+    }
+
+    // we got woken up by the self-pipe
+    if (FD_ISSET(pipe_r_fd, &rfds)) {
+      // flush the pipe (from mt_adaptor.c)
+      char b[1];
+      read(pipe_r_fd, b, 1); // one event has awoken us, so we clear one event from the pipe
     }
   }
 
@@ -633,6 +659,7 @@ static VALUE method_has_events(VALUE self) {
 
 
 // wake up the event loop, used when shutting down
+#if 0
 static VALUE method_wake_event_loop_bang(VALUE self) {
   FETCH_DATA_PTR(self, zk); 
 
@@ -641,6 +668,7 @@ static VALUE method_wake_event_loop_bang(VALUE self) {
 
   return Qnil;
 };
+#endif
 
 static VALUE method_close_handle(VALUE self) {
   FETCH_DATA_PTR(self, zk);
@@ -771,7 +799,7 @@ static void zkrb_define_methods(void) {
   rb_define_singleton_method(CZookeeper, "set_zkrb_debug_level", klass_method_zkrb_set_debug_level, 1);
 
   rb_attr(CZookeeper, rb_intern("selectable_io"), 1, 0, Qtrue);
-  rb_define_method(CZookeeper, "wake_event_loop!", method_wake_event_loop_bang, 0);
+/*  rb_define_method(CZookeeper, "wake_event_loop!", method_wake_event_loop_bang, 0);*/
 
 }
 

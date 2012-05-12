@@ -70,6 +70,8 @@ class CZookeeper
 
     # used to signal we've received the connected event
     @connected_cond = @mutex.new_cond
+
+    @pipe_read, @pipe_write = IO.pipe
     
     @event_thread = nil
 
@@ -124,6 +126,8 @@ class CZookeeper
       @mutex.synchronize(&fn_close)
     end
 
+    [@pipe_read, @pipe_write].each { |io| io.close unless io.closed? }
+
     nil
   end
 
@@ -156,6 +160,7 @@ class CZookeeper
     def submit_and_block(meth, *args)
       cnt = Continuation.new(meth, *args)
       @reg.synchronized { |r| r.pending << cnt }
+      wake_event_loop!
       cnt.value
     end
 
@@ -183,13 +188,17 @@ class CZookeeper
 
       event_thread_await_running
 
-      until @_shutting_down
-        zkrb_iterate_event_loop # XXX: check rc here
+      until (@_shutting_down or @_closed or is_unrecoverable)
         submit_pending_calls    if @reg.pending?
         iterate_event_delivery
+#         log_realtime("zkrb_iterate_event_loop") do
+          zkrb_iterate_event_loop # XXX: check rc here
+#         end
       end
     rescue ShuttingDownException
       logger.error { "event thread saw @_shutting_down, bailing without entering loop" }
+    ensure
+      logger.debug { "#{self.class}##{__method__} exiting" }
     end
 
     def submit_pending_calls
@@ -207,14 +216,22 @@ class CZookeeper
 
       return if pending.empty?
 
+      logger.debug { "#{self.class}##{__method__} " }
+
       while cntn = pending.shift
         @reg.in_flight[cntn.req_id] = cntn   # in_flight is only ever touched by us
         cntn.submit(self)
       end
     end
 
+    def wake_event_loop!
+      logger.debug { "#{self.class}##{__method__}" }
+      @pipe_write && @pipe_write.write("\001")
+    end
+
     def iterate_event_delivery
       while hash = zkrb_get_next_event_st()
+        logger.debug { "#{self.class}##{__method__} got #{hash.inspect} " }
 
         # notify when we get this event so we know we're connected
         if hash.values_at(:req_id, :type, :state) == CONNECTED_EVENT_VALUES[1..2]
@@ -226,7 +243,6 @@ class CZookeeper
 
         if cntn = @reg.in_flight.delete(hash[:req_id])
           cntn.call(hash)
-          next # skip adding this to the queue below  TODO: REFACTOR THIS! GAH! ICK!
         else
           @event_queue.push(hash)
         end
@@ -252,12 +268,7 @@ class CZookeeper
     def shut_down!
       logger.debug { "#{self.class}##{__method__}" }
 
-      @mutex.lock
-      begin
-        @_shutting_down = true
-      ensure
-        @mutex.unlock
-      end
+      @mutex.synchronize { @_shutting_down = true }
     end
 
     # this method is part of the reopen/close code, and is responsible for
@@ -269,10 +280,8 @@ class CZookeeper
       logger.debug { "#{self.class}##{__method__}" }
 
       if @event_thread
-#         unless @_closed
-#           wake_event_loop! # this is a C method
-#         end
         shut_down!
+        wake_event_loop!
         @event_thread.join 
         @event_thread = nil
       end

@@ -14,6 +14,13 @@ module Zookeeper
     end
 
     private
+      def log_realtime(what)
+        logger.debug do
+          t = Benchmark.realtime { yield }
+          "#{what} took #{t} sec"
+        end
+      end
+
       def logger
         ::Zookeeper.logger
       end

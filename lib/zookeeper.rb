@@ -4,6 +4,7 @@ require 'thread'
 require 'monitor'
 require 'forwardable'
 require 'logger'
+require 'benchmark'
 
 module Zookeeper
   # establishes the namespace
