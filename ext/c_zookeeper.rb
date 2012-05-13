@@ -229,25 +229,27 @@ class CZookeeper
 
       event_thread_await_running
 
+      # this is the main loop
       until (@_shutting_down or @_closed or is_unrecoverable)
         submit_pending_calls    if @reg.pending?
-        log_realtime("zkrb_iterate_event_loop") do
+#         log_realtime("zkrb_iterate_event_loop") do
           zkrb_iterate_event_loop # XXX: check rc here
-        end
+#         end
         iterate_event_delivery
       end
 
-      if @_shutting_down and not (@_closed or is_unrecoverable)
-        unless @reg.in_flight.empty?
-          logger.debug { "we're in shutting down state, ensuring we have no in-flight completions" }
+      # ok, if we're exiting the event loop, and we still have a valid connection
+      # and there's still completions we're waiting to hear about, then we
+      # should pump the handle before leaving this loop
+      if @_shutting_down and not (@_closed or is_unrecoverable or @reg.in_flight.empty?)
+        logger.debug { "we're in shutting down state, ensuring we have no in-flight completions" }
 
-          until @reg.in_flight.empty?
-            zkrb_iterate_event_loop
-            iterate_event_delivery
-          end
-
-          logger.debug { "finished completions" }
+        until @reg.in_flight.empty?
+          zkrb_iterate_event_loop
+          iterate_event_delivery
         end
+
+        logger.debug { "finished completions" }
       end
 
     rescue ShuttingDownException

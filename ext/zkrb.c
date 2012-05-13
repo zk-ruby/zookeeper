@@ -14,7 +14,13 @@
 #undef THREADED
 
 #include "ruby.h"
+
+#ifdef ZKRB_RUBY_187
+#include "rubyio.h"
+#else
 #include "ruby/io.h"
+#endif
+
 #include "c-client-src/zookeeper.h"
 #include <errno.h>
 #include <stdio.h>
@@ -592,7 +598,11 @@ inline static int get_self_pipe_read_fd(VALUE self) {
 
   rb_io_check_readable(fptr);
 
+#ifdef ZKRB_RUBY_187
+  return fileno(fptr->f);
+#else
   return fptr->fd;
+#endif
 }
 
 
