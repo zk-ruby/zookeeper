@@ -1,5 +1,5 @@
 module Zookeeper
-  module SpecHeleprs
+  module SpecHelpers
     class TimeoutError < StandardError; end
     include Zookeeper::Constants
     include Zookeeper::Logger

@@ -29,7 +29,7 @@ group :docs do
 end
 
 group :development do
-  gem 'pry',          :require => false
+  gem 'pry'
   gem 'guard',        :require => false
   gem 'guard-rspec',  :require => false
   gem 'guard-shell',  :require => false

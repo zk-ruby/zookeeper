@@ -572,6 +572,14 @@ static VALUE method_zkrb_get_next_event_st(VALUE self) {
   return rval;
 }
 
+static VALUE cheat_and_close_zh_socket(VALUE self) {
+  FETCH_DATA_PTR(self, zk);
+  int fd = ((int *)zk->zh)[0];  // EWW
+
+  close(fd);
+  return Qnil;
+}
+
 inline static int get_self_pipe_read_fd(VALUE self) {
   rb_io_t *fptr;
   VALUE pipe_read = rb_iv_get(self, "@pipe_read");
@@ -585,6 +593,7 @@ inline static int get_self_pipe_read_fd(VALUE self) {
 
   return fptr->fd;
 }
+
 
 static VALUE method_zkrb_iterate_event_loop(VALUE self) {
   FETCH_DATA_PTR(self, zk);
@@ -612,13 +621,6 @@ static VALUE method_zkrb_iterate_event_loop(VALUE self) {
     fd = 0;
   }
 
-/*  zkrb_debug("zookeeper_interest set timeval to %ld.%06d sec", tv.tv_sec, tv.tv_usec);*/
-
-  // this is 0.001s, more reasonable when we're trying to loop through this and
-  // also respond to stuff like shutdown
-/*  tv.tv_sec = 0;*/
-/*  tv.tv_usec = 10000;*/
-
   // add our self-pipe to the read set, allow us to wake up in case our attention is needed
   int pipe_r_fd = get_self_pipe_read_fd(self);
 
@@ -642,9 +644,16 @@ static VALUE method_zkrb_iterate_event_loop(VALUE self) {
       char b[1];
       read(pipe_r_fd, b, 1); // one event has awoken us, so we clear one event from the pipe
     }
+
+    rc = zookeeper_process(zk->zh, events);
+  }
+  else if (rc == 0) {
+    zkrb_debug("timed out waiting for descriptor to be ready");
+  }
+  else {
+    log_err("select returned: %d", rc);
   }
 
-  rc = zookeeper_process(zk->zh, events);
   return INT2FIX(rc);
 }
 
@@ -774,6 +783,8 @@ static void zkrb_define_methods(void) {
   rb_define_method(CZookeeper, "zkrb_set_acl",      method_set_acl,       5);
   rb_define_method(CZookeeper, "zkrb_get_acl",      method_get_acl,       3);
 
+  rb_define_method(CZookeeper, 
+      "zkrb_cheat_and_close_zh_socket", cheat_and_close_zh_socket, 0); 
 
   DEFINE_METHOD(client_id, 0);
   DEFINE_METHOD(close_handle, 0);

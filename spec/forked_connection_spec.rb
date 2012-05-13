@@ -15,6 +15,7 @@ unless defined?(::JRUBY_VERSION)
     end
 
     before do
+
       if defined?(::Rubinius)
         pending("this test is currently broken in rbx")
 #       elsif ENV['TRAVIS']
@@ -23,9 +24,11 @@ unless defined?(::JRUBY_VERSION)
         @zk = Zookeeper.new(connection_string)
         rm_rf(@zk, path)
       end
+      logger.debug { "----------------< BEFORE: END >-------------------" }
     end
 
     after do
+      logger.debug { "----------------< AFTER: BEGIN >-------------------" }
       if @pid and process_alive?(@pid)
         begin
           Process.kill('KILL', @pid)
@@ -53,6 +56,7 @@ unless defined?(::JRUBY_VERSION)
     end
 
     it %[should do the right thing and not fail] do
+      logger.debug { "----------------< TEST: BEGIN >-------------------" }
       @zk.wait_until_connected
 
       mkdir_p(@zk, pids_root)
@@ -73,20 +77,24 @@ unless defined?(::JRUBY_VERSION)
 
       logger.debug { "------------------->   FORK   <---------------------------" }
 
+      @zk.pause
+
       @pid = fork do
         logger.debug { "reopening connection in child: #{$$}" }
         @zk.reopen
         logger.debug { "creating path" }
         rv = @zk.create(:path => "#{pids_root}/child", :data => $$.to_s)
-        logger.debug { "created path #{rv}" }
+        logger.debug { "created path #{rv[:path]}" }
         @zk.close
 
         logger.debug { "close finished" }
         exit!(0)
       end
 
+      @zk.resume
+
       event_waiter_th = Thread.new do
-        @latch.await(10) unless @event 
+        @latch.await(5) unless @event 
         @event
       end
 
@@ -99,8 +107,7 @@ unless defined?(::JRUBY_VERSION)
       status.should be_success
 
       event_waiter_th.join(5).should == event_waiter_th
-      @event.should_not be nil
+      @event.should_not be_nil
     end
   end
 end
-

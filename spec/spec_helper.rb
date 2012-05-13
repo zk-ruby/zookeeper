@@ -32,8 +32,8 @@ end
 
 RSpec.configure do |config|
   config.mock_with :rspec
-  config.include Zookeeper::SpecHeleprs
-  config.extend Zookeeper::SpecHeleprs
+  config.include Zookeeper::SpecHelpers
+  config.extend Zookeeper::SpecHelpers
 
   if Zookeeper.spawn_zookeeper?
     require 'zk-server'

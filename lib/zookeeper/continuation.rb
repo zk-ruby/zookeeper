@@ -128,12 +128,12 @@ module Zookeeper
       def async_args
         ary = @args.dup
 
+        logger.debug { "async_args, meth: #{meth} ary: #{ary.inspect}, #{callback_arg_idx}" }
+
         # this is not already an async call
         # so we replace the req_id with the ZKRB_ASYNC_CONTN_ID so the 
         # event thread knows to dispatch it itself
         ary[callback_arg_idx] ||= self
-
-        logger.debug { "async_args, ary: #{ary.inspect}, #{callback_arg_idx}" }
 
         ary
       end

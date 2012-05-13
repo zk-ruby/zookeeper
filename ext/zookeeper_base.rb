@@ -32,7 +32,7 @@ class ZookeeperBase
 
 
   def_delegators :@czk, :get_children, :exists, :delete, :get, :set,
-    :set_acl, :get_acl, :client_id, :sync, :wait_until_connected 
+    :set_acl, :get_acl, :client_id, :sync, :wait_until_connected, :pause, :resume
 
   # some state methods need to be more paranoid about locking to ensure the correct
   # state is returned

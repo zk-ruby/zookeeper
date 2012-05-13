@@ -78,9 +78,11 @@ class CZookeeper
     # hash of in-flight Continuation instances
     @reg = Continuation::Registry.new
 
-    zkrb_init(@host, :zkc_log_level => Constants::ZOO_LOG_LEVEL_DEBUG)
+    log_level = ENV['ZKC_DEBUG'] ? ZOO_LOG_LEVEL_DEBUG : ZOO_LOG_LEVEL_ERROR
 
-    setup_event_thread!
+    zkrb_init(@host, :zkc_log_level => log_level)
+
+    start_event_thread
 
     logger.debug { "init returned!" }
   end
@@ -120,15 +122,37 @@ class CZookeeper
     end
 
     if forked?
+      logger.debug { "We've forked, now it's time to do the nasty, zkrb_cheat_and_close_zh_socket" }
+      zkrb_cheat_and_close_zh_socket
       fn_close.call
     else
-      stop_event_thread!
+      stop_event_thread
       @mutex.synchronize(&fn_close)
     end
 
     [@pipe_read, @pipe_write].each { |io| io.close unless io.closed? }
 
     nil
+  end
+  
+  # call this to stop the event loop, you can resume with the
+  # resume method
+  #
+  # requests may still be added during this time, but they will not be
+  # processed until you call resume
+  def pause
+    logger.debug { "#{self.class}##{__method__}" }
+    @mutex.synchronize { stop_event_thread }
+  end
+
+  # call this if 'pause' was previously called to start the event loop again
+  def resume
+    logger.debug { "#{self.class}##{__method__}" }
+
+    @mutex.synchronize do 
+      @_shutting_down = nil
+      start_event_thread
+    end
   end
 
   def state
@@ -163,6 +187,28 @@ class CZookeeper
       wake_event_loop!
       cnt.value
     end
+    
+    # this method is part of the reopen/close code, and is responsible for
+    # shutting down the dispatch thread. 
+    #
+    # @event_thread will be nil when this method exits
+    #
+    def stop_event_thread
+      if @event_thread
+        logger.debug { "#{self.class}##{__method__}" }
+        shut_down!
+        wake_event_loop!
+        @event_thread.join 
+        @event_thread = nil
+      end
+    end
+
+    # starts the event thread running if not already started
+    # returns false if already running
+    def start_event_thread
+      return false if @event_thread
+      @event_thread = Thread.new(&method(:event_thread_body))
+    end
 
     # will wait until the client has entered the running? state
     # or until timeout seconds have passed.
@@ -179,22 +225,31 @@ class CZookeeper
       end
     end
 
-    def setup_event_thread!
-      @event_thread ||= Thread.new(&method(:event_thread_body))
-    end
-
     def event_thread_body
       Thread.current.abort_on_exception = true
+      logger.debug { "#{self.class}##{__method__} starting event thread" }
 
       event_thread_await_running
 
       until (@_shutting_down or @_closed or is_unrecoverable)
         submit_pending_calls    if @reg.pending?
-        iterate_event_delivery
-#         log_realtime("zkrb_iterate_event_loop") do
+        log_realtime("zkrb_iterate_event_loop") do
           zkrb_iterate_event_loop # XXX: check rc here
-#         end
+        end
+        iterate_event_delivery
       end
+
+      if @_shutting_down and not (@_closed or is_unrecoverable)
+        logger.debug { "we're in shutting down state, ensuring we have no in-flight completions" }
+
+        until @reg.in_flight.empty?
+          zkrb_iterate_event_loop
+          iterate_event_delivery
+        end
+
+        logger.debug { "finished completions" }
+      end
+
     rescue ShuttingDownException
       logger.error { "event thread saw @_shutting_down, bailing without entering loop" }
     ensure
@@ -219,8 +274,8 @@ class CZookeeper
       logger.debug { "#{self.class}##{__method__} " }
 
       while cntn = pending.shift
-        @reg.in_flight[cntn.req_id] = cntn   # in_flight is only ever touched by us
         cntn.submit(self)
+        @reg.in_flight[cntn.req_id] = cntn   # in_flight is only ever touched by us
       end
     end
 
@@ -271,22 +326,6 @@ class CZookeeper
       logger.debug { "#{self.class}##{__method__}" }
 
       @mutex.synchronize { @_shutting_down = true }
-    end
-
-    # this method is part of the reopen/close code, and is responsible for
-    # shutting down the dispatch thread. 
-    #
-    # @dispatch will be nil when this method exits
-    #
-    def stop_event_thread!
-      logger.debug { "#{self.class}##{__method__}" }
-
-      if @event_thread
-        shut_down!
-        wake_event_loop!
-        @event_thread.join 
-        @event_thread = nil
-      end
     end
 
     # called by underlying C code to signal we're running

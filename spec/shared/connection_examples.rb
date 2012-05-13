@@ -69,7 +69,6 @@ shared_examples_for "connection" do
       before do
         @cb = Zookeeper::Callbacks::DataCallback.new
 
-        logger.debug { "-----------------> MAKING ASYNC GET REQUEST <--------------------" }
         @rv = zk.get(:path => path, :callback => @cb, :callback_context => path)
         wait_until(1.0) { @cb.completed? }
         @cb.should be_completed
@@ -91,16 +90,18 @@ shared_examples_for "connection" do
       end
     end
 
-    describe :async_watch, :async => true do
+    describe :async_watch, :async => true, :method => :get, :watch => true do
       it_should_behave_like "all success return values"
 
       before do
+        logger.debug { "-----------------> MAKING ASYNC GET REQUEST WITH WATCH <--------------------" }
         @cb = Zookeeper::Callbacks::DataCallback.new
         @watcher = Zookeeper::Callbacks::WatcherCallback.new
 
         @rv = zk.get(:path => path, :callback => @cb, :callback_context => path, :watcher => @watcher, :watcher_context => path)
         wait_until(1.0) { @cb.completed? }
         @cb.should be_completed
+        logger.debug { "-----------------> ASYNC GET REQUEST WITH WATCH COMPLETE <--------------------" }
       end
 
       it %[should have the stat object in the callback] do
