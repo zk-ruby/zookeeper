@@ -23,5 +23,5 @@ bundler_args: --without development docs coverage
 # blacklist
 branches:
   except:
-    - 'dev/zookeeper-st'
+#     - 'dev/zookeeper-st'
 
