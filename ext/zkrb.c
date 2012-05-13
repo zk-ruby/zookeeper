@@ -55,6 +55,37 @@ typedef enum {
 #define IS_SYNC(zkrbcall) ((zkrbcall)==SYNC || (zkrbcall)==SYNC_WATCH)
 #define IS_ASYNC(zkrbcall) ((zkrbcall)==ASYNC || (zkrbcall)==ASYNC_WATCH)
 
+#define FETCH_DATA_PTR(X, Y)                                             \
+  zkrb_instance_data_t * Y;                                         \
+  Data_Get_Struct(rb_iv_get(X, "@_data"), zkrb_instance_data_t, Y); \
+  if ((Y)->zh == NULL)                                                   \
+    rb_raise(rb_eRuntimeError, "zookeeper handle is closed")
+
+#define STANDARD_PREAMBLE(self, zk, reqid, path, async, watch, cb_ctx, w_ctx, call_type) \
+  if (TYPE(reqid) != T_FIXNUM && TYPE(reqid) != T_BIGNUM) {                   \
+    rb_raise(rb_eTypeError, "reqid must be Fixnum/Bignum");                   \
+    return Qnil;                                                              \
+  }                                                                           \
+  Check_Type(path, T_STRING);                                                 \
+  zkrb_instance_data_t * zk;                                             \
+  Data_Get_Struct(rb_iv_get(self, "@_data"), zkrb_instance_data_t, zk);  \
+  if (!zk->zh)                                                                \
+    rb_raise(rb_eRuntimeError, "zookeeper handle is closed");                 \
+  zkrb_calling_context* cb_ctx =                                              \
+    (async != Qfalse && async != Qnil) ?                                      \
+       zkrb_calling_context_alloc(NUM2LL(reqid), zk->queue) :                 \
+       NULL;                                                                  \
+  zkrb_calling_context* w_ctx =                                               \
+    (watch != Qfalse && watch != Qnil) ?                                      \
+       zkrb_calling_context_alloc(NUM2LL(reqid), zk->queue) :                 \
+       NULL;                                                                  \
+  int a_  = (async != Qfalse && async != Qnil);                               \
+  int w_  = (watch != Qfalse && watch != Qnil);                               \
+  zkrb_call_type call_type;                                                   \
+  if (a_) { if (w_) { call_type = ASYNC_WATCH; } else { call_type = ASYNC; } } \
+     else { if (w_) { call_type =  SYNC_WATCH; } else { call_type = SYNC; } }
+
+
 static void hexbufify(char *dest, const char *src, int len) {
   int i=0;
 
@@ -63,31 +94,46 @@ static void hexbufify(char *dest, const char *src, int len) {
   }
 }
 
-static int destroy_zkrb_instance(zkrb_instance_data_t* ptr) {
+/*static VALUE cheat_and_close_zh_socket(VALUE self) {*/
+/*  FETCH_DATA_PTR(self, zk);*/
+/*  int fd = ((int *)zk->zh)[0];  // EWW*/
+/*  close(fd);*/
+/*  return Qnil;*/
+/*}*/
+
+static int destroy_zkrb_instance(zkrb_instance_data_t* zk) {
   int rv = ZOK;
 
-  zkrb_debug("destroy_zkrb_instance, zk_local_ctx: %p, zh: %p, queue: %p", ptr, ptr->zh, ptr->queue);
+  zkrb_debug("destroy_zkrb_instance, zk_local_ctx: %p, zh: %p, queue: %p", zk, zk->zh, zk->queue);
 
-  if (ptr->zh) {
-    const void *ctx = zoo_get_context(ptr->zh);
+  if (zk->zh) {
+    const void *ctx = zoo_get_context(zk->zh);
     /* Note that after zookeeper_close() returns, ZK handle is invalid */
-    zkrb_debug("obj_id: %lx, calling zookeeper_close", ptr->object_id);
+    zkrb_debug("obj_id: %lx, calling zookeeper_close", zk->object_id);
 
-    rv = zookeeper_close(ptr->zh);
+    if (zk->orig_pid != getpid()) {
+      zkrb_debug("FORK DETECTED! orig_pid: %d, current pid: %d, "
+          "using socket-closing hack before zookeeper_close", zk->orig_pid, getpid());
 
-    zkrb_debug("obj_id: %lx, zookeeper_close returned %d", ptr->object_id, rv); 
+      int fd = ((int *)zk->zh)[0];  // EWW
+      close(fd);
+    }
+
+    rv = zookeeper_close(zk->zh);
+
+    zkrb_debug("obj_id: %lx, zookeeper_close returned %d", zk->object_id, rv); 
     free((void *) ctx);
   }
 
-  ptr->zh = NULL;
+  zk->zh = NULL;
 
 // [wickman] TODO: fire off warning if queue is not empty
-  if (ptr->queue) {
-    zkrb_debug("obj_id: %lx, freeing queue pointer: %p", ptr->object_id, ptr->queue);
-    zkrb_queue_free(ptr->queue);
+  if (zk->queue) {
+    zkrb_debug("obj_id: %lx, freeing queue pointer: %p", zk->object_id, zk->queue);
+    zkrb_queue_free(zk->queue);
   }
 
-  ptr->queue = NULL;
+  zk->queue = NULL;
 
   return rv;
 }
@@ -181,36 +227,6 @@ static VALUE method_zkrb_init(int argc, VALUE* argv, VALUE self) {
 
   return Qnil;
 }
-
-#define FETCH_DATA_PTR(X, Y)                                             \
-  zkrb_instance_data_t * Y;                                         \
-  Data_Get_Struct(rb_iv_get(X, "@_data"), zkrb_instance_data_t, Y); \
-  if ((Y)->zh == NULL)                                                   \
-    rb_raise(rb_eRuntimeError, "zookeeper handle is closed")
-
-#define STANDARD_PREAMBLE(self, zk, reqid, path, async, watch, cb_ctx, w_ctx, call_type) \
-  if (TYPE(reqid) != T_FIXNUM && TYPE(reqid) != T_BIGNUM) {                   \
-    rb_raise(rb_eTypeError, "reqid must be Fixnum/Bignum");                   \
-    return Qnil;                                                              \
-  }                                                                           \
-  Check_Type(path, T_STRING);                                                 \
-  zkrb_instance_data_t * zk;                                             \
-  Data_Get_Struct(rb_iv_get(self, "@_data"), zkrb_instance_data_t, zk);  \
-  if (!zk->zh)                                                                \
-    rb_raise(rb_eRuntimeError, "zookeeper handle is closed");                 \
-  zkrb_calling_context* cb_ctx =                                              \
-    (async != Qfalse && async != Qnil) ?                                      \
-       zkrb_calling_context_alloc(NUM2LL(reqid), zk->queue) :                 \
-       NULL;                                                                  \
-  zkrb_calling_context* w_ctx =                                               \
-    (watch != Qfalse && watch != Qnil) ?                                      \
-       zkrb_calling_context_alloc(NUM2LL(reqid), zk->queue) :                 \
-       NULL;                                                                  \
-  int a_  = (async != Qfalse && async != Qnil);                               \
-  int w_  = (watch != Qfalse && watch != Qnil);                               \
-  zkrb_call_type call_type;                                                   \
-  if (a_) { if (w_) { call_type = ASYNC_WATCH; } else { call_type = ASYNC; } } \
-     else { if (w_) { call_type =  SYNC_WATCH; } else { call_type = SYNC; } }
 
 static VALUE method_get_children(VALUE self, VALUE reqid, VALUE path, VALUE async, VALUE watch) {
   STANDARD_PREAMBLE(self, zk, reqid, path, async, watch, data_ctx, watch_ctx, call_type);
@@ -572,14 +588,6 @@ static VALUE method_zkrb_get_next_event_st(VALUE self) {
   return rval;
 }
 
-static VALUE cheat_and_close_zh_socket(VALUE self) {
-  FETCH_DATA_PTR(self, zk);
-  int fd = ((int *)zk->zh)[0];  // EWW
-
-  close(fd);
-  return Qnil;
-}
-
 inline static int get_self_pipe_read_fd(VALUE self) {
   rb_io_t *fptr;
   VALUE pipe_read = rb_iv_get(self, "@pipe_read");
@@ -783,8 +791,8 @@ static void zkrb_define_methods(void) {
   rb_define_method(CZookeeper, "zkrb_set_acl",      method_set_acl,       5);
   rb_define_method(CZookeeper, "zkrb_get_acl",      method_get_acl,       3);
 
-  rb_define_method(CZookeeper, 
-      "zkrb_cheat_and_close_zh_socket", cheat_and_close_zh_socket, 0); 
+/*  rb_define_method(CZookeeper, */
+/*      "zkrb_cheat_and_close_zh_socket", cheat_and_close_zh_socket, 0); */
 
   DEFINE_METHOD(client_id, 0);
   DEFINE_METHOD(close_handle, 0);

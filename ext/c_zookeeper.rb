@@ -122,8 +122,6 @@ class CZookeeper
     end
 
     if forked?
-      logger.debug { "We've forked, now it's time to do the nasty, zkrb_cheat_and_close_zh_socket" }
-      zkrb_cheat_and_close_zh_socket
       fn_close.call
     else
       stop_event_thread

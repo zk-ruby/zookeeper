@@ -71,8 +71,6 @@ class CauseAbort
 
     @zk.stat(:path => "#{pids_root}/child", :watcher => cb)
 
-#     @zk.pause
-
     logger.debug { "------------------->   FORK   <---------------------------" }
 
     @pid = fork do
@@ -91,8 +89,6 @@ class CauseAbort
       logger.debug { "close finished" }
       exit!(0)
     end
-
-#     @zk.resume
 
     event_waiter_th = Thread.new do
       @latch.await(5) unless @event 
