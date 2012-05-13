@@ -38,7 +38,7 @@ file 'c' => TARBALL do
   sh "tar -zxf #{TARBALL}"
 end
 
-file GENERATE_GVL_CODE_RB 
+file GENERATE_GVL_CODE_RB => 'c'
 
 file 'zkrb_wrapper.c' => GENERATE_GVL_CODE_RB do
   sh "ruby generate_gvl_code.rb code"
