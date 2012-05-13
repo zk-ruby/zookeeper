@@ -94,13 +94,6 @@ static void hexbufify(char *dest, const char *src, int len) {
   }
 }
 
-/*static VALUE cheat_and_close_zh_socket(VALUE self) {*/
-/*  FETCH_DATA_PTR(self, zk);*/
-/*  int fd = ((int *)zk->zh)[0];  // EWW*/
-/*  close(fd);*/
-/*  return Qnil;*/
-/*}*/
-
 static int destroy_zkrb_instance(zkrb_instance_data_t* zk) {
   int rv = ZOK;
 
@@ -790,9 +783,6 @@ static void zkrb_define_methods(void) {
   rb_define_method(CZookeeper, "zkrb_set",          method_set,           5);
   rb_define_method(CZookeeper, "zkrb_set_acl",      method_set_acl,       5);
   rb_define_method(CZookeeper, "zkrb_get_acl",      method_get_acl,       3);
-
-/*  rb_define_method(CZookeeper, */
-/*      "zkrb_cheat_and_close_zh_socket", cheat_and_close_zh_socket, 0); */
 
   DEFINE_METHOD(client_id, 0);
   DEFINE_METHOD(close_handle, 0);

@@ -80,7 +80,7 @@ class CZookeeper
 
     log_level = ENV['ZKC_DEBUG'] ? ZOO_LOG_LEVEL_DEBUG : ZOO_LOG_LEVEL_ERROR
 
-    zkrb_init(@host, :zkc_log_level => log_level)
+    zkrb_init(@host)#, :zkc_log_level => log_level)
 
     start_event_thread
 
@@ -238,14 +238,16 @@ class CZookeeper
       end
 
       if @_shutting_down and not (@_closed or is_unrecoverable)
-        logger.debug { "we're in shutting down state, ensuring we have no in-flight completions" }
+        unless @reg.in_flight.empty?
+          logger.debug { "we're in shutting down state, ensuring we have no in-flight completions" }
 
-        until @reg.in_flight.empty?
-          zkrb_iterate_event_loop
-          iterate_event_delivery
+          until @reg.in_flight.empty?
+            zkrb_iterate_event_loop
+            iterate_event_delivery
+          end
+
+          logger.debug { "finished completions" }
         end
-
-        logger.debug { "finished completions" }
       end
 
     rescue ShuttingDownException
@@ -317,7 +319,6 @@ class CZookeeper
         @mutex.unlock
       end
     end
-
 
     # use this method to set the @_shutting_down flag to true
     def shut_down!
