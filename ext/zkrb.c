@@ -106,6 +106,19 @@ typedef enum {
   ASYNC_WATCH = 3
 } zkrb_call_type;
 
+inline static const char* call_type_to_str(zkrb_call_type ct) {
+  switch (ct) {
+    case SYNC:
+      return "SYNC";
+    case ASYNC:
+      return "ASYNC";
+    case SYNC_WATCH:
+      return "SYNC_WATCH";
+    case ASYNC_WATCH:
+      return "ASYNC_WATCH";
+  }
+}
+
 inline static void assert_valid_params(VALUE reqid, VALUE path) {
   switch (TYPE(reqid)) {
     case T_FIXNUM:
@@ -127,7 +140,7 @@ inline static zkrb_call_type get_call_type(VALUE async, VALUE watch) {
 }
 
 inline static void raise_invalid_call_type_err(zkrb_call_type call_type) {
-  rb_raise(rb_eRuntimeError, "hit the default case, call_type: %d", (int)call_type);
+  rb_raise(rb_eRuntimeError, "hit the default case, call_type: %s", call_type_to_str(call_type));
 }
 
 #define IS_SYNC(zkrbcall) ((zkrbcall)==SYNC || (zkrbcall)==SYNC_WATCH)
