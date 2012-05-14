@@ -58,9 +58,6 @@
  *
  */
 
-//#define THREADED
-#undef THREADED
-
 #include "ruby.h"
 
 #ifdef ZKRB_RUBY_187
@@ -79,6 +76,7 @@
 #include <inttypes.h>
 #include <time.h>
 
+#include "common.h"
 #include "event_lib.h"
 #include "zkrb_wrapper.h"
 #include "dbg.h"

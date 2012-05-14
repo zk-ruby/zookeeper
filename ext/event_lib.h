@@ -1,5 +1,5 @@
-#ifndef ZOOKEEPER_LIB_H
-#define ZOOKEEPER_LIB_H
+#ifndef ZKRB_EVENT_LIB_H
+#define ZKRB_EVENT_LIB_H
 
 #include "ruby.h"
 #include "c-client-src/zookeeper.h"
@@ -171,4 +171,4 @@ struct String_vector * zkrb_clone_string_vector(const struct String_vector * src
 struct ACL             zkrb_ruby_to_acl(VALUE rubyacl);
 struct Id              zkrb_ruby_to_id(VALUE rubyid);
 
-#endif  /* ZOOKEEPER_LIB_H */
+#endif  /* ZKRB_EVENT_LIB_H */

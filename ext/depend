@@ -1,5 +1,5 @@
-event_lib.c:	event_lib.h
+event_lib.c:	event_lib.h common.h
 zkrb_wrapper_compat.c:  zkrb_wrapper_compat.h
 zkrb_wrapper.c:		zkrb_wrapper_compat.c zkrb_wrapper.h
-zkrb.c:	event_lib.c event_lib.h zkrb_wrapper.c zkrb_wrapper.h dbg.h
+zkrb.c:	event_lib.c event_lib.h zkrb_wrapper.c zkrb_wrapper.h dbg.h common.h 
 
