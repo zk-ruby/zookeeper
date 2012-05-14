@@ -107,16 +107,22 @@ typedef enum {
 } zkrb_call_type;
 
 inline static const char* call_type_to_str(zkrb_call_type ct) {
+  const char *rv = NULL;
   switch (ct) {
     case SYNC:
-      return "SYNC";
+      rv="SYNC";
+      break;
     case ASYNC:
-      return "ASYNC";
+      rv="ASYNC";
+      break;
     case SYNC_WATCH:
-      return "SYNC_WATCH";
+      rv="SYNC_WATCH";
+      break;
     case ASYNC_WATCH:
-      return "ASYNC_WATCH";
+      rv="ASYNC_WATCH";
+      break;
   }
+  return rv;
 }
 
 inline static void assert_valid_params(VALUE reqid, VALUE path) {
