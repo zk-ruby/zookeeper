@@ -189,6 +189,7 @@ static int destroy_zkrb_instance(zkrb_instance_data_t* zk) {
 
       int fd = ((int *)zk->zh)[0];  // nasty, brutish, and wonderfully effective hack (see above)
       close(fd);
+
     }
 
     rv = zookeeper_close(zk->zh);
@@ -199,7 +200,6 @@ static int destroy_zkrb_instance(zkrb_instance_data_t* zk) {
 
   zk->zh = NULL;
 
-// [wickman] TODO: fire off warning if queue is not empty
   if (zk->queue) {
     zkrb_debug("obj_id: %lx, freeing queue pointer: %p", zk->object_id, zk->queue);
     zkrb_queue_free(zk->queue);
@@ -478,7 +478,7 @@ static VALUE method_get(VALUE self, VALUE reqid, VALUE path, VALUE async, VALUE 
   int data_len = MAX_ZNODE_SIZE;
   struct Stat stat;
 
-  char * data = xmalloc(MAX_ZNODE_SIZE); /* ugh */
+  char * data = malloc(MAX_ZNODE_SIZE); /* ugh */
 
   int rc;
 
@@ -520,7 +520,7 @@ static VALUE method_get(VALUE self, VALUE reqid, VALUE path, VALUE async, VALUE 
     rb_ary_push(output, zkrb_stat_to_rarray(&stat));
   }
 
-  xfree(data);
+  free(data);
   return output;
 }
 
