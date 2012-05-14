@@ -58,13 +58,33 @@ typedef enum {
   ASYNC_WATCH = 3
 } zkrb_call_type;
 
+inline static void assert_valid_params(VALUE reqid, VALUE path) {
+  switch (TYPE(reqid)) {
+    case T_FIXNUM:
+    case T_BIGNUM:
+      break;
+    default:
+      rb_raise(rb_eTypeError, "reqid must be Fixnum/Bignum");  
+  }
+
+  Check_Type(path, T_STRING);
+}
+
+inline static zkrb_call_type get_call_type(VALUE async, VALUE watch) {
+  if RTEST(async) {
+    return RTEST(watch) ? ASYNC_WATCH : ASYNC;
+  } else {
+    return RTEST(watch) ? SYNC_WATCH : SYNC;
+  }
+}
+
 #define IS_SYNC(zkrbcall) ((zkrbcall)==SYNC || (zkrbcall)==SYNC_WATCH)
 #define IS_ASYNC(zkrbcall) ((zkrbcall)==ASYNC || (zkrbcall)==ASYNC_WATCH)
 
-#define FETCH_DATA_PTR(X, Y)                                             \
-  zkrb_instance_data_t * Y;                                         \
-  Data_Get_Struct(rb_iv_get(X, "@_data"), zkrb_instance_data_t, Y); \
-  if ((Y)->zh == NULL)                                                   \
+#define FETCH_DATA_PTR(SELF, ZK)                                        \
+  zkrb_instance_data_t * ZK;                                            \
+  Data_Get_Struct(rb_iv_get(SELF, "@_data"), zkrb_instance_data_t, ZK); \
+  if ((ZK)->zh == NULL)                                                 \
     rb_raise(rb_eRuntimeError, "zookeeper handle is closed")
 
 #define STANDARD_PREAMBLE(self, zk, reqid, path, async, watch, cb_ctx, w_ctx, call_type) \
@@ -91,6 +111,13 @@ typedef enum {
   if (a_) { if (w_) { call_type = ASYNC_WATCH; } else { call_type = ASYNC; } } \
      else { if (w_) { call_type =  SYNC_WATCH; } else { call_type = SYNC; } }
 
+
+#define STD_PREAMBLE(SELF, ZK, REQID, PATH, ASYNC, WATCH, CALL_TYPE) \
+  assert_valid_params(REQID, PATH); \
+  FETCH_DATA_PTR(SELF, ZK); \
+  zkrb_call_type CALL_TYPE = get_call_type(ASYNC, WATCH); \
+
+#define CTX_ALLOC(ZK,REQID) zkrb_calling_context_alloc(NUM2LL(REQID), ZK->queue)
 
 static void hexbufify(char *dest, const char *src, int len) {
   int i=0;
@@ -214,7 +241,6 @@ static VALUE method_zkrb_init(int argc, VALUE* argv, VALUE self) {
   zkrb_debug("method_zkrb_init, zk_local_ctx: %p, zh: %p, queue: %p, calling_ctx: %p",
       zk_local_ctx, zk_local_ctx->zh, zk_local_ctx->queue, ctx);
 
-// [wickman] TODO handle this properly on the Ruby side rather than C side
   if (!zk_local_ctx->zh) {
     rb_raise(rb_eRuntimeError, "error connecting to zookeeper: %d", errno);
   }
@@ -375,12 +401,14 @@ static VALUE method_delete(VALUE self, VALUE reqid, VALUE path, VALUE version, V
 #define MAX_ZNODE_SIZE 1048576
 
 static VALUE method_get(VALUE self, VALUE reqid, VALUE path, VALUE async, VALUE watch) {
-  STANDARD_PREAMBLE(self, zk, reqid, path, async, watch, data_ctx, watch_ctx, call_type);
+  STD_PREAMBLE(self, zk, reqid, path, async, watch, call_type);
 
-  /* ugh */
-  char * data = malloc(MAX_ZNODE_SIZE);
+  VALUE output = Qnil;
+
   int data_len = MAX_ZNODE_SIZE;
   struct Stat stat;
+
+  char * data = xmalloc(MAX_ZNODE_SIZE); /* ugh */
 
   int rc;
 
@@ -390,19 +418,22 @@ static VALUE method_get(VALUE self, VALUE reqid, VALUE path, VALUE async, VALUE 
       break;
 
     case SYNC_WATCH:
-      rc = zkrb_call_zoo_wget(zk->zh, RSTRING_PTR(path), zkrb_state_callback, watch_ctx, data, &data_len, &stat);
+      rc = zkrb_call_zoo_wget(
+              zk->zh, RSTRING_PTR(path), zkrb_state_callback, CTX_ALLOC(zk, reqid), data, &data_len, &stat);
       break;
 
     case ASYNC:
-      rc = zkrb_call_zoo_aget(zk->zh, RSTRING_PTR(path), 0, zkrb_data_callback, data_ctx);
+      rc = zkrb_call_zoo_aget(zk->zh, RSTRING_PTR(path), 0, zkrb_data_callback, CTX_ALLOC(zk, reqid));
       break;
 
     case ASYNC_WATCH:
-      rc = zkrb_call_zoo_awget(zk->zh, RSTRING_PTR(path), zkrb_state_callback, watch_ctx, zkrb_data_callback, data_ctx);
+      // first ctx is a watch, second is the async callback
+      rc = zkrb_call_zoo_awget(
+            zk->zh, RSTRING_PTR(path), zkrb_state_callback, CTX_ALLOC(zk, reqid), zkrb_data_callback, CTX_ALLOC(zk, reqid));
       break;
   }
 
-  VALUE output = rb_ary_new();
+  output = rb_ary_new();
   rb_ary_push(output, INT2FIX(rc));
   if (IS_SYNC(call_type) && rc == ZOK) {
     if (data_len == -1)
@@ -411,8 +442,8 @@ static VALUE method_get(VALUE self, VALUE reqid, VALUE path, VALUE async, VALUE 
       rb_ary_push(output, rb_str_new(data, data_len));
     rb_ary_push(output, zkrb_stat_to_rarray(&stat));
   }
-  free(data);
 
+  xfree(data);
   return output;
 }
 
