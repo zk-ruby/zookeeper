@@ -77,6 +77,10 @@ stacktrace:
   class ShuttingDownException   < ZookeeperException; end
   class DataTooLargeException   < ZookeeperException; end
 
+  # raised when an operation is performed on an instance without a valid
+  # zookeeper handle. (C version)
+  class HandleClosedException < ZookeeperException; end
+
   # maybe use this for continuation
   class InterruptedException  < ZookeeperException ; end
 
