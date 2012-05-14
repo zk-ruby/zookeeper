@@ -175,7 +175,7 @@ static int destroy_zkrb_instance(zkrb_instance_data_t* zk) {
     rv = zookeeper_close(zk->zh);
 
     zkrb_debug("obj_id: %lx, zookeeper_close returned %d", zk->object_id, rv); 
-    free((void *) ctx);
+    zkrb_calling_context_free((zkrb_calling_context *) ctx);
   }
 
   zk->zh = NULL;

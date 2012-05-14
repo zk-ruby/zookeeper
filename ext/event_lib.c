@@ -7,13 +7,14 @@ This file contains three sets of helpers:
 
 wickman@twitter.com
 
-*********************************************************************************
-*
-* NOTE: be *very careful* in these functions, calling *ANY* ruby interpreter
-* function when you're not in an interpreter thread can hork ruby, trigger a
-* [BUG], corrupt the stack, kill your dog, knock up your daughter, etc. etc.
-*
-*********************************************************************************
+
+NOTE: be *very careful* in these functions, calling *ANY* ruby interpreter
+function when you're not in an interpreter thread can hork ruby, trigger a
+[BUG], corrupt the stack, kill your dog, knock up your daughter, etc. etc.
+
+NOTE: the above is only true when you're running in THREADED mode, in 
+single-threaded, everything is called on an interpreter thread.
+
 
 slyphon@gmail.com
 
@@ -70,6 +71,7 @@ void atfork_child() {
 
 // delegates to the system malloc (we can't use xmalloc in the threaded case,
 // as we can't touch the interpreter)
+
 inline static void* zk_malloc(size_t size) {
   return malloc(size);
 }
@@ -99,6 +101,7 @@ inline static void* zk_malloc(size_t size) {
 inline static void zk_free(void *ptr) {
   xfree(ptr);
 }
+
 
 #endif /* THREADED */
 
@@ -408,6 +411,10 @@ zkrb_calling_context *zkrb_calling_context_alloc(int64_t req_id, zkrb_queue_t *q
   ctx->queue  = queue;
 
   return ctx;
+}
+
+void zkrb_calling_context_free(zkrb_calling_context *ctx) {
+  zk_free(ctx);
 }
 
 void zkrb_print_calling_context(zkrb_calling_context *ctx) {

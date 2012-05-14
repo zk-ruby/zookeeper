@@ -128,6 +128,7 @@ typedef struct {
 
 void zkrb_print_calling_context(zkrb_calling_context *ctx);
 zkrb_calling_context *zkrb_calling_context_alloc(int64_t req_id, zkrb_queue_t *queue);
+void zkrb_calling_context_free(zkrb_calling_context *ctx);
 
 /*
   default process completions that get queued into the ruby client event queue
