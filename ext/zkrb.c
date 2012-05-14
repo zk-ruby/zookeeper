@@ -8,6 +8,54 @@
  * approach to isolate the ZK state machine from the ruby interpreter via an
  * event queue.  It's similar to the ZookeeperFFI version except that it
  * actually works on MRI 1.8.
+ *
+ *----------------
+ * (slyphon)
+ *
+ * Wickman's implementation was linked against the 'mt' version of the zookeeper
+ * library, which is multithreaded at the zookeeper level and is subsequently
+ * much more difficult to get to behave properly with the ruby runtime (which
+ * he did, and I could never have written).
+ *
+ * The current implementation has been converted to use the 'st' version of the
+ * zookeeper library, which is single threaded and requires a ruby-side event
+ * loop. This is essentially a ruby port of the code running in the 'mt'
+ * library, with one important difference: It's running in ruby-land. The
+ * reason this change is so important is that it's virtually impossible to
+ * provide a fork-safe library when you have native threads you don't own
+ * running around. If you fork when a thread holds a mutex, and that thread
+ * is not the fork-caller, that mutex can never be unlocked, and is therefore
+ * a ticking time-bomb in the child. The only way to guarantee safety is to 
+ * either replace all of your mutexes and conditions and such after a fork
+ * (which is what we do on the ruby side), or avoid the problem altogether
+ * and not use a multithreaded library on the backend. Since we can't replace
+ * mutexes in the zookeeper code, we opt for the latter solution.
+ *
+ * The ruby code runs the event loop in a thread that will never cause a fork()
+ * to occur. This way, when fork() is called, the event thread will be dead
+ * in the child, guaranteeing that the child can safely be cleaned up.
+ *
+ * In that cleanup, there is a nasty (and brutishly effective) hack that makes
+ * the fork case work. We keep track of the pid that allocated the
+ * zkrb_instance_data_t, and if at destruction time we see that a fork has
+ * happened, we reach inside the zookeeper handle (zk->zh), and close the
+ * open socket it's got before calling zookeeper_close. This prevents
+ * corruption of the client/server state. Without this code, zookeeper_close
+ * in the child would actually send an "Ok, we're closing" message with the
+ * parent's session id, causing the parent to hit an assert() case in 
+ * zookeeper_process, and cause a SIGABRT. With this code in place, we get back
+ * a ZCONNECTIONLOSS from zookeeper_close in the child (which we ignore), and
+ * the parent continues on.
+ * 
+ * You will notice below we undef 'THREADED', which would be set if we were
+ * using the 'mt' library. We also conditionally include additional cases
+ * ('SYNC', 'SYNC_WATCH') inside of some of the methods defined here. These
+ * would be valid when running the 'mt' library, but since we have a ruby layer
+ * to provide a sync front-end to an async backend, these cases should never be
+ * hit, and instead will raise exceptions.
+ *
+ * NOTE: This file depends on exception classes defined in lib/zookeeper/exceptions.rb
+ *
  */
 
 //#define THREADED
