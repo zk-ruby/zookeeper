@@ -6,6 +6,10 @@ An interface to the Zookeeper cluster coordination server.
 
 For a higher-level interface with a more convenient API and features such as locks, have a look at [ZK](https://github.com/slyphon/zk) (also available is [ZK-EventMachine](https://github.com/slyphon/zk-eventmachine) for those who prefer async).
 
+## Fork Safety! ##
+
+As of 1.1.0, this library is fork-safe (which was not easy to accomplish). This means you can use it without worry in unicorn, resque, and whatever other fork-philic frameworks you sick little monkeys are using this week. The only rule is that after a fork(), you need to call `#reopen` on the client ASAP, because if you try to peform any other action, an exception will be raised. Other than that, there is no special action that is needed in the parent.
+
 ## Big Plans for 1.0 ##
 
 The 1.0 release will feature a reorganization of the heirarchy. There will be a single top-level `Zookeeper` namespace (as opposed to the current layout, with 5-6 different top-level constants), and for the next several releases, there will be a backwards compatible require for users that still need to use the old names.
@@ -36,18 +40,18 @@ Connect to a server:
 ## Idioms
 
 The following methods are initially supported:
-* get
-* set
-* get\_children
-* stat
-* create
-* delete
-* get\_acl
-* set\_acl
+* `get`
+* `set`
+* `get_children`
+* `stat`
+* `create`
+* `delete`
+* `get_acl`
+* `set_acl`
 
-All support async callbacks.  get, get\_children and stat support both watchers and callbacks.
+All support async callbacks. `get`, `get_children` and `stat` support both watchers and callbacks.
 
-Calls take a dictionary of parameters.  With the exception of set\_acl, the only required parameter is :path.  Each call returns a dictionary with at minimum two keys :req\_id and :rc.
+Calls take a dictionary of parameters. With the exception of set\_acl, the only required parameter is `:path`. Each call returns a dictionary with at minimum two keys :req\_id and :rc.
 
 ### A Bit about this repository ###
 

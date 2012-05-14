@@ -1,3 +1,16 @@
+v1.1.0 Rewrite C backend to use zookeeper_st, the async library
+
+  * In order to ensure fork safety, a rewrite of the backend was necessary.
+    It was impossible to guarantee with the mt lib that a lock would not
+    be held by a thread when fork() was called, which opened up the possibility
+    for corruption and other badness.
+
+    This version contains a Continuation class, which allows us to present a 
+    synchronous front-end to the asynchronous backend. All features are still
+    supported, no special action is necessary to prepare for a fork, and the
+    post-fork procedure is the same as before: call reopen() in the child,
+    continue on in the parent like nothing happened.
+
 v1.0.6 Only include backports if RUBY_VERSION is 1.8.x
 
   * 'backports' pollutes too much, use sparingly
