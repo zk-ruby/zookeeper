@@ -422,6 +422,8 @@ static VALUE method_create(VALUE self, VALUE reqid, VALUE path, VALUE data, VALU
   if (acls != Qnil) { aclptr = zkrb_ruby_to_aclvector(acls); }
   char realpath[16384];
 
+  int invalid_call_type=0;
+
   int rc;
   switch (call_type) {
 
@@ -437,7 +439,7 @@ static VALUE method_create(VALUE self, VALUE reqid, VALUE path, VALUE data, VALU
       break;
 
     default:
-      raise_invalid_call_type_err(call_type);
+      invalid_call_type=1;
       break;
   }
 
@@ -445,6 +447,8 @@ static VALUE method_create(VALUE self, VALUE reqid, VALUE path, VALUE data, VALU
     deallocate_ACL_vector(aclptr);
     free(aclptr);
   }
+
+  if (invalid_call_type) raise_invalid_call_type_err(call_type);
 
   output = rb_ary_new();
   rb_ary_push(output, INT2FIX(rc));
@@ -491,7 +495,7 @@ static VALUE method_get(VALUE self, VALUE reqid, VALUE path, VALUE async, VALUE 
 
   char * data = malloc(MAX_ZNODE_SIZE); /* ugh */
 
-  int rc;
+  int rc, invalid_call_type=0;
 
   switch (call_type) {
 
@@ -517,7 +521,8 @@ static VALUE method_get(VALUE self, VALUE reqid, VALUE path, VALUE async, VALUE 
       break;
 
     default:
-      raise_invalid_call_type_err(call_type);
+      invalid_call_type=1;
+      goto cleanup;    
       break;
   }
 
@@ -531,7 +536,9 @@ static VALUE method_get(VALUE self, VALUE reqid, VALUE path, VALUE async, VALUE 
     rb_ary_push(output, zkrb_stat_to_rarray(&stat));
   }
 
+cleanup:
   free(data);
+  if (invalid_call_type) raise_invalid_call_type_err(call_type);
   return output;
 }
 
@@ -578,7 +585,7 @@ static VALUE method_set_acl(VALUE self, VALUE reqid, VALUE path, VALUE acls, VAL
 
   struct ACL_vector * aclptr = zkrb_ruby_to_aclvector(acls);
 
-  int rc;
+  int rc=ZOK, invalid_call_type=0;
   switch (call_type) {
     
 #ifdef THREADED
@@ -592,12 +599,14 @@ static VALUE method_set_acl(VALUE self, VALUE reqid, VALUE path, VALUE acls, VAL
       break;
 
     default:
-      raise_invalid_call_type_err(call_type);
+      invalid_call_type=1;
       break;
   }
 
   deallocate_ACL_vector(aclptr);
   free(aclptr);
+
+  if (invalid_call_type) raise_invalid_call_type_err(call_type);
 
   return INT2FIX(rc);
 }
