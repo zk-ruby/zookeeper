@@ -493,7 +493,11 @@ static VALUE method_get(VALUE self, VALUE reqid, VALUE path, VALUE async, VALUE 
   int data_len = MAX_ZNODE_SIZE;
   struct Stat stat;
 
-  char * data = malloc(MAX_ZNODE_SIZE); /* ugh */
+  char * data = NULL; 
+  if (IS_SYNC(call_type)) {
+    data = malloc(MAX_ZNODE_SIZE); /* ugh */
+    memset(data, 0, sizeof(data));
+  }
 
   int rc, invalid_call_type=0;
 
