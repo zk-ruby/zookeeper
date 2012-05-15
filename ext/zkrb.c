@@ -416,7 +416,7 @@ static VALUE method_create(VALUE self, VALUE reqid, VALUE path, VALUE data, VALU
   if (data != Qnil) Check_Type(data, T_STRING);
   Check_Type(flags, T_FIXNUM);
   const char *data_ptr = (data == Qnil) ? NULL : RSTRING_PTR(data);
-  size_t      data_len = (data == Qnil) ? -1   : RSTRING_LEN(data);
+  ssize_t     data_len = (data == Qnil) ? -1   : RSTRING_LEN(data);
 
   struct ACL_vector *aclptr = NULL;
   if (acls != Qnil) { aclptr = zkrb_ruby_to_aclvector(acls); }
@@ -544,7 +544,7 @@ static VALUE method_set(VALUE self, VALUE reqid, VALUE path, VALUE data, VALUE a
   if (data != Qnil) Check_Type(data, T_STRING);
 
   const char *data_ptr = (data == Qnil) ? NULL : RSTRING_PTR(data);
-  size_t      data_len = (data == Qnil) ? -1   : RSTRING_LEN(data);
+  ssize_t     data_len = (data == Qnil) ? -1   : RSTRING_LEN(data);
 
   int rc;
   switch (call_type) {
