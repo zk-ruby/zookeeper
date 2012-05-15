@@ -803,9 +803,12 @@ static VALUE method_zkrb_iterate_event_loop(VALUE self) {
 
     // we got woken up by the self-pipe
     if (FD_ISSET(pipe_r_fd, &rfds)) {
-      // flush the pipe (from mt_adaptor.c)
+      // one event has awoken us, so we clear one event from the pipe
       char b[1];
-      read(pipe_r_fd, b, 1); // one event has awoken us, so we clear one event from the pipe
+
+      if (read(pipe_r_fd, b, 1) < 0) {
+        rb_raise(rb_eRuntimeError, "read from pipe failed: %s", clean_errno());
+      }
     }
 
     rc = zookeeper_process(zk->zh, events);
