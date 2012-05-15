@@ -1,3 +1,17 @@
+v1.1.1 Cleanup after code review (h/t @eric)
+
+  * While hunting down this bug: https://bugs.ruby-lang.org/issues/6438
+    Eric Lindvall made a number of helpful catches.
+
+  * Reduce syscall overhead by not using an unnecessary pipe in the event_lib.c
+    implementation
+
+  * More careful use of rb_raise, don't longjmp past necessary free() calls.
+
+  * More careful malloc in the get() implementation (we need to allocate 1MB
+    to hold the data in a znode, but only in the SYNC cases).
+
+
 v1.1.0 Rewrite C backend to use zookeeper_st, the async library
 
   * In order to ensure fork safety, a rewrite of the backend was necessary.
