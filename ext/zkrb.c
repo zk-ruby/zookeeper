@@ -239,7 +239,7 @@ static void print_zkrb_instance_data(zkrb_instance_data_t* ptr) {
 
 inline static void zkrb_debug_clientid_t(const clientid_t *cid) {
   int pass_len = sizeof(cid->passwd);
-  int hex_len = 2 * pass_len;
+  int hex_len = 2 * pass_len + 1;
   char buf[hex_len];
   hexbufify(buf, cid->passwd, pass_len);
 
