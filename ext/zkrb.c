@@ -266,7 +266,7 @@ static VALUE method_zkrb_init(int argc, VALUE* argv, VALUE self) {
     zoo_set_debug_level(0); // no log messages
   } else {
     Check_Type(log_level, T_FIXNUM);
-    zoo_set_debug_level((int)log_level);
+    zoo_set_debug_level(FIX2INT(log_level));
   }
 
   VALUE data;
