@@ -799,6 +799,11 @@ static VALUE method_has_events(VALUE self) {
   return rb_event;
 }
 
+static VALUE method_zoo_set_log_level(VALUE self, VALUE level) {
+  Check_Type(level, T_FIXNUM);
+  zoo_set_debug_level(FIX2INT(level));
+  return Qnil;
+}
 
 // wake up the event loop, used when shutting down
 #if 0
