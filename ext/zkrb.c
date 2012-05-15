@@ -722,12 +722,14 @@ static VALUE method_zkrb_get_next_event_st(VALUE self) {
     rval = zkrb_event_to_ruby(event);
     zkrb_event_free(event);
 
+#if THREADED
     int fd = zk->queue->pipe_read;
 
     // we don't care in this case. this is just until i can remove the self
     // pipe from the queue
     char b[128];
     while(read(fd, b, sizeof(b)) == sizeof(b)){}
+#endif
   }
 
   return rval;

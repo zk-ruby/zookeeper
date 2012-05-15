@@ -21,7 +21,6 @@ slyphon@gmail.com
 */
 
 #include "ruby.h"
-#include "event_lib.h"
 #include "c-client-src/zookeeper.h"
 #include <errno.h>
 #include <stdio.h>
@@ -30,64 +29,37 @@ slyphon@gmail.com
 #include <unistd.h>
 #include <inttypes.h>
 #include "common.h"
+#include "event_lib.h"
 #include "dbg.h"
+
+#ifndef THREADED
+#define USE_XMALLOC
+#endif
 
 #define GET_SYM(str) ID2SYM(rb_intern(str))
 
 int ZKRBDebugging;
 
-#ifdef THREADED
-
+#if THREADED
 pthread_mutex_t zkrb_q_mutex = PTHREAD_MUTEX_INITIALIZER;
+#endif
 
 inline static int global_mutex_lock() {
-  int rv = pthread_mutex_lock(&zkrb_q_mutex);
+  int rv=0;
+#if THREADED
+  rv = pthread_mutex_lock(&zkrb_q_mutex);
   if (rv != 0) log_err("global_mutex_lock error");
+#endif
   return rv;
 }
 
 inline static int global_mutex_unlock() {
-  int rv = pthread_mutex_unlock(&zkrb_q_mutex);
+  int rv=0;
+#if THREADED
+  rv = pthread_mutex_unlock(&zkrb_q_mutex);
   if (rv != 0) log_err("global_mutex_unlock error");
+#endif
   return rv;
-}
-
-void atfork_prepare() {
-  global_mutex_lock();
-}
-
-void atfork_parent() {
-  global_mutex_unlock();
-}
-
-void atfork_child() {
-  global_mutex_unlock();
-}
-
-// set up handlers to make sure the thread being forked holds the lock at the 
-// time the process is copied, then immediately unlock the mutex in both parent
-// and children
-/*pthread_atfork(atfork_prepare, atfork_parent, atfork_child);*/
-
-// delegates to the system malloc (we can't use xmalloc in the threaded case,
-// as we can't touch the interpreter)
-
-inline static void* zk_malloc(size_t size) {
-  return malloc(size);
-}
-
-inline static void zk_free(void *ptr) {
-  free(ptr);
-}
-
-#else
-
-inline static int global_mutex_lock() {
-  return 0;
-}
-
-inline static int global_mutex_unlock() {
-  return 0;
 }
 
 // we can use the ruby xmalloc/xfree that will raise errors
@@ -95,16 +67,20 @@ inline static int global_mutex_unlock() {
 // the garbage collector in some cases.
 
 inline static void* zk_malloc(size_t size) {
+#ifdef USE_XMALLOC
   return xmalloc(size);
+#else
+  return malloc(size);
+#endif
 }
 
 inline static void zk_free(void *ptr) {
+#ifdef USE_XMALLOC
   xfree(ptr);
+#else
+  free(ptr);
+#endif
 }
-
-
-#endif /* THREADED */
-
 
 void zkrb_enqueue(zkrb_queue_t *q, zkrb_event_t *elt) {
   if (q == NULL) {
@@ -125,13 +101,15 @@ void zkrb_enqueue(zkrb_queue_t *q, zkrb_event_t *elt) {
   q->tail->event = NULL;
   q->tail->next = NULL;
 
-  ssize_t ret = write(q->pipe_write, "0", 1);   /* Wake up Ruby listener */
-
   global_mutex_unlock();
 
-  if (ret < 0) {
+#if THREADED
+  ssize_t ret = write(q->pipe_write, "0", 1);   /* Wake up Ruby listener */
+
+  if (ret < 0)
     log_err("write to queue (%p) pipe failed!\n", q);
-  }
+#endif
+
 }
 
 // NOTE: the zkrb_event_t* returned *is* the same pointer that's part of the
@@ -182,8 +160,10 @@ void zkrb_signal(zkrb_queue_t *q) {
 
   global_mutex_lock();
 
+#if THREADED
   if (!write(q->pipe_write, "0", 1))      /* Wake up Ruby listener */
     log_err("zkrb_signal: write to pipe failed, could not wake");
+#endif
 
   global_mutex_unlock();
 }
@@ -200,10 +180,12 @@ zkrb_event_ll_t *zkrb_event_ll_t_alloc(void) {
 }
 
 zkrb_queue_t *zkrb_queue_alloc(void) {
-  int pfd[2];
   zkrb_queue_t *rq = NULL;
  
+#if THREADED
+  int pfd[2];
   check(pipe(pfd) == 0, "creating the signal pipe failed");
+#endif
 
   rq = zk_malloc(sizeof(zkrb_queue_t));
   check_mem(rq);
@@ -214,8 +196,11 @@ zkrb_queue_t *zkrb_queue_alloc(void) {
   check_mem(rq->head);
 
   rq->tail = rq->head;
+
+#if THREADED
   rq->pipe_read = pfd[0];
   rq->pipe_write = pfd[1];
+#endif
 
   return rq;
 
@@ -233,8 +218,11 @@ void zkrb_queue_free(zkrb_queue_t *queue) {
   }
 
   zk_free(queue->head);
+
+#if THREADED
   close(queue->pipe_read);
   close(queue->pipe_write);
+#endif
 
   zk_free(queue);
 }
