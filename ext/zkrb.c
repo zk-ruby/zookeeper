@@ -835,18 +835,6 @@ static VALUE method_zoo_set_log_level(VALUE self, VALUE level) {
   return Qnil;
 }
 
-// wake up the event loop, used when shutting down
-#if 0
-static VALUE method_wake_event_loop_bang(VALUE self) {
-  FETCH_DATA_PTR(self, zk); 
-
-  zkrb_debug_inst(self, "Waking event loop: %p", zk->queue);
-  zkrb_signal(zk->queue);
-
-  return Qnil;
-};
-#endif
-
 static VALUE method_close_handle(VALUE self) {
   FETCH_DATA_PTR(self, zk);
 
@@ -886,12 +874,6 @@ static VALUE method_recv_timeout(VALUE self) {
   FETCH_DATA_PTR(self, zk);
   return INT2NUM(zoo_recv_timeout(zk->zh));
 }
-
-/*static VALUE method_client_id(VALUE self) {*/
-/*  FETCH_DATA_PTR(self, zk);*/
-/*  const clientid_t *id = zoo_client_id(zk->zh);*/
-/*  return UINT2NUM(id->client_id);*/
-/*}*/
 
 // returns a CZookeeper::ClientId object with the values set for session_id and passwd
 static VALUE method_client_id(VALUE self) {
