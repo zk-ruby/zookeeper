@@ -173,6 +173,17 @@ static void hexbufify(char *dest, const char *src, int len) {
   }
 }
 
+inline static int we_are_forked(zkrb_instance_data_t *zk) {
+  int rv=0;
+
+  if ((!!zk) && (zk->orig_pid != getpid())) {
+    rv=1;
+  }
+
+  return rv;
+}
+
+
 static int destroy_zkrb_instance(zkrb_instance_data_t* zk) {
   int rv = ZOK;
 
@@ -183,7 +194,7 @@ static int destroy_zkrb_instance(zkrb_instance_data_t* zk) {
     /* Note that after zookeeper_close() returns, ZK handle is invalid */
     zkrb_debug("obj_id: %lx, calling zookeeper_close", zk->object_id);
 
-    if (zk->orig_pid != getpid()) {
+    if (we_are_forked(zk)) {
       zkrb_debug("FORK DETECTED! orig_pid: %d, current pid: %d, "
           "using socket-closing hack before zookeeper_close", zk->orig_pid, getpid());
 
