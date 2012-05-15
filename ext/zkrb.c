@@ -205,7 +205,7 @@ static int destroy_zkrb_instance(zkrb_instance_data_t* zk) {
 
     rv = zookeeper_close(zk->zh);
 
-    zkrb_debug("obj_id: %lx, zookeeper_close returned %d", zk->object_id, rv); 
+    zkrb_debug("obj_id: %lx, zookeeper_close returned %d, calling context: %p", zk->object_id, rv, ctx); 
     zkrb_calling_context_free((zkrb_calling_context *) ctx);
   }
 
@@ -557,7 +557,7 @@ static VALUE method_set(VALUE self, VALUE reqid, VALUE path, VALUE data, VALUE a
   const char *data_ptr = (data == Qnil) ? NULL : RSTRING_PTR(data);
   ssize_t     data_len = (data == Qnil) ? -1   : RSTRING_LEN(data);
 
-  int rc;
+  int rc=ZOK;
   switch (call_type) {
 
 #ifdef THREADED
@@ -622,7 +622,7 @@ static VALUE method_get_acl(VALUE self, VALUE reqid, VALUE path, VALUE async) {
   struct ACL_vector acls;
   struct Stat stat;
 
-  int rc;
+  int rc=ZOK;
   switch (call_type) {
 
 #ifdef THREADED
@@ -894,7 +894,7 @@ static VALUE method_client_id(VALUE self) {
   const clientid_t *cid = zoo_client_id(zk->zh);
 
   if (strlen(cid->passwd) != 16) { 
-    zkrb_debug("passwd is not null-termniated");
+    zkrb_debug("passwd is not null-terminated");
   } else {
     hexbufify(buf, cid->passwd, 16);
     zkrb_debug("password in hex is: %s", buf);
@@ -944,6 +944,8 @@ static void zkrb_define_methods(void) {
   rb_define_method(CZookeeper, "zkrb_set",          method_set,           5);
   rb_define_method(CZookeeper, "zkrb_set_acl",      method_set_acl,       5);
   rb_define_method(CZookeeper, "zkrb_get_acl",      method_get_acl,       3);
+
+  rb_define_singleton_method(CZookeeper, "zoo_set_log_level", method_zoo_set_log_level, 1);
 
   DEFINE_METHOD(client_id, 0);
   DEFINE_METHOD(close_handle, 0);
