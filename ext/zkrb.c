@@ -753,6 +753,7 @@ inline static int get_self_pipe_read_fd(VALUE self) {
 #endif
 }
 
+#define TV_USEC_MAX 5000
 
 static VALUE method_zkrb_iterate_event_loop(VALUE self) {
   FETCH_DATA_PTR(self, zk);
@@ -762,6 +763,9 @@ static VALUE method_zkrb_iterate_event_loop(VALUE self) {
 
   int fd=0, interest=0, events=0, rc=0, maxfd=0;
   struct timeval tv;
+
+  if (tv.tv_sec > 0) tv.tv_sec = 0;
+  if (tv.tv_usec > TV_USEC_MAX) tv.tv_usec = TV_USEC_MAX;
   
   zookeeper_interest(zk->zh, &fd, &interest, &tv);
 
