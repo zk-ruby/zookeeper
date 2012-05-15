@@ -247,8 +247,8 @@ inline static void zkrb_debug_clientid_t(const clientid_t *cid) {
 }
 
 static VALUE method_zkrb_init(int argc, VALUE* argv, VALUE self) {
-  VALUE hostPort;
-  VALUE options;
+  VALUE hostPort=Qnil;
+  VALUE options=Qnil;
 
   rb_scan_args(argc, argv, "11", &hostPort, &options);
 
@@ -287,12 +287,12 @@ static VALUE method_zkrb_init(int argc, VALUE* argv, VALUE self) {
 
   zk_local_ctx->zh =
       zookeeper_init(
-          RSTRING_PTR(hostPort),
-          zkrb_state_callback,
-          session_timeout_msec(self),
-          &zk_local_ctx->myid,
-          ctx,
-          0);
+          RSTRING_PTR(hostPort),        // const char *host
+          zkrb_state_callback,          // watcher_fn
+          session_timeout_msec(self),   // recv_timeout
+          &zk_local_ctx->myid,          // cilentid_t
+          ctx,                          // void *context
+          0);                           // flags
 
   zkrb_debug("method_zkrb_init, zk_local_ctx: %p, zh: %p, queue: %p, calling_ctx: %p",
       zk_local_ctx, zk_local_ctx->zh, zk_local_ctx->queue, ctx);
