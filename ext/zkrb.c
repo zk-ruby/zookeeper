@@ -56,6 +56,13 @@
  *
  * NOTE: This file depends on exception classes defined in lib/zookeeper/exceptions.rb
  *
+ * -------
+ *
+ * @rectalogic: any time you create a ruby value in C, and so there are no
+ * references to it in the VM except for your variable, and you then call into
+ * the VM (allowing a GC), and your reference is on the stack, then it needs to
+ * be volatile
+ *
  */
 
 #include "ruby.h"
@@ -269,7 +276,7 @@ static VALUE method_zkrb_init(int argc, VALUE* argv, VALUE self) {
     zoo_set_debug_level(FIX2INT(log_level));
   }
 
-  VALUE data;
+  volatile VALUE data;
   zkrb_instance_data_t *zk_local_ctx;
   data = Data_Make_Struct(CZookeeper, zkrb_instance_data_t, 0, free_zkrb_instance_data, zk_local_ctx);
 
@@ -665,13 +672,12 @@ static VALUE method_zkrb_get_next_event(VALUE self, VALUE blocking) {
     check_debug(!is_closed(self), "we're closed in the middle of method_zkrb_get_next_event, bailing");
 
     zkrb_event_t *event = zkrb_dequeue(zk->queue, 1);
-
-    /* Wait for an event using rb_thread_select() on the queue's pipe */
+    
     if (event == NULL) {
       if (NIL_P(blocking) || (blocking == Qfalse)) { 
         goto error;
       } 
-      else {
+      else { 
         // if we're shutting down, don't enter this section, we don't want to block
         check_debug(!is_shutting_down(self), "method_zkrb_get_next_event, we're shutting down, don't enter blocking section");
 
@@ -707,7 +713,7 @@ static VALUE method_zkrb_get_next_event(VALUE self, VALUE blocking) {
 // the single threaded version of this call. will go away when we do direct
 // event delivery (soon)
 static VALUE method_zkrb_get_next_event_st(VALUE self) {
-  VALUE rval = Qnil;
+  volatile VALUE rval = Qnil;
 
   if (is_closed(self)) {
     zkrb_debug("we are closed, not gonna try to get an event");
