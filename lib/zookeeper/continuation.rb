@@ -101,7 +101,7 @@ module Zookeeper
           return @rval
         end
       ensure
-        @mutex.unlock
+        @mutex.unlock rescue nil
       end
     end
 
