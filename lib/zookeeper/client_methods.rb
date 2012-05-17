@@ -192,6 +192,16 @@ module ClientMethods
     super
   end
 
+  # stop all underlying threads in preparation for a fork()
+  def pause_before_fork_in_parent
+    super
+  end
+
+  # re-start all underlying threads after performing a fork()
+  def resume_after_fork_in_parent
+    super
+  end
+
 protected
   # used during shutdown, awaken the event delivery thread if it's blocked
   # waiting for the next event

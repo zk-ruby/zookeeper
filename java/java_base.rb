@@ -435,6 +435,14 @@ class JavaBase
     @connected_latch.release
   end
 
+  def pause_before_fork_in_parent
+    # this is a no-op in java-land
+  end
+
+  def resume_after_fork_in_parent
+    # this is a no-op in java-land
+  end
+
   protected
     def jzk
       @mutex.synchronize { @jzk }

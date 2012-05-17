@@ -33,8 +33,7 @@ module Common
     def push(obj)
       @mutex.lock
       begin
-        raise ShutdownException if (@closed or @graceful)
-
+#         raise ShutdownException if (@closed or @graceful)
         @array << obj
         @cond.signal
       ensure
