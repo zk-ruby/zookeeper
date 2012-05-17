@@ -8,13 +8,17 @@ module Zookeeper
 
     # for keeping track of which continuations are pending, and which ones have
     # been submitted and are awaiting a repsonse
-    class Registry < Struct.new(:pending, :in_flight)
+    # 
+    # `state_check` are high-priority checks that query the connection about
+    # its current state, they always run before other continuations
+    #
+    class Registry < Struct.new(:pending, :state_check, :in_flight)
       extend Forwardable
 
       def_delegators :@mutex, :lock, :unlock
 
       def initialize
-        super([], {})
+        super([], [], {})
         @mutex = Mutex.new
       end
 
@@ -23,15 +27,15 @@ module Zookeeper
         begin
           yield self
         ensure
-          @mutex.unlock
+          @mutex.unlock rescue nil
         end
       end
 
       # does not lock the mutex, returns true if there are pending jobs
-      def pending?
-        !self.pending.empty?
+      def anything_to_do?
+        (pending.length + state_check.length) > 0
       end
-    end
+    end # Registry
 
     # *sigh* what is the index in the *args array of the 'callback' param
     CALLBACK_ARG_IDX = {
@@ -43,6 +47,7 @@ module Zookeeper
       :get_acl => 2,
       :set_acl => 3,
       :get_children => 2,
+      :state => 0,
     }
     
     # maps the method name to the async return hash keys it should use to
@@ -111,9 +116,10 @@ module Zookeeper
     def submit(czk)
       rc, *_ = czk.__send__(:"zkrb_#{@meth}", *async_args)
       
-      if user_callback? or (rc != ZOK)      # if this is an async call, or we failed to submit it
-        @rval = [rc]                        # create the repsonse
-        deliver!                            # wake the caller and we're out
+      # if this is an state call, async call, or we failed to submit it
+      if (@meth == :state) or user_callback? or (rc != ZOK)
+        @rval = [rc]           # create the repsonse
+        deliver!               # wake the caller and we're out
       end
     end
 
@@ -121,11 +127,16 @@ module Zookeeper
       @args.first
     end
 
+    def state_call?
+      @meth == :state
+    end
+
     protected
 
       # an args array with the only difference being that if there's a user
       # callback provided, we don't handle delivering the end result
       def async_args
+        return [] if @meth == :state    # special-case :P
         ary = @args.dup
 
         logger.debug { "async_args, meth: #{meth} ary: #{ary.inspect}, #{callback_arg_idx}" }
@@ -147,7 +158,7 @@ module Zookeeper
         begin
           @cond.signal
         ensure
-          @mutex.unlock
+          @mutex.unlock rescue nil
         end
       end
   end # Base

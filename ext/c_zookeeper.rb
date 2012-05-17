@@ -156,7 +156,7 @@ class CZookeeper
 
   def state
     return ZOO_CLOSED_STATE if closed?
-    zkrb_state
+    submit_and_block(:state)
   end
 
   # this implementation is gross, but i don't really see another way of doing it
@@ -176,13 +176,18 @@ class CZookeeper
     connected?
   end
 
-
   private
     # submits a job for processing 
     # blocks the caller until result has returned
     def submit_and_block(meth, *args)
       cnt = Continuation.new(meth, *args)
-      @reg.synchronized { |r| r.pending << cnt }
+      @reg.synchronized do |r| 
+        if meth == :state
+          r.state_check << cnt
+        else
+          r.pending << cnt
+        end
+      end
       wake_event_loop!
       cnt.value
     end
@@ -232,10 +237,8 @@ class CZookeeper
 
       # this is the main loop
       until (@_shutting_down or @_closed or is_unrecoverable)
-        submit_pending_calls    if @reg.pending?
-#         log_realtime("zkrb_iterate_event_loop") do
-          zkrb_iterate_event_loop # XXX: check rc here
-#         end
+        submit_pending_calls    if @reg.anything_to_do?
+        zkrb_iterate_event_loop 
         iterate_event_delivery
       end
 
@@ -263,28 +266,31 @@ class CZookeeper
       # this is ok, because the calling thread only ever *adds* to this hash,
       # and the keys are always unique
 
-      pending = nil
+      calls = nil
 
       @reg.lock
       begin
-        pending, @reg.pending = @reg.pending, []
+        calls = @reg.state_check + @reg.pending
+        @reg.state_check.clear
+        @reg.pending.clear
       ensure
-        @reg.unlock
+        @reg.unlock rescue nil
       end
 
-      return if pending.empty?
+      # ok, do state checks right here, they're synchronous anyway
 
-      logger.debug { "#{self.class}##{__method__} " }
+      return if calls.empty?
 
-      while cntn = pending.shift
+      while cntn = calls.shift
         cntn.submit(self)
-        @reg.in_flight[cntn.req_id] = cntn   # in_flight is only ever touched by us
+        if cntn.req_id                            # state checks will not have a req_id
+          @reg.in_flight[cntn.req_id] = cntn      # in_flight is only ever touched by us
+        end
       end
     end
 
     def wake_event_loop!
-      logger.debug { "#{self.class}##{__method__}" }
-      @pipe_write && @pipe_write.write("\001")
+      @pipe_write && @pipe_write.write('1')
     end
 
     def iterate_event_delivery
