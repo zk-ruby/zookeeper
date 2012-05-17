@@ -54,6 +54,7 @@ module Common
           rval = @array.shift
 
           unless rval
+            raise ThreadError if non_blocking     # sigh, ruby's stupid behavior
             raise ShutdownException if @graceful  # we've processed all the remaining mesages
 
             @cond.wait(@mutex) until (@closed or @graceful or (@array.length > 0))
