@@ -12,13 +12,13 @@ module Zookeeper
     # `state_check` are high-priority checks that query the connection about
     # its current state, they always run before other continuations
     #
-    class Registry < Struct.new(:pending, :state_check, :in_flight)
+    class Registry < Struct.new(:pending, :in_flight)
       extend Forwardable
 
       def_delegators :@mutex, :lock, :unlock
 
       def initialize
-        super([], [], {})
+        super([], {})
         @mutex = Mutex.new
       end
 
@@ -33,7 +33,18 @@ module Zookeeper
 
       # does not lock the mutex, returns true if there are pending jobs
       def anything_to_do?
-        (pending.length + state_check.length) > 0
+        !pending.empty?
+      end
+
+      # returns the pending continuations, resetting the list
+      # this method is synchronized
+      def next_batch()
+        @mutex.lock
+        begin
+          pending.slice!(0,pending.length)
+        ensure
+          @mutex.unlock rescue nil
+        end
       end
     end # Registry
 

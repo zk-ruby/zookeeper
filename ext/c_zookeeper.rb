@@ -181,12 +181,15 @@ class CZookeeper
     # blocks the caller until result has returned
     def submit_and_block(meth, *args)
       cnt = Continuation.new(meth, *args)
-      @reg.synchronized do |r| 
+      @reg.lock 
+      begin
         if meth == :state
-          r.state_check << cnt
+          @reg.pending.unshift(cnt)
         else
-          r.pending << cnt
+          @reg.pending << cnt
         end
+      ensure
+        @reg.unlock rescue nil
       end
       wake_event_loop!
       cnt.value
@@ -263,28 +266,14 @@ class CZookeeper
     end
 
     def submit_pending_calls
-      # this is ok, because the calling thread only ever *adds* to this hash,
-      # and the keys are always unique
-
-      calls = nil
-
-      @reg.lock
-      begin
-        calls = @reg.state_check + @reg.pending
-        @reg.state_check.clear
-        @reg.pending.clear
-      ensure
-        @reg.unlock rescue nil
-      end
-
-      # ok, do state checks right here, they're synchronous anyway
+      calls = @reg.next_batch()
 
       return if calls.empty?
 
       while cntn = calls.shift
         cntn.submit(self)
-        if cntn.req_id                            # state checks will not have a req_id
-          @reg.in_flight[cntn.req_id] = cntn      # in_flight is only ever touched by us
+        if req_id = cntn.req_id              # state checks will not have a req_id
+          @reg.in_flight[req_id] = cntn      # in_flight is only ever touched by us
         end
       end
     end
