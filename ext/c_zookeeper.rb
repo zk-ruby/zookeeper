@@ -228,7 +228,7 @@ class CZookeeper
         @running_cond.wait(timeout)
         !!@_running
       ensure
-        @mutex.unlock
+        @mutex.unlock rescue nil
       end
     end
 
@@ -314,7 +314,7 @@ class CZookeeper
 
         raise ShuttingDownException if @_shutting_down
       ensure
-        @mutex.unlock
+        @mutex.unlock rescue nil
       end
     end
 
@@ -334,7 +334,7 @@ class CZookeeper
         @_running = true
         @running_cond.broadcast
       ensure
-        @mutex.unlock
+        @mutex.unlock rescue nil
       end
     end
 
@@ -343,7 +343,7 @@ class CZookeeper
       begin
         @connected_cond.broadcast
       ensure
-        @mutex.unlock
+        @mutex.unlock rescue nil
       end
     end
 end
