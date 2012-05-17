@@ -271,9 +271,9 @@ class CZookeeper
       return if calls.empty?
 
       while cntn = calls.shift
-        cntn.submit(self)
-        if req_id = cntn.req_id              # state checks will not have a req_id
-          @reg.in_flight[req_id] = cntn      # in_flight is only ever touched by us
+        cntn.submit(self)                     # this delivers state check results (and does other stuff)
+        if req_id = cntn.req_id               # state checks will not have a req_id
+          @reg.in_flight[req_id] = cntn       # in_flight is only ever touched by us
         end
       end
     end
