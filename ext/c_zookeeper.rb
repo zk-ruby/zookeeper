@@ -184,7 +184,7 @@ class CZookeeper
       @reg.lock 
       begin
         if meth == :state
-          @reg.pending.unshift(cnt)
+          @reg.state_check << cnt
         else
           @reg.pending << cnt
         end
