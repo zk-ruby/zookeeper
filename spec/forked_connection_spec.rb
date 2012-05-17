@@ -14,8 +14,16 @@ unless defined?(::JRUBY_VERSION)
       false
     end
 
-    before do
+    LBORDER = ('-' * 35) << '< '
+    RBORDER = ' >' << ('-' * 35) 
 
+
+    def mark(thing)
+      logger << "\n#{LBORDER}#{thing}#{RBORDER}\n\n"
+    end
+
+    before do
+      mark "BEFORE: START"
       if defined?(::Rubinius)
         pending("this test is currently broken in rbx")
 #       elsif ENV['TRAVIS']
@@ -24,11 +32,12 @@ unless defined?(::JRUBY_VERSION)
         @zk = Zookeeper.new(connection_string)
         rm_rf(@zk, path)
       end
-      logger.debug { "----------------< BEFORE: END >-------------------" }
+      mark "BEFORE: END"
     end
 
     after do
-      logger.debug { "----------------< AFTER: BEGIN >-------------------" }
+      mark "AFTER: START"
+
       if @pid and process_alive?(@pid)
         begin
           Process.kill('KILL', @pid)
@@ -39,6 +48,8 @@ unless defined?(::JRUBY_VERSION)
 
       @zk.close if @zk and !@zk.closed?
       with_open_zk(connection_string) { |z| rm_rf(z, path) }
+
+      mark "AFTER: END"
     end
 
     def wait_for_child_safely(pid, timeout=5)
@@ -56,7 +67,8 @@ unless defined?(::JRUBY_VERSION)
     end
 
     it %[should do the right thing and not fail] do
-      logger.debug { "----------------< TEST: BEGIN >-------------------" }
+      mark "TEST: START"
+
       @zk.wait_until_connected
 
       mkdir_p(@zk, pids_root)
@@ -75,9 +87,9 @@ unless defined?(::JRUBY_VERSION)
 
       @zk.stat(:path => "#{pids_root}/child", :watcher => cb)
 
-      logger.debug { "------------------->   FORK   <---------------------------" }
+      @zk.pause_before_fork_in_parent
 
-      @zk.pause
+      mark "FORK"
 
       @pid = fork do
         logger.debug { "reopening connection in child: #{$$}" }
@@ -91,7 +103,7 @@ unless defined?(::JRUBY_VERSION)
         exit!(0)
       end
 
-      @zk.resume
+      @zk.resume_after_fork_in_parent
 
       event_waiter_th = Thread.new do
         @latch.await(5) unless @event 

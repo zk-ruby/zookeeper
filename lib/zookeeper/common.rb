@@ -94,7 +94,7 @@ protected
   #
   # @dispatcher will be nil when this method exits
   #
-  def stop_dispatch_thread!
+  def stop_dispatch_thread!(timeout=2)
     logger.debug { "#{self.class}##{__method__}" }
 
     if @dispatcher
@@ -111,8 +111,8 @@ protected
         #
         @dispatch_shutdown_cond.wait
 
-        # wait for another 2 sec for the thread to join
-        until @dispatcher.join(2)
+        # wait for another timeout sec for the thread to join
+        until @dispatcher.join(timeout)
           logger.error { "Dispatch thread did not join cleanly, waiting" }
         end
         @dispatcher = nil

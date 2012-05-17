@@ -32,7 +32,7 @@ class ZookeeperBase
 
 
   def_delegators :@czk, :get_children, :exists, :delete, :get, :set,
-    :set_acl, :get_acl, :client_id, :sync, :wait_until_connected, :pause, :resume
+    :set_acl, :get_acl, :client_id, :sync, :wait_until_connected
 
   # some state methods need to be more paranoid about locking to ensure the correct
   # state is returned
@@ -194,6 +194,29 @@ class ZookeeperBase
     @mutex.synchronize { !@czk or @czk.closed? } 
   end
 
+  def pause_before_fork_in_parent
+    @mutex.synchronize do
+      logger.debug { "ZookeeperBase#pause_before_fork_in_parent" }
+
+      # XXX: add anal-retentive state checking 
+      raise "EXPLODERATE! @czk was nil!" unless @czk
+
+      @czk.pause_before_fork_in_parent
+      stop_dispatch_thread!
+    end
+  end
+
+  def resume_after_fork_in_parent
+    @mutex.synchronize do
+      logger.debug { "ZookeeperBase#resume_after_fork_in_parent" }
+
+      raise "EXPLODERATE! @czk was nil!" unless @czk
+
+      event_queue.open
+      setup_dispatch_thread!
+      @czk.resume_after_fork_in_parent
+    end
+  end
 
 protected
   # this is a hack: to provide consistency between the C and Java drivers when

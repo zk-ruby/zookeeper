@@ -139,13 +139,13 @@ class CZookeeper
   #
   # requests may still be added during this time, but they will not be
   # processed until you call resume
-  def pause
+  def pause_before_fork_in_parent
     logger.debug { "#{self.class}##{__method__}" }
     @mutex.synchronize { stop_event_thread }
   end
 
   # call this if 'pause' was previously called to start the event loop again
-  def resume
+  def resume_after_fork_in_parent
     logger.debug { "#{self.class}##{__method__}" }
 
     @mutex.synchronize do 

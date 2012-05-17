@@ -84,7 +84,6 @@ module Common
     def open
       @mutex.lock
       begin
-        return unless @closed
         @closed = @graceful = false
         @cond.broadcast
       ensure
