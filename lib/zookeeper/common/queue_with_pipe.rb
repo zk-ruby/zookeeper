@@ -5,8 +5,6 @@ module Common
     extend Forwardable
     include Logger
 
-    def_delegators :@queue, :clear
-    
     # raised when close has been called, and pop() is performed
     # 
     class ShutdownException < StandardError; end
@@ -15,57 +13,88 @@ module Common
     KILL_TOKEN = Object.new unless defined?(KILL_TOKEN)
 
     def initialize
-      @queue = Queue.new
+      @array = []
 
-      @mutex = Mutex.new
-      @closed = false
+      @mutex    = Mutex.new
+      @cond     = ConditionVariable.new
+      @closed   = false
       @graceful = false
     end
 
+    def clear
+      @mutex.lock
+      begin
+        @array.clear
+      ensure
+        @mutex.unlock rescue nil
+      end
+    end
+
     def push(obj)
-      logger.debug { "#{self.class}##{__method__} obj: #{obj.inspect}, kill_token? #{obj == KILL_TOKEN}" }
-      @queue.push(obj)
+      @mutex.lock
+      begin
+        raise ShutdownException if (@closed or @graceful)
+
+        @array << obj
+        @cond.signal
+      ensure
+        @mutex.unlock rescue nil
+      end
     end
 
     def pop(non_blocking=false)
-      raise ShutdownException if closed?  # this may get us in trouble
+      rval = nil
 
-      rv = @queue.pop(non_blocking)
+      @mutex.lock
+      begin
 
-      if rv == KILL_TOKEN
-        close
-        raise ShutdownException
+        begin
+          raise ShutdownException if @closed  # this may get us in trouble
+
+          rval = @array.shift
+
+          unless rval
+            raise ShutdownException if @graceful  # we've processed all the remaining mesages
+
+            @cond.wait(@mutex) until (@closed or @graceful or (@array.length > 0))
+          end
+        end until rval
+
+        return rval
+
+      ensure
+        @mutex.unlock rescue nil
       end
-
-      rv
     end
 
     # close the queue and causes ShutdownException to be raised on waiting threads
     def graceful_close!
-      @mutex.synchronize do
+      @mutex.lock
+      begin
         return if @graceful or @closed
         logger.debug { "#{self.class}##{__method__} gracefully closing" }
         @graceful = true
-        push(KILL_TOKEN)
+        @cond.broadcast
+      ensure
+        @mutex.unlock rescue nil
       end
       nil
     end
 
     def close
-      @mutex.synchronize do
+      @mutex.lock
+      begin
         return if @closed
         @closed = true
+        @cond.broadcast
+      ensure
+        @mutex.unlock rescue nil
       end
     end
 
     def closed?
       @mutex.synchronize { !!@closed }
     end
-
-    private
-      def clear_reads_on_pop?
-        @clear_reads_on_pop
-      end
   end
 end
 end
