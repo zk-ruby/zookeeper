@@ -82,6 +82,17 @@ module Common
       nil
     end
 
+    def open
+      @mutex.lock
+      begin
+        return unless @closed
+        @closed = @graceful = false
+        @cond.broadcast
+      ensure
+        @mutex.unlock rescue nil
+      end
+    end
+
     def close
       @mutex.lock
       begin
