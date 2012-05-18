@@ -17,7 +17,6 @@ unless defined?(::JRUBY_VERSION)
     LBORDER = ('-' * 35) << '< '
     RBORDER = ' >' << ('-' * 35) 
 
-
     def mark(thing)
       logger << "\n#{LBORDER}#{thing}#{RBORDER}\n\n"
     end

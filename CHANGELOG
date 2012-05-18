@@ -1,3 +1,14 @@
+v1.2.0 Stop the World, I Wanna fork()
+
+  * changed pause/resume methods to pause_before_fork_in_parent
+    and resume_after_fork_in_parent to match their ZK counterparts
+
+  * replaced the Queue in QueueWithPipe (really have to change that name)
+    with an Array and Mutex/ConditionVariable pair. This allows us to 
+    have better control over the shutdown signaling, and lets us resume
+    operations after a pause.
+
+
 v1.1.1 Cleanup after code review (h/t @eric)
 
   * While hunting down this bug: https://bugs.ruby-lang.org/issues/6438
