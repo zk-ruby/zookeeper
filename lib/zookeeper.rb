@@ -5,6 +5,7 @@ require 'monitor'
 require 'forwardable'
 require 'logger'
 require 'benchmark'
+require 'logging'
 
 module Zookeeper
   # establishes the namespace
@@ -33,13 +34,13 @@ require_relative 'zookeeper/client'
 
 module Zookeeper
   include Constants
-
-  unless defined?(@@logger)
-    @@logger = ::Logger.new($stderr).tap { |l| l.level = ENV['ZOOKEEPER_DEBUG'] ? ::Logger::DEBUG : ::Logger::ERROR } 
-  end
-
+  #::Logger.new($stderr).tap { |l| l.level = ENV['ZOOKEEPER_DEBUG'] ? ::Logger::DEBUG : ::Logger::ERROR } 
+  #
+  
+  @@logger = nil unless defined?(@@logger)
+  
   def self.logger
-    @@logger
+    @@logger || ::Logging.logger['Zookeeper']
   end
 
   def self.logger=(logger)

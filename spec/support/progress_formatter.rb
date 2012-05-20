@@ -5,7 +5,7 @@ module RSpec
     module Formatters
       class ProgressFormatter
         def example_started(example)
-          Zookeeper.logger.info(yellow("=====<([ #{example.full_description} ])>====="))
+          ::Logging.logger['spec'].write(yellow("\n=====<([ #{example.full_description} ])>=====\n"))
           super(example)
         end
       end

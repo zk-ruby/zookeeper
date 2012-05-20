@@ -1,16 +1,28 @@
 module Zookeeper
   module Logger
     def self.included(mod)
+      return false if mod < self    # avoid infinite recursion
+      mod.class_eval do 
+        def self.logger
+          ::Zookeeper.logger || ::Logging.logger[logger_name]
+        end
+      end
       mod.extend(self)
     end
 
-    def self.const_missing(sym)
-      return ::Logger.const_get(sym) if ::Logger.const_defined?(sym)
-      super
-    end
+    def self.set_default
+      ::Logging.logger['Zookeeper'].tap do |ch_root|
+        ::Logging.appenders.stderr.tap do |serr|
+          serr.layout = ::Logging.layouts.pattern(
+            :pattern => '%.1l, [%d] %c30.30{2}:  %m\n',
+            :date_pattern => '%Y-%m-%d %H:%M:%S.%6N' 
+          )
 
-    def self.new(*a, &b)
-      ::Logger.new(*a, &b)
+          ch_root.add_appenders(serr)
+        end
+
+        ch_root.level = ENV['ZOOKEEPER_DEBUG'] ? :debug : :off
+      end
     end
 
     private
@@ -22,7 +34,7 @@ module Zookeeper
       end
 
       def logger
-        ::Zookeeper.logger
+        @logger ||= (::Zookeeper.logger || ::Logging.logger[self.class.logger_name]) # logger_name defined in ::Logging::Utils
       end
   end
 end
