@@ -3,7 +3,7 @@ module Zookeeper
 end
 
 layout = Logging.layouts.pattern(
-  :pattern => '%.1l, [%d #%p] %30.30c{2}:  %m\n',
+  :pattern => '%.1l, [%d #%p]:  %m\n',
   :date_pattern => '%Y-%m-%d %H:%M:%S.%6N' 
 )
 
