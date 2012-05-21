@@ -1,3 +1,13 @@
+v1.2.2 avoid race while waiting for connection
+
+  * There was a possible race in CZookeeper#wait_until_connected where if we
+    couldn't connect to the port specified (localhost:28271) then we wound up
+    burning 100% CPU and spinning. This solution fixes that by hooking into the
+    event delivery and keeping track of what the current state is. When there's
+    a change, we use a ConditionVariable to wake up threads that were waiting
+    until the connection was connected. Additionally, we now respect the
+    timeout parameter again.
+
 v1.2.1 simplify assert_open
 
   * The client methods were all calling assert_open before performing an
