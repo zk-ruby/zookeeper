@@ -117,8 +117,7 @@ class ZookeeperBase
   # if either of these happen, the user will need to renegotiate a connection via reopen
   def assert_open
     @mutex.synchronize do
-      raise Exceptions::SessionExpired if state == ZOO_EXPIRED_SESSION_STATE
-      raise Exceptions::NotConnected   unless connected?
+      raise Exceptions::NotConnected if closed?
       if forked?
         raise InheritedConnectionError, <<-EOS.gsub(/(?:^|\n)\s*/, ' ').strip
           You tried to use a connection inherited from another process 
