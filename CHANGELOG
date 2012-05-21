@@ -1,3 +1,5 @@
+v1.1.2 backport change from 1.2.1: make assert_open more sane
+
 v1.1.1 Cleanup after code review (h/t @eric)
 
   * While hunting down this bug: https://bugs.ruby-lang.org/issues/6438

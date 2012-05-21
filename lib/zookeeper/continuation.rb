@@ -111,11 +111,6 @@ module Zookeeper
         else
           return @rval
         end
-<<<<<<< HEAD
-      ensure
-        @mutex.unlock
-=======
->>>>>>> b1e005c... make assert_open more sane
       end
     end
 
