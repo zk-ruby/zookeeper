@@ -405,7 +405,7 @@ class JavaBase
 
   def assert_open
     # XXX don't know how to check for valid session state!
-    raise ZookeeperException::NotConnected unless connected?
+    raise NotConnected unless connected?
   end
 
   # set the watcher object/proc that will receive all global events (such as session/state events)
