@@ -82,6 +82,9 @@ module Zookeeper
       @mutex  = Mutex.new
       @cond   = ConditionVariable.new
       @rval   = nil
+
+      # make this error reporting more robust if necessary, right now, just set to state
+      @error  = nil
       
       # set to true when an event occurs that would cause the caller to
       # otherwise block forever
@@ -90,9 +93,17 @@ module Zookeeper
 
     # the caller calls this method and receives the response from the async loop
     def value
-      @mutex.lock
-      begin
-        @cond.wait(@mutex) until @rval
+      @mutex.synchronize do
+        @cond.wait(@mutex) until @rval or @error
+
+        case @error
+        when nil
+          # ok, nothing to see here, carry on
+        when ZOO_EXPIRED_SESSION_STATE
+          raise Exceptions::SessionExpired, "connection has expired"
+        else
+          raise Exceptions::NotConnected, "connection state is #{STATE_NAMES[@error]}"
+        end
 
         case @rval.length
         when 1
@@ -100,8 +111,11 @@ module Zookeeper
         else
           return @rval
         end
+<<<<<<< HEAD
       ensure
         @mutex.unlock
+=======
+>>>>>>> b1e005c... make assert_open more sane
       end
     end
 
@@ -124,13 +138,24 @@ module Zookeeper
     # implementation, but it's more important to get *something* working and
     # passing specs, then refactor to make everything sane
     # 
+    #
     def submit(czk)
+      state = czk.zkrb_state    # check the state of the connection
+
+      if @meth == :state        # if the method is a state call
+        @rval = [state]         # we're done, no error
+        return deliver!
+
+      elsif state != ZOO_CONNECTED_STATE  # otherwise, we must be connected
+        @error = state                    # so set the error
+        return deliver!                   # and we're out
+      end
+
       rc, *_ = czk.__send__(:"zkrb_#{@meth}", *async_args)
       
-      # if this is an state call, async call, or we failed to submit it
-      if (@meth == :state) or user_callback? or (rc != ZOK)
-        @rval = [rc]           # create the repsonse
-        deliver!               # wake the caller and we're out
+      if user_callback? or (rc != ZOK)  # async call, or we failed to submit it
+        @rval = [rc]                    # create the repsonse
+        deliver!                        # wake the caller and we're out
       end
     end
 
@@ -152,9 +177,6 @@ module Zookeeper
 
         logger.debug { "async_args, meth: #{meth} ary: #{ary.inspect}, #{callback_arg_idx}" }
 
-        # this is not already an async call
-        # so we replace the req_id with the ZKRB_ASYNC_CONTN_ID so the 
-        # event thread knows to dispatch it itself
         ary[callback_arg_idx] ||= self
 
         ary
@@ -165,11 +187,8 @@ module Zookeeper
       end
 
       def deliver!
-        @mutex.lock
-        begin
+        @mutex.synchronize do
           @cond.signal
-        ensure
-          @mutex.unlock rescue nil
         end
       end
   end # Base
