@@ -51,3 +51,11 @@ RSpec.configure do |config|
   end
 end
 
+require 'pp'
+
+if RUBY_VERSION == '1.9.3'
+  trap('USR1') do
+    threads = Thread.list.map { |th| th.backtrace }
+    pp threads
+  end
+end

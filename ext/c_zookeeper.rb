@@ -70,7 +70,10 @@ class CZookeeper
     @running_cond = @mutex.new_cond
 
     # used to signal we've received the connected event
-    @connected_cond = @mutex.new_cond
+    @state_cond = @mutex.new_cond
+
+    # the current state of the connection
+    @state = ZOO_CLOSED_STATE
 
     @pipe_read, @pipe_write = IO.pipe
     
@@ -167,12 +170,13 @@ class CZookeeper
   # if timeout is nil, we never time out, and wait forever for CONNECTED state
   #
   def wait_until_connected(timeout=10)
-    # this begin/ensure/end style is recommended by tarceri
-    # no need to create a context for every mutex grab
 
-    wait_until_running(timeout)
+    return false unless wait_until_running(timeout)
 
-    Thread.pass until connected? or is_unrecoverable
+    @mutex.synchronize do
+      @state_cond.wait(timeout) unless (@state == ZOO_CONNECTED_STATE)
+    end
+
     connected?
   end
 
@@ -222,13 +226,10 @@ class CZookeeper
     #
     # returns true if we're running, false if we timed out
     def wait_until_running(timeout=5) 
-      @mutex.lock
-      begin
+      @mutex.synchronize do
         return true if @_running
         @running_cond.wait(timeout)
         !!@_running
-      ensure
-        @mutex.unlock rescue nil
       end
     end
 
@@ -286,11 +287,17 @@ class CZookeeper
       while hash = zkrb_get_next_event_st()
         logger.debug { "#{self.class}##{__method__} got #{hash.inspect} " }
 
-        # notify when we get this event so we know we're connected
-        if hash.values_at(:req_id, :type, :state) == CONNECTED_EVENT_VALUES[1..2]
-          notify_connected!
-        end
+        if (hash[:req_id] == ZKRB_GLOBAL_CB_REQ) && (hash[:type] == -1)
+          ev_state = hash[:state]
 
+          if @state != ev_state
+            @mutex.synchronize do
+              @state = ev_state
+              @state_cond.broadcast
+            end
+          end
+        end
+        
         cntn = @reg.in_flight.delete(hash[:req_id])
 
         if cntn and not cntn.user_callback?     # this is one of "our" continuations 
@@ -307,14 +314,11 @@ class CZookeeper
     def event_thread_await_running
       logger.debug { "event_thread waiting until running: #{@_running}" }
 
-      @mutex.lock
-      begin
+      @mutex.synchronize do
         @running_cond.wait_until { @_running or @_shutting_down }
         logger.debug { "event_thread running: #{@_running}" }
 
         raise ShuttingDownException if @_shutting_down
-      ensure
-        @mutex.unlock rescue nil
       end
     end
 
@@ -329,22 +333,16 @@ class CZookeeper
     def zkc_set_running_and_notify!
       logger.debug { "#{self.class}##{__method__}" }
 
-      @mutex.lock
-      begin
+      @mutex.synchronize do
         @_running = true
         @running_cond.broadcast
-      ensure
-        @mutex.unlock rescue nil
       end
     end
 
-    def notify_connected!
-      @mutex.lock
-      begin
-        @connected_cond.broadcast
-      ensure
-        @mutex.unlock rescue nil
-      end
-    end
+#     def notify_state_change!
+#       @mutex.synchronize do
+#         @state_cond.broadcast
+#       end
+#     end
 end
 end
