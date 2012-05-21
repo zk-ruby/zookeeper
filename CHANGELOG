@@ -1,3 +1,17 @@
+v1.2.1 simplify assert_open
+
+  * The client methods were all calling assert_open before performing an
+    action. This was meant as a fail-early lightweight check of the connection
+    state and it worked well when we were running against the mt code. Now this
+    requires us to use a Continuation and make our way through the event loop.
+    There is a possible deadlock this release should solve that was caused by 
+    the assert_open code holding a lock while making an async call through
+    the event loop. This is no longer the case. The assert_open call only checks
+    that the current handle hasn't been closed, the connection-state checking
+    now occurs before submitting a request on the event iteration thread, and
+    the behavior should be the same as it was before. If the underlying
+    connection is not in the 'connected' state, an exception will be raised.
+
 v1.2.0 Stop the World, I Wanna fork()
 
   * changed pause/resume methods to pause_before_fork_in_parent
