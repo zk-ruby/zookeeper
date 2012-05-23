@@ -1,4 +1,4 @@
 module Zookeeper
-  VERSION = '1.2.2'
+  VERSION = '1.2.3'
   DRIVER_VERSION = '3.3.5'
 end

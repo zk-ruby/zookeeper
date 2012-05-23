@@ -1,3 +1,12 @@
+v1.2.3 ensure that all threads are woken up on shutdown
+
+  * There was an edge case where a call would be queued up and its thread
+    sleeping waiting for a response, but that response would never come because
+    the connection was shut down. This version includes a patch for that case
+    to ensure that if a call is in 'pending' state, and shutdown time arrives
+    that all pending threads will receive a Zookeeper::Exceptions::NotConnected
+    exception.
+
 v1.2.2 avoid race while waiting for connection
 
   * There was a possible race in CZookeeper#wait_until_connected where if we
