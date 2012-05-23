@@ -256,7 +256,7 @@ class CZookeeper
       if @_shutting_down and not (@_closed or is_unrecoverable)
         logger.debug { "we're in shutting down state, ensuring we have no in-flight completions" }
 
-        until @reg.in_flight.empty?
+        while @reg.in_flight.empty? and not is_unrecoverable
           zkrb_iterate_event_loop
           iterate_event_delivery
         end
@@ -265,7 +265,10 @@ class CZookeeper
       end
 
       if @_shutting_down # in shutting down state, no more can be added to @reg
-        remaining = @reg.next_batch
+        # anything left over after all that gets the finger
+        remaining = @reg.next_batch + @reg.in_flight
+
+        @reg.in_flight.clear
 
         while cb = remaining.shift
           cb.shutdown!
