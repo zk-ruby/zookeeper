@@ -130,7 +130,7 @@ protected
   def dispatch_next_callback(hash)
     return nil unless hash
 
-    Zookeeper.logger.debug { "get_next_event returned: #{prettify_event(hash).inspect}" }
+    logger.debug { "get_next_event returned: #{prettify_event(hash).inspect}" }
     
     is_completion = hash.has_key?(:rc)
     

@@ -3,12 +3,14 @@ module Zookeeper
 end
 
 layout = Logging.layouts.pattern(
-  :pattern => '%.1l, [%d #%p]:  %m\n',
+  :pattern => '%.1l, [%d #%p] %25.25c{2}:  %m\n',
   :date_pattern => '%Y-%m-%d %H:%M:%S.%6N' 
 )
 
 appender = (ENV['ZOOKEEPER_DEBUG'] || ENV['ZKRB_DEBUG']) ? Logging.appenders.stderr : Logging.appenders.file(Zookeeper::TEST_LOG_PATH)
 appender.layout = layout
+appender.auto_flushing = 25
+appender.flush_period = 5
 
 %w[spec Zookeeper].each do |name|
   ::Logging.logger[name].tap do |log|

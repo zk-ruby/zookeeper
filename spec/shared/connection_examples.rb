@@ -11,7 +11,7 @@ shared_examples_for "connection" do
   end
 
   after :all do
-    Zookeeper.logger.warn "running shared examples after :all"
+    logger.warn "running shared examples after :all"
 
     with_open_zk(connection_string) do |z|
       rm_rf(z, path)

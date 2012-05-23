@@ -143,13 +143,13 @@ class CZookeeper
   # requests may still be added during this time, but they will not be
   # processed until you call resume
   def pause_before_fork_in_parent
-    logger.debug { "#{self.class}##{__method__}" }
+    logger.debug { "##{__method__}" }
     @mutex.synchronize { stop_event_thread }
   end
 
   # call this if 'pause' was previously called to start the event loop again
   def resume_after_fork_in_parent
-    logger.debug { "#{self.class}##{__method__}" }
+    logger.debug { "##{__method__}" }
 
     @mutex.synchronize do 
       @_shutting_down = nil
@@ -210,7 +210,7 @@ class CZookeeper
     #
     def stop_event_thread
       if @event_thread
-        logger.debug { "#{self.class}##{__method__}" }
+        logger.debug { "##{__method__}" }
         shut_down!
         wake_event_loop!
         @event_thread.join 
@@ -239,7 +239,7 @@ class CZookeeper
 
     def event_thread_body
       Thread.current.abort_on_exception = true
-      logger.debug { "#{self.class}##{__method__} starting event thread" }
+      logger.debug { "##{__method__} starting event thread" }
 
       event_thread_await_running
 
@@ -280,7 +280,7 @@ class CZookeeper
     rescue ShuttingDownException
       logger.error { "event thread saw @_shutting_down, bailing without entering loop" }
     ensure
-      logger.debug { "#{self.class}##{__method__} exiting" }
+      logger.debug { "##{__method__} exiting" }
     end
 
     def submit_pending_calls
@@ -302,7 +302,7 @@ class CZookeeper
 
     def iterate_event_delivery
       while hash = zkrb_get_next_event_st()
-        logger.debug { "#{self.class}##{__method__} got #{hash.inspect} " }
+        logger.debug { "##{__method__} got #{hash.inspect} " }
 
         if (hash[:req_id] == ZKRB_GLOBAL_CB_REQ) && (hash[:type] == -1)
           ev_state = hash[:state]
@@ -341,14 +341,14 @@ class CZookeeper
 
     # use this method to set the @_shutting_down flag to true
     def shut_down!
-      logger.debug { "#{self.class}##{__method__}" }
+      logger.debug { "##{__method__}" }
 
       @mutex.synchronize { @_shutting_down = true }
     end
 
     # called by underlying C code to signal we're running
     def zkc_set_running_and_notify!
-      logger.debug { "#{self.class}##{__method__}" }
+      logger.debug { "##{__method__}" }
 
       @mutex.synchronize do
         @_running = true

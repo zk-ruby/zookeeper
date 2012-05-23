@@ -61,7 +61,7 @@ describe 'Zookeeper chrooted' do
 
   describe do
     before :all do
-      Zookeeper.logger.warn "running before :all"
+      logger.warn "running before :all"
 
       with_open_zk do |z|
         z.create(:path => chroot_path, :data => '')

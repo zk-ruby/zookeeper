@@ -40,7 +40,7 @@ module Zookeeper
   @@logger = nil unless defined?(@@logger)
   
   def self.logger
-    @@logger || ::Logging.logger['Zookeeper']
+    @@logger
   end
 
   def self.logger=(logger)
