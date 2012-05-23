@@ -22,7 +22,7 @@ module Zookeeper
         @mutex = Mutex.new
       end
 
-      def synchronized
+      def synchronize
         @mutex.lock
         begin
           yield self
@@ -85,10 +85,6 @@ module Zookeeper
 
       # make this error reporting more robust if necessary, right now, just set to state
       @error  = nil
-      
-      # set to true when an event occurs that would cause the caller to
-      # otherwise block forever
-      @interrupt = false
     end
 
     # the caller calls this method and receives the response from the async loop
@@ -99,6 +95,8 @@ module Zookeeper
         case @error
         when nil
           # ok, nothing to see here, carry on
+        when :shutdown
+          raise Exceptions::NotConnected, "the connection is shutting down"
         when ZOO_EXPIRED_SESSION_STATE
           raise Exceptions::SessionExpired, "connection has expired"
         else
@@ -160,6 +158,15 @@ module Zookeeper
 
     def state_call?
       @meth == :state
+    end
+
+    # interrupt the sleeping thread with a NotConnected error
+    def shutdown!
+      @mutex.synchronize do
+        return if @rval or @error
+        @error = :shutdown
+        @cond.broadcast
+      end
     end
 
     protected

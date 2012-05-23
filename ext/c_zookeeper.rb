@@ -184,6 +184,10 @@ class CZookeeper
     # submits a job for processing 
     # blocks the caller until result has returned
     def submit_and_block(meth, *args)
+      @mutex.synchronize do
+        raise Exceptions::NotConnected if @_shutting_down
+      end
+
       cnt = Continuation.new(meth, *args)
       @reg.lock 
       begin
@@ -249,7 +253,7 @@ class CZookeeper
       # ok, if we're exiting the event loop, and we still have a valid connection
       # and there's still completions we're waiting to hear about, then we
       # should pump the handle before leaving this loop
-      if @_shutting_down and not (@_closed or is_unrecoverable or @reg.in_flight.empty?)
+      if @_shutting_down and not (@_closed or is_unrecoverable)
         logger.debug { "we're in shutting down state, ensuring we have no in-flight completions" }
 
         until @reg.in_flight.empty?
@@ -260,6 +264,13 @@ class CZookeeper
         logger.debug { "finished completions" }
       end
 
+      if @_shutting_down # in shutting down state, no more can be added to @reg
+        remaining = @reg.next_batch
+
+        while cb = remaining.shift
+          cb.shutdown!
+        end
+      end
     rescue ShuttingDownException
       logger.error { "event thread saw @_shutting_down, bailing without entering loop" }
     ensure
