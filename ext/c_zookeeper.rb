@@ -254,11 +254,12 @@ class CZookeeper
       # and there's still completions we're waiting to hear about, then we
       # should pump the handle before leaving this loop
       if @_shutting_down and not (@_closed or is_unrecoverable)
-        logger.debug { "we're in shutting down state, ensuring we have no in-flight completions" }
+        logger.debug { "we're in shutting down state, there are #{@reg.in_flight.length} in_flight completions" }
 
-        until @reg.in_flight.empty? 
+        until @reg.in_flight.empty? or is_unrecoverable
           zkrb_iterate_event_loop
           iterate_event_delivery
+          logger.debug { "there are #{@reg.in_flight} in_flight completions left" }
         end
 
         logger.debug { "finished completions" }
@@ -267,6 +268,8 @@ class CZookeeper
       if @_shutting_down # in shutting down state, no more can be added to @reg
         # anything left over after all that gets the finger
         remaining = @reg.next_batch + @reg.in_flight.values
+
+        logger.debug { "there are #{remaining.length} completions to awaken" }
 
         @reg.in_flight.clear
 
