@@ -7,6 +7,10 @@ module Zookeeper
     !!ENV['TRAVIS']
   end
 
+  def self.default_cnx_host
+    ENV['ZK_DEFAULT_HOST'] || 'localhost'
+  end
+
   @test_port ||= spawn_zookeeper? ? 21811 : 2181
 
   class << self
@@ -14,7 +18,7 @@ module Zookeeper
   end
 
   def self.default_cnx_str
-    "localhost:#{test_port}"
+    "#{default_cnx_host}:#{test_port}"
   end
 end
 

@@ -26,7 +26,7 @@ end
 
 ZK_DEBUG = (ENV['DEBUG'] or ARGV.any? { |arg| arg == '--debug' })
 ZK_DEV = ENV['ZK_DEV']
-DEBUG_CFLAGS = " -O0 -ggdb3 -DHAVE_DEBUG -fstack-protector"
+DEBUG_CFLAGS = " -O0 -ggdb3 -DHAVE_DEBUG -fstack-protector-all"
 
 if ZK_DEBUG
   $stderr.puts "*** Setting debug flags. ***"

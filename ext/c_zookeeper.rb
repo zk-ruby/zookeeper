@@ -84,6 +84,8 @@ class CZookeeper
 
     log_level = ENV['ZKC_DEBUG'] ? ZOO_LOG_LEVEL_DEBUG : ZOO_LOG_LEVEL_ERROR
 
+    logger.info { "initiating connection to #{@host}" }
+
     zkrb_init(@host)#, :zkc_log_level => log_level)
 
     start_event_thread
