@@ -1,3 +1,9 @@
+v1.2.4 fix buffer overflow in CZookeeper client_id code
+  
+  * the 'passwd' part of the struct is a char[16], but isn't null terminated.
+    use rb_str_new with an explicit length, rather than rb_str_new2 which
+    uses strlen().
+    
 v1.2.3 ensure that all threads are woken up on shutdown
 
   * There was an edge case where a call would be queued up and its thread
