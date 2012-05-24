@@ -17,7 +17,7 @@ namespace :zkrb do
   end
 
   task :clobber => :clean do
-    rm_rf %w[Makefile c lib bin include]
+    rm_rf %w[Makefile c lib bin include ._c]
   end
 end
 

@@ -26,7 +26,7 @@ end
 
 ZK_DEBUG = (ENV['DEBUG'] or ARGV.any? { |arg| arg == '--debug' })
 ZK_DEV = ENV['ZK_DEV']
-DEBUG_CFLAGS = " -O0 -ggdb3 -DHAVE_DEBUG"
+DEBUG_CFLAGS = " -O0 -ggdb3 -DHAVE_DEBUG -fstack-protector"
 
 if ZK_DEBUG
   $stderr.puts "*** Setting debug flags. ***"
@@ -60,6 +60,9 @@ Dir.chdir(HERE) do
       puts(cmd = "tar xzf #{BUNDLE} 2>&1")
       raise "'#{cmd}' failed" unless system(cmd)
     end
+
+    # clean up stupid apple rsrc fork bullshit
+    FileUtils.rm_f(Dir['**/._*'].select{|p| test(?f, p)})
 
     Dir.chdir(BUNDLE_PATH) do        
       configure = "./configure --prefix=#{HERE} --with-pic --without-cppunit --disable-dependency-tracking #{$EXTRA_CONF} 2>&1"
