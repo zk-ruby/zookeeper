@@ -885,15 +885,15 @@ static VALUE method_client_id(VALUE self) {
   char buf[32];
   const clientid_t *cid = zoo_client_id(zk->zh);
 
-  if (strlen(cid->passwd) != 16) { 
-    zkrb_debug("passwd is not null-terminated");
-  } else {
-    hexbufify(buf, cid->passwd, 16);
-    zkrb_debug("password in hex is: %s", buf);
-  }
+/*  if (strlen(cid->passwd) != 16) { */
+/*    zkrb_debug("passwd is not null-terminated");*/
+/*  } else {*/
+/*    hexbufify(buf, cid->passwd, 16);*/
+/*    zkrb_debug("password in hex is: %s", buf);*/
+/*  }*/
 
   VALUE session_id = LL2NUM(cid->client_id);
-  VALUE passwd = rb_str_new2(cid->passwd);
+  VALUE passwd = rb_str_new(cid->passwd, 16);
 
   VALUE client_id_obj = rb_class_new_instance(0, RARRAY_PTR(rb_ary_new()), ZookeeperClientId);
 
