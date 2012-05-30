@@ -42,6 +42,11 @@ $LDFLAGS = "#{$libraries} #{$LDFLAGS}"
 $LIBPATH = ["#{HERE}/lib"]
 $DEFLIBPATH = []
 
+# fix for rbenv?
+if $LIBRUBYARG == ''
+  $LIBRUBYARG = RbConfig::CONFIG['LIBRUBYARG']
+end
+
 def safe_sh(cmd)
   puts cmd
   system(cmd)
