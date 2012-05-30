@@ -87,6 +87,8 @@ Dir.chdir("#{HERE}/lib") do
 end
 $LIBS << " -lzookeeper_st_gem"
 
+have_func('rb_thread_blocking_region')
+
 $CFLAGS << ' -Wall' if ZK_DEV
 create_makefile 'zookeeper_c'
 
