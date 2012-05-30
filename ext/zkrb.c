@@ -824,7 +824,6 @@ static VALUE method_zkrb_iterate_event_loop(VALUE self) {
   return INT2FIX(rc);
 }
 
-
 static VALUE method_has_events(VALUE self) {
   VALUE rb_event;
   FETCH_DATA_PTR(self, zk);
@@ -882,15 +881,7 @@ static VALUE method_recv_timeout(VALUE self) {
 // returns a CZookeeper::ClientId object with the values set for session_id and passwd
 static VALUE method_client_id(VALUE self) {
   FETCH_DATA_PTR(self, zk);
-  char buf[32];
   const clientid_t *cid = zoo_client_id(zk->zh);
-
-/*  if (strlen(cid->passwd) != 16) { */
-/*    zkrb_debug("passwd is not null-terminated");*/
-/*  } else {*/
-/*    hexbufify(buf, cid->passwd, 16);*/
-/*    zkrb_debug("password in hex is: %s", buf);*/
-/*  }*/
 
   VALUE session_id = LL2NUM(cid->client_id);
   VALUE passwd = rb_str_new(cid->passwd, 16);
