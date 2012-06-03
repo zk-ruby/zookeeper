@@ -31,7 +31,7 @@ class ZookeeperBase
   ZOO_LOG_LEVEL_DEBUG  = 4
 
 
-  def_delegators :@czk, :get_children, :exists, :delete, :get, :set,
+  def_delegators :czk, :get_children, :exists, :delete, :get, :set,
     :set_acl, :get_acl, :client_id, :sync, :wait_until_connected
 
   # some state methods need to be more paranoid about locking to ensure the correct
@@ -41,7 +41,8 @@ class ZookeeperBase
     syms.each do |sym|
       class_eval(<<-EOM, __FILE__, __LINE__+1)
         def #{sym}
-          false|@mutex.synchronize { @czk and @czk.#{sym} }
+          c = @mutex.synchronize { @czk }
+          false|(c && c.#{sym})
         end
       EOM
     end
@@ -117,7 +118,7 @@ class ZookeeperBase
   # if either of these happen, the user will need to renegotiate a connection via reopen
   def assert_open
     @mutex.synchronize do
-      raise Exceptions::NotConnected if closed?
+      raise Exceptions::NotConnected if !@czk or @czk.closed?
       if forked?
         raise InheritedConnectionError, <<-EOS.gsub(/(?:^|\n)\s*/, ' ').strip
           You tried to use a connection inherited from another process 
@@ -152,7 +153,7 @@ class ZookeeperBase
   # is pretty damn annoying. this is used to clean things up.
   def create(*args)
     # since we don't care about the inputs, just glob args
-    rc, new_path = @mutex.synchronize { @czk.create(*args) }
+    rc, new_path = czk.create(*args)
     [rc, strip_chroot_from(new_path)]
   end
 
@@ -173,7 +174,7 @@ class ZookeeperBase
 
   def state
     return ZOO_CLOSED_STATE if closed?
-    @mutex.synchronize { @czk.state }
+    czk.state
   end
 
   def session_id
@@ -190,7 +191,9 @@ class ZookeeperBase
 
   # we are closed if there is no @czk instance or @czk.closed?
   def closed?
-    @mutex.synchronize { !@czk or @czk.closed? } 
+    czk.closed?
+  rescue Exceptions::NotConnected
+    true
   end
 
   def pause_before_fork_in_parent
@@ -241,6 +244,12 @@ protected
 
     # pass this along to the Zookeeper::Common implementation
     super(req_id, meth_name, call_opts)
+  end
+
+  def czk
+    rval = @mutex.synchronize { @czk }
+    raise Exceptions::NotConnected unless rval
+    rval
   end
 
   # if we're chrooted, this method will strip the chroot prefix from +path+

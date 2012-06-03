@@ -176,6 +176,7 @@ class CZookeeper
     return false unless wait_until_running(timeout)
 
     @mutex.synchronize do
+      # TODO: use deadline here
       @state_cond.wait(timeout) unless (@state == ZOO_CONNECTED_STATE)
     end
 
@@ -191,15 +192,12 @@ class CZookeeper
       end
 
       cnt = Continuation.new(meth, *args)
-      @reg.lock 
-      begin
+      @reg.synchronize do |r|
         if meth == :state
-          @reg.state_check << cnt
+          r.state_check << cnt
         else
-          @reg.pending << cnt
+          r.pending << cnt
         end
-      ensure
-        @reg.unlock rescue nil
       end
       wake_event_loop!
       cnt.value
