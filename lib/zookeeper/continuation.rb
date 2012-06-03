@@ -6,6 +6,8 @@ module Zookeeper
     include Constants
     include Logger
 
+    OPERATION_TIMEOUT = 30 # seconds
+
     # for keeping track of which continuations are pending, and which ones have
     # been submitted and are awaiting a repsonse
     # 
@@ -79,8 +81,8 @@ module Zookeeper
     def initialize(meth, *args)
       @meth   = meth
       @args   = args
-      @mutex  = Mutex.new
-      @cond   = ConditionVariable.new
+      @mutex  = Monitor.new
+      @cond   = @mutex.new_cond
       @rval   = nil
 
       # make this error reporting more robust if necessary, right now, just set to state
@@ -88,9 +90,28 @@ module Zookeeper
     end
 
     # the caller calls this method and receives the response from the async loop
+    # this method has a hard-coded 30 second timeout as a safety feature. No
+    # call should take more than 20s (as the session timeout is set to 20s)
+    # so if any call takes longer than that, something has gone horribly wrong.
+    #
+    # @raise [ContinuationTimeoutError] if a response is not received within 30s
+    #
     def value
+      time_to_stop = Time.now + OPERATION_TIMEOUT
+      now = nil
+
       @mutex.synchronize do
-        @cond.wait(@mutex) until @rval or @error
+        while true
+          now = Time.now
+          break if @rval or @error or (now > time_to_stop)
+
+          deadline = time_to_stop.to_f - now.to_f
+          @cond.wait(deadline)
+        end
+
+        if now > time_to_stop
+          raise ContinuationTimeoutError, "response for meth: #{meth.inspect}, args: #{args.inspect}, not received within #{OPERATION_TIMEOUT} seconds"
+        end
 
         case @error
         when nil

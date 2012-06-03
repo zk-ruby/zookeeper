@@ -84,6 +84,10 @@ stacktrace:
   # maybe use this for continuation
   class InterruptedException  < ZookeeperException ; end
 
+  # raised when a continuation operation takes more time than is reasonable and
+  # the thread should be awoken. (i.e. prevents a call that never returns)
+  class ContinuationTimeoutError < ZookeeperException; end
+
   # raised when the user tries to use a connection after a fork()
   # without calling reopen() in the C client
   #
