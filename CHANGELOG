@@ -1,3 +1,24 @@
+v1.2.5 cleanup locking in ZookeeperBase
+
+  * There were several situations where we would hold the lock before calling
+    a method on CZookeeper (inquisitors and #create in particular). This
+    exposed us to deadlocks in situations where an async event would be
+    delivered (probably a SESSION_EXPIRED event), but the callback block could
+    not be called because the dispatch thread would block on the mutex being
+    held by the caller of create. 
+
+    This version cleans up that usage, and ensures that the only time we hold
+    the mutex is during startup/shutdown (when the value of @czk may be changing),
+    and in all other cases we grab the mutex, dereference, and unlock then perform
+    whatever action on the reference. 
+
+  * Add a safety net to Continuation (which will soon be called 'Promise' or
+    'Future' at the request of @eric). If any operation takes more than 30s
+    an exception will be raised in the calling thread. The session timeout
+    setting makes it so that no operation should take more than 20s, so we know
+    if we haven't received a reply in *longer* than that, something has gone
+    awry. 
+
 v1.2.4 fix buffer overflow in CZookeeper client_id code
   
   * the 'passwd' part of the struct is a char[16], but isn't null terminated.
