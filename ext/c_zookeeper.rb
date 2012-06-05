@@ -161,7 +161,7 @@ class CZookeeper
 
   def state
     return ZOO_CLOSED_STATE if closed?
-    submit_and_block(:state)
+    @mutex.synchronize { @state }
   end
 
   # this implementation is gross, but i don't really see another way of doing it
@@ -172,12 +172,17 @@ class CZookeeper
   # if timeout is nil, we never time out, and wait forever for CONNECTED state
   #
   def wait_until_connected(timeout=10)
+    time_to_stop = Time.now + timeout
 
     return false unless wait_until_running(timeout)
 
     @mutex.synchronize do
-      # TODO: use deadline here
-      @state_cond.wait(timeout) unless (@state == ZOO_CONNECTED_STATE)
+      while true 
+        now = Time.now
+        break if (@state == ZOO_CONNECTED_STATE) || @_shutting_down || @_closed || (now > time_to_stop)
+        delay = time_to_stop.to_f - now.to_f
+        @state_cond.wait(delay)
+      end
     end
 
     connected?
