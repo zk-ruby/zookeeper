@@ -1,3 +1,22 @@
+v1.2.7 further lock adjustments, deadlock risk reduction
+
+  * Refactor ZookeeperBase to not hold onto the mutex while waiting
+    for the dispatch thread to exit and the CZookeeper instance to close.
+    Instead, lock, nil out @czk, and unlock (which will cause all calls to
+    raise NotConnected), and then carry on with the shutdown procedure, greatly
+    reducing the chances of a deadlock. Also add a hardcoded 30 second timeout
+    to the join of the shutdown thread, that way we won't hang indefinitely in
+    the case of an unforseen condition.
+
+  * Improve the CZookeeper#wait_until_connected to use a deadline approach
+    to waiting for both running and connected states. Also, handle the 
+    'nil' (wait forever) timeout properly.
+
+  * Wake all waiting threads on all ConditionVariables when CZookeeper#shut_down!
+    is called
+
+v1.2.6 fix build on fedora
+
 v1.2.5 cleanup locking in ZookeeperBase
 
   * There were several situations where we would hold the lock before calling
