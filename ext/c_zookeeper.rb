@@ -348,7 +348,12 @@ class CZookeeper
     def shut_down!
       logger.debug { "##{__method__}" }
 
-      @mutex.synchronize { @_shutting_down = true }
+      @mutex.synchronize do 
+        @_shutting_down = true
+        # ollie ollie oxen all home free!
+        @state_cond.broadcast
+        @running_cond.broadcast
+      end
     end
 
     # called by underlying C code to signal we're running
@@ -360,11 +365,5 @@ class CZookeeper
         @running_cond.broadcast
       end
     end
-
-#     def notify_state_change!
-#       @mutex.synchronize do
-#         @state_cond.broadcast
-#       end
-#     end
 end
 end
