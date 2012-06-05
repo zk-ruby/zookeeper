@@ -172,16 +172,21 @@ class CZookeeper
   # if timeout is nil, we never time out, and wait forever for CONNECTED state
   #
   def wait_until_connected(timeout=10)
-    time_to_stop = Time.now + timeout
+    time_to_stop = timeout ? Time.now + timeout : nil
 
     return false unless wait_until_running(timeout)
 
     @mutex.synchronize do
       while true 
-        now = Time.now
-        break if (@state == ZOO_CONNECTED_STATE) || @_shutting_down || @_closed || (now > time_to_stop)
-        delay = time_to_stop.to_f - now.to_f
-        @state_cond.wait(delay)
+        if timeout
+          now = Time.now
+          break if (@state == ZOO_CONNECTED_STATE) || @_shutting_down || @_closed || (now > time_to_stop)
+          delay = time_to_stop.to_f - now.to_f
+          @state_cond.wait(delay)
+        else
+          break if (@state == ZOO_CONNECTED_STATE) || @_shutting_down || @_closed
+          @state_cond.wait
+        end
       end
     end
 
