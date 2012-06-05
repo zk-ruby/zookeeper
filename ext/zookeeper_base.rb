@@ -130,20 +130,34 @@ class ZookeeperBase
   # potentially dangerous and should only be called after a fork() to close
   # this instance
   def close!
-    @czk && @czk.close
+    inst, @czk = @czk, nil
+    inst && inst.close
   end
 
   # close the connection normally, stops the dispatch thread and closes the
   # underlying connection cleanly
   def close
-    shutdown_thread = Thread.new do
-      @mutex.synchronize do
+    sd_thread = nil
+
+    @mutex.synchronize do
+      return unless @czk
+      inst, @czk = @czk, nil
+    
+      sd_thread = Thread.new(inst) do |_inst|
         stop_dispatch_thread!
-        close!
+        _inst.close
       end
     end
 
-    shutdown_thread.join unless event_dispatch_thread?
+    # if we're on the event dispatch thread for some stupid reason, then don't join
+    unless event_dispatch_thread?
+      # hard-coded 30 second delay, don't hang forever
+      if sd_thread.join(30) != sd_thread 
+        logger.error { "timed out waiting for shutdown thread to exit" }
+      end
+    end
+
+    nil
   end
 
   # the C lib doesn't strip the chroot path off of returned path values, which
