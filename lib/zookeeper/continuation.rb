@@ -109,8 +109,8 @@ module Zookeeper
           @cond.wait(deadline)
         end
 
-        if now > time_to_stop
-          raise ContinuationTimeoutError, "response for meth: #{meth.inspect}, args: #{args.inspect}, not received within #{OPERATION_TIMEOUT} seconds"
+        if (now > time_to_stop) and !@rval and !@error
+          raise Exceptions::ContinuationTimeoutError, "response for meth: #{meth.inspect}, args: #{args.inspect}, not received within #{OPERATION_TIMEOUT} seconds"
         end
 
         case @error
