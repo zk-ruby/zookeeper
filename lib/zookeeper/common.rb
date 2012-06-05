@@ -10,15 +10,7 @@ module Common
     @dispatcher && (@dispatcher == Thread.current)
   end
 
-protected
-  def get_next_event(blocking=true)
-    @event_queue.pop(!blocking).tap do |event|
-      logger.debug { "#{self.class}##{__method__} delivering event #{event.inspect}" }
-    end
-  rescue ThreadError
-    nil
-  end
-
+private
   def setup_call(meth_name, opts)
     req_id = nil
     @mutex.synchronize {
@@ -71,21 +63,9 @@ protected
         return
       end
 
-      logger.debug {  "starting dispatch thread" }
+      logger.debug { "starting dispatch thread" }
 
-      @dispatcher = Thread.new do
-        while true
-          begin
-            dispatch_next_callback(get_next_event(true))
-          rescue QueueWithPipe::ShutdownException
-            logger.info { "dispatch thread exiting, got shutdown exception" }
-            break
-          rescue Exception => e
-            $stderr.puts ["#{e.class}: #{e.message}", e.backtrace.map { |n| "\t#{n}" }.join("\n")].join("\n")
-          end
-        end
-        signal_dispatch_thread_exit!
-      end
+      @dispatcher = Thread.new(&method(:dispatch_thread_body))
     end
   end
   
@@ -120,11 +100,12 @@ protected
     end
   end
 
-  def signal_dispatch_thread_exit!
-    @mutex.synchronize do
-      logger.debug { "dispatch thread exiting!" }
-      @dispatch_shutdown_cond.broadcast
+  def get_next_event(blocking=true)
+    @event_queue.pop(!blocking).tap do |event|
+      logger.debug { "#{self.class}##{__method__} delivering event #{event.inspect}" }
     end
+  rescue ThreadError
+    nil
   end
 
   def dispatch_next_callback(hash)
@@ -177,7 +158,28 @@ protected
     end
   end
 
-private
+  def dispatch_thread_body
+    while true
+      begin
+        dispatch_next_callback(get_next_event(true))
+      rescue QueueWithPipe::ShutdownException
+        logger.info { "dispatch thread exiting, got shutdown exception" }
+        return
+      rescue Exception => e
+        $stderr.puts ["#{e.class}: #{e.message}", e.backtrace.map { |n| "\t#{n}" }.join("\n")].join("\n")
+      end
+    end
+  ensure
+    signal_dispatch_thread_exit!
+  end
+
+  def signal_dispatch_thread_exit!
+    @mutex.synchronize do
+      logger.debug { "dispatch thread exiting!" }
+      @dispatch_shutdown_cond.broadcast
+    end
+  end
+
   def prettify_event(hash)
     hash.dup.tap do |h|
       # pretty up the event display
