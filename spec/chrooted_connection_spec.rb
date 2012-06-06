@@ -26,9 +26,11 @@ describe 'Zookeeper chrooted' do
 
       describe 'create' do
         before do
-          with_open_zk do |z|
-            rm_rf(z, chroot_path)
-          end
+          with_open_zk { |z| rm_rf(z, chroot_path) }
+        end
+
+        after do
+          with_open_zk { |z| rm_rf(z, chroot_path) }
         end
 
         it %[should successfully create the path] do
