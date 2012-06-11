@@ -78,9 +78,11 @@ module Zookeeper
 
     attr_accessor :meth, :block, :rval
 
+    attr_reader :args
+
     def initialize(meth, *args)
       @meth   = meth
-      @args   = args
+      @args   = args.freeze
       @mutex  = Monitor.new
       @cond   = @mutex.new_cond
       @rval   = nil
@@ -110,7 +112,7 @@ module Zookeeper
         end
 
         if (now > time_to_stop) and !@rval and !@error
-          raise Exceptions::ContinuationTimeoutError, "response for meth: #{meth.inspect}, args: #{args.inspect}, not received within #{OPERATION_TIMEOUT} seconds"
+          raise Exceptions::ContinuationTimeoutError, "response for meth: #{meth.inspect}, args: #{@args.inspect}, not received within #{OPERATION_TIMEOUT} seconds"
         end
 
         case @error
