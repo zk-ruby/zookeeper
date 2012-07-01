@@ -443,7 +443,7 @@ class JavaBase
     # this is a no-op in java-land
   end
 
-  protected
+  private
     def jzk
       @mutex.synchronize { @jzk }
     end
@@ -451,8 +451,13 @@ class JavaBase
     def handle_keeper_exception
       yield
     rescue JZK::KeeperException => e
-      e.cause.code.intValue
+      if e.respond_to?(:cause) and e.cause and e.cause.respond_to?(:code) and e.cause.code and e.cause.code.respond_to?(:intValue)
+        e.cause.code.intValue
+      else
+        raise e # dunno what happened, just raise it
+      end
     end
+
 
     def call_type(callback, watcher)
       if callback
@@ -481,7 +486,6 @@ class JavaBase
       }
     end
 
-  private
     def replace_jzk!
       orig_jzk = @jzk
       @jzk = JZK::ZooKeeper.new(@host, DEFAULT_SESSION_TIMEOUT, JavaCB::WatcherCallback.new(event_queue, :client => self))
