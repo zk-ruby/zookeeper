@@ -28,6 +28,20 @@ Portions contributed to the open source community by HPDC, L.P.
 
 sudo gem install zookeeper
 
+### rbenv is awesome
+
+Let me start out by saying I prefer rvm, and that I really don't know a whole lot about linking on OS X. Or Linux. Any suggestions or constructive insults would be greatly appreciated if you have insight into what i'm doing wrong here.
+
+So, it seems that [ruby-build][] doesn't use `--enable-shared` by default. I'm told this is for speed. 
+
+If you run into problems with installing this gem (specifically with linking ex. `Undefined symbols for architecture x86_64`) and you're using rbenv, for now you need to ensure that your ruby was built with `--enable-shared`. I'm sorry for the inconvenience. (no, really)
+
+```shell
+~ $ CONFIGURE_OPTS='--enable-shared --disable-install-doc' rbenv install 1.9.3-p194
+```
+
+[ruby-build]: https://github.com/sstephenson/ruby-build
+
 ## Usage
 
 Connect to a server:
