@@ -1,3 +1,7 @@
+v1.2.10 minor bug fix in java code
+  
+  * Don't obscure a legitimate exception because of an unexpected nil
+
 v1.2.7 further lock adjustments, deadlock risk reduction
 
   * Refactor ZookeeperBase to not hold onto the mutex while waiting
