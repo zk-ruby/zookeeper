@@ -45,8 +45,6 @@ Zookeeper.require_lib(
   'zookeeper/client_methods'
 )
 
-#require 'backports' if RUBY_VERSION =~ /\A1\.8\./
-
 # ok, now we construct the client
 Zookeeper.require_lib 'zookeeper/client'
 
