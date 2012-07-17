@@ -1,5 +1,6 @@
-require_relative 'c_zookeeper'
 require 'forwardable'
+
+Zookeeper.require_root 'ext/c_zookeeper'
 
 # The low-level wrapper-specific methods for the C lib
 # subclassed by the top-level Zookeeper class

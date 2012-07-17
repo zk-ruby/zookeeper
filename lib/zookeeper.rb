@@ -8,29 +8,47 @@ require 'benchmark'
 require 'logging'
 
 module Zookeeper
-  # establishes the namespace
+  ZOOKEEPER_ROOT = File.expand_path('../..', __FILE__)
+
+  # require a path relative to the lib directory
+  # this is to avoid monkeying explicitly with $LOAD_PATH
+  #
+  # @private
+  def self.require_lib(*relpaths)
+    relpaths.each do |relpath|
+      require File.join(ZOOKEEPER_ROOT, 'lib', relpath)
+    end
+  end
+
+  # require a path that's relative to ZOOKEEPER_ROOT
+  # @private
+  def self.require_root(*relpaths)
+    relpaths.each do |relpath|
+      require File.join(ZOOKEEPER_ROOT, relpath)
+    end
+  end
 end
 
-require File.expand_path('../zookeeper/core_ext', __FILE__)
+Zookeeper.require_lib(
+  'zookeeper/core_ext',
+  'zookeeper/monitor',
+  'zookeeper/logger',
+  'zookeeper/forked',
+  'zookeeper/latch',
+  'zookeeper/acls',
+  'zookeeper/constants',
+  'zookeeper/exceptions',
+  'zookeeper/continuation',
+  'zookeeper/common',
+  'zookeeper/callbacks',
+  'zookeeper/stat',
+  'zookeeper/client_methods'
+)
 
-require 'backports' if RUBY_VERSION =~ /\A1\.8\./
-
-require_relative 'zookeeper/monitor'
-require_relative 'zookeeper/logger'
-require_relative 'zookeeper/forked'
-require_relative 'zookeeper/latch'
-require_relative 'zookeeper/acls'
-require_relative 'zookeeper/constants'
-require_relative 'zookeeper/exceptions'
-require_relative 'zookeeper/continuation'
-require_relative 'zookeeper/common'
-require_relative 'zookeeper/callbacks'
-require_relative 'zookeeper/stat'
-require_relative 'zookeeper/client_methods'
+#require 'backports' if RUBY_VERSION =~ /\A1\.8\./
 
 # ok, now we construct the client
-
-require_relative 'zookeeper/client'
+Zookeeper.require_lib 'zookeeper/client'
 
 module Zookeeper
   include Constants
@@ -90,7 +108,7 @@ module Zookeeper
 end
 
 # just for first test, get rid of this soon
-require_relative 'zookeeper/compatibility'
+Zookeeper.require_lib 'zookeeper/compatibility'
 
 if ENV['ZKRB_DEBUG']
   Zookeeper.debug_level = Zookeeper::Constants::ZOO_LOG_LEVEL_DEBUG

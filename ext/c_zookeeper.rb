@@ -1,8 +1,11 @@
-require_relative '../lib/zookeeper/logger'
-require_relative '../lib/zookeeper/common'
-require_relative '../lib/zookeeper/constants'
-require_relative '../lib/zookeeper/exceptions' # zookeeper_c depends on exceptions defined in here
-require_relative 'zookeeper_c'
+Zookeeper.require_lib(
+  'zookeeper/logger',
+  'zookeeper/common',
+  'zookeeper/constants',
+  'zookeeper/exceptions' # zookeeper_c depends on exceptions defined in here
+)
+
+Zookeeper.require_root 'ext/zookeeper_c'
 
 # require File.expand_path('../zookeeper_c', __FILE__)
 

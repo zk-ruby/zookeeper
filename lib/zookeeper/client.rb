@@ -3,9 +3,9 @@
 # or which class we're subclassing.
 
 if defined?(::JRUBY_VERSION)
-  require_relative('../../java/java_base')
+  Zookeeper.require_root('java/java_base')
 else
-  require_relative('../../ext/zookeeper_base')
+  Zookeeper.require_root('ext/zookeeper_base')
 end
 
 
