@@ -1,3 +1,12 @@
+v1.2.11 remove dependency on backports gem
+
+  * Somewhat naively we were requiring the backports gem to provide
+    Kernel#require_relative. This release implements similar functionlity
+    inside the Zookeeper module and doesn't affect the global namespace.
+
+    We apologise for the inconvenience.
+
+
 v1.2.10 minor bug fix in java code
   
   * Don't obscure a legitimate exception because of an unexpected nil
