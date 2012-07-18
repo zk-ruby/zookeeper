@@ -6,7 +6,6 @@ v1.2.11 remove dependency on backports gem
 
     We apologise for the inconvenience.
 
-
 v1.2.10 minor bug fix in java code
   
   * Don't obscure a legitimate exception because of an unexpected nil
