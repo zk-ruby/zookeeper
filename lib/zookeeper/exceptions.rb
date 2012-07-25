@@ -9,9 +9,9 @@ module Exceptions
       CONST_MISSING_WARNING = <<-EOS
 
 ------------------------------------------------------------------------------------------
-WARNING! THE ZOOKEEPER NAMESPACE HAS CHNAGED AS OF 1.0!
+WARNING! THE ZOOKEEPER NAMESPACE HAS CHANGED AS OF 1.0!
 
-Please update your code to use the new heirarchy!
+Please update your code to use the new hierarchy!
 
 The constant that got you this was ZookeeperExceptions::ZookeeperException::%s
 
