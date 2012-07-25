@@ -118,14 +118,30 @@ private
     hash[:stat] = Zookeeper::Stat.new(hash[:stat]) if hash.has_key?(:stat)
     hash[:acl] = hash[:acl].map { |acl| Zookeeper::ACLs::ACL.new(acl) } if hash[:acl]
     
-    callback_context = is_completion ? get_completion(hash[:req_id]) : get_watcher(hash[:req_id])
+    callback_context = nil
 
-    # When connectivity to the server has been lost (as indicated by SESSION_EVENT)
-    # we want to rerun the callback at a later time when we eventually do have
-    # a valid response.
-    if hash[:type] == Zookeeper::Constants::ZOO_SESSION_EVENT
-      # XXX: setup_completion changed arity, is this setup_completion necessary anymore?
-      is_completion ? setup_completion(hash[:req_id], callback_context) : setup_watcher(hash[:req_id], callback_context)
+    @mutex.synchronize do
+      callback_context = is_completion ? get_completion(hash[:req_id]) : get_watcher(hash[:req_id])
+
+      # When connectivity to the server has been lost (as indicated by SESSION_EVENT)
+      # we want to rerun the callback at a later time when we eventually do have
+      # a valid response.
+      #
+      # XXX: this code needs to be refactored, get_completion shouldn't remove the context
+      #      in the case of a session event. this would involve changing the
+      #      platform implementations as well, as the C version does some funky
+      #      stuff to maintain compatibilty w/ java in chrooted envs.
+      #
+      #      The point is that this lock ^^ is unnecessary if the functions above lock internally
+      #      and don't do the wrong thing, requiring us to do the below.
+      #
+      if hash[:type] == Zookeeper::Constants::ZOO_SESSION_EVENT
+        if is_completion 
+          setup_completion(hash[:req_id], callback_context) 
+        else
+          setup_watcher(hash[:req_id], callback_context)
+        end
+      end
     end
 
     if callback_context
