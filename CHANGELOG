@@ -1,3 +1,7 @@
+v1.2.12 improve locking in dispatch_next_callback
+
+  * Possible fix for an edgy NoMethodError on nil
+
 v1.2.11 remove dependency on backports gem
 
   * Somewhat naively we were requiring the backports gem to provide

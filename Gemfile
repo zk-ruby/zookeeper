@@ -21,9 +21,8 @@ platform :mri_19 do
 end
 
 group :docs do
-  gem 'yard', '~> 0.8.0'
-
   platform :mri_19 do
+    gem 'yard', '~> 0.8.0'
     gem 'redcarpet'
   end
 end
