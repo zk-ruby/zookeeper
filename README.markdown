@@ -30,6 +30,8 @@ sudo gem install zookeeper
 
 ### rbenv is awesome
 
+UPDATE: this appears to have been fixed by @eric in [this patch](http://git.io/PEPgnA). If you use rbenv, please report any issues, but I believe it should work now.
+
 Let me start out by saying I prefer rvm, and that I really don't know a whole lot about linking on OS X. Or Linux. Any suggestions or constructive insults would be greatly appreciated if you have insight into what i'm doing wrong here.
 
 So, it seems that [ruby-build][] doesn't use `--enable-shared` by default. I'm told this is for speed. 

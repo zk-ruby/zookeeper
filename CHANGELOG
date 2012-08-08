@@ -1,3 +1,8 @@
+v1.2.13 fix build under rbenv
+
+  * h/t to Eric Lindvall for fixing #22 in http://git.io/PEPgnA
+    build reportedly works in rbenv now.
+
 v1.2.12 improve locking in dispatch_next_callback
 
   * Possible fix for an edgy NoMethodError on nil
