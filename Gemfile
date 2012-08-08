@@ -4,10 +4,6 @@ gemspec
 
 gem 'rake', '~> 0.9.0'
 
-platform :mri_19 do
-  gem 'simplecov', :group => :coverage, :require => false
-end
-
 group :test do
   gem "rspec", "~> 2.8.0"
   gem 'eventmachine', '1.0.0.beta.4'
@@ -16,22 +12,20 @@ group :test do
   gem 'zk-server', '~> 1.0.0'
 end
 
-platform :mri_19 do
+# ffs, :platform appears to be COMLETELY BROKEN so we just DO THAT HERE
+# ...BY HAND
+
+if RUBY_VERSION != '1.8.7' && !defined?(JRUBY_VERSION)
   gem 'simplecov', :group => :coverage, :require => false
-end
+  gem 'yard', '~> 0.8.0', :group => :docs
+  gem 'redcarpet',        :group => :docs
 
-group :docs do
-  platform :mri_19 do
-    gem 'yard', '~> 0.8.0'
-    gem 'redcarpet'
+  group :development do
+    gem 'pry'
+    gem 'guard',        :require => false
+    gem 'guard-rspec',  :require => false
+    gem 'guard-shell',  :require => false
   end
-end
-
-group :development do
-  gem 'pry'
-  gem 'guard',        :require => false
-  gem 'guard-rspec',  :require => false
-  gem 'guard-shell',  :require => false
 end
 
 # vim:ft=ruby
