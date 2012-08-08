@@ -18,7 +18,7 @@ end
 $CFLAGS = "#{$CFLAGS}".gsub("$(cflags)", "").gsub("-arch ppc", "")
 $LDFLAGS = "#{$LDFLAGS}".gsub("$(ldflags)", "").gsub("-arch ppc", "")
 $CXXFLAGS = " -std=gnu++98 #{$CFLAGS}"
-$CPPFLAGS = $ARCH_FLAG = $DLDFLAGS = ""
+$CPPFLAGS = $ARCH_FLAG = ""
 
 if RUBY_VERSION == '1.8.7'
   $CFLAGS << ' -DZKRB_RUBY_187'
