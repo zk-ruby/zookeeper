@@ -321,6 +321,13 @@ class JavaBase
     end
   end
 
+  def add_auth(req_id, scheme, cert)
+    handle_keeper_exception do
+      jzk.addAuthInfo(scheme, cert.to_java_bytes)
+      Code::OK
+    end
+  end
+
   def create(req_id, path, data, callback, acl, flags)
     handle_keeper_exception do
       acl   = Array(acl).map{ |a| JZKD::ACL.from_ruby_acl(a) }

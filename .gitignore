@@ -11,3 +11,7 @@ tmp/
 .rvmrc
 .zkserver
 coverage
+
+*.swp
+*.swo
+

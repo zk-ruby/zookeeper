@@ -25,7 +25,7 @@
  * provide a fork-safe library when you have native threads you don't own
  * running around. If you fork when a thread holds a mutex, and that thread
  * is not the fork-caller, that mutex can never be unlocked, and is therefore
- * a ticking time-bomb in the child. The only way to guarantee safety is to 
+ * a ticking time-bomb in the child. The only way to guarantee safety is to
  * either replace all of your mutexes and conditions and such after a fork
  * (which is what we do on the ruby side), or avoid the problem altogether
  * and not use a multithreaded library on the backend. Since we can't replace
@@ -42,11 +42,11 @@
  * open socket it's got before calling zookeeper_close. This prevents
  * corruption of the client/server state. Without this code, zookeeper_close
  * in the child would actually send an "Ok, we're closing" message with the
- * parent's session id, causing the parent to hit an assert() case in 
+ * parent's session id, causing the parent to hit an assert() case in
  * zookeeper_process, and cause a SIGABRT. With this code in place, we get back
  * a ZCONNECTIONLOSS from zookeeper_close in the child (which we ignore), and
  * the parent continues on.
- * 
+ *
  * You will notice below we undef 'THREADED', which would be set if we were
  * using the 'mt' library. We also conditionally include additional cases
  * ('SYNC', 'SYNC_WATCH') inside of some of the methods defined here. These
@@ -138,7 +138,7 @@ inline static void assert_valid_params(VALUE reqid, VALUE path) {
     case T_BIGNUM:
       break;
     default:
-      rb_raise(rb_eTypeError, "reqid must be Fixnum/Bignum");  
+      rb_raise(rb_eTypeError, "reqid must be Fixnum/Bignum");
   }
 
   Check_Type(path, T_STRING);
@@ -212,7 +212,7 @@ static int destroy_zkrb_instance(zkrb_instance_data_t* zk) {
 
     rv = zookeeper_close(zk->zh);
 
-    zkrb_debug("obj_id: %lx, zookeeper_close returned %d, calling context: %p", zk->object_id, rv, ctx); 
+    zkrb_debug("obj_id: %lx, zookeeper_close returned %d, calling context: %p", zk->object_id, rv, ctx);
     zkrb_calling_context_free((zkrb_calling_context *) ctx);
   }
 
@@ -415,6 +415,19 @@ static VALUE method_sync(VALUE self, VALUE reqid, VALUE path) {
   return INT2FIX(rc);
 }
 
+static VALUE method_add_auth(VALUE self, VALUE reqid, VALUE scheme, VALUE cert) {
+  int rc = ZOK;
+
+  Check_Type(scheme, T_STRING);
+  Check_Type(cert, T_STRING);
+
+  FETCH_DATA_PTR(self, zk);
+
+  rc = zkrb_call_zoo_add_auth(zk->zh, RSTRING_PTR(scheme), RSTRING_PTR(cert), RSTRING_LEN(cert), zkrb_void_callback, CTX_ALLOC(zk, reqid));
+
+  return INT2FIX(rc);
+}
+
 
 static VALUE method_create(VALUE self, VALUE reqid, VALUE path, VALUE data, VALUE async, VALUE acls, VALUE flags) {
   STANDARD_PREAMBLE(self, zk, reqid, path, async, Qfalse, call_type);
@@ -500,7 +513,7 @@ static VALUE method_get(VALUE self, VALUE reqid, VALUE path, VALUE async, VALUE 
   int data_len = MAX_ZNODE_SIZE;
   struct Stat stat;
 
-  char * data = NULL; 
+  char * data = NULL;
   if (IS_SYNC(call_type)) {
     data = malloc(MAX_ZNODE_SIZE); /* ugh */
     memset(data, 0, sizeof(data));
@@ -533,7 +546,7 @@ static VALUE method_get(VALUE self, VALUE reqid, VALUE path, VALUE async, VALUE 
 
     default:
       invalid_call_type=1;
-      goto cleanup;    
+      goto cleanup;
       break;
   }
 
@@ -598,7 +611,7 @@ static VALUE method_set_acl(VALUE self, VALUE reqid, VALUE path, VALUE acls, VAL
 
   int rc=ZOK, invalid_call_type=0;
   switch (call_type) {
-    
+
 #ifdef THREADED
     case SYNC:
       rc = zkrb_call_zoo_set_acl(zk->zh, RSTRING_PTR(path), FIX2INT(version), aclptr);
@@ -662,7 +675,7 @@ static VALUE method_get_acl(VALUE self, VALUE reqid, VALUE path, VALUE async) {
 #define is_shutting_down(self) RTEST(rb_iv_get(self, "@_shutting_down"))
 
 static VALUE method_zkrb_get_next_event(VALUE self, VALUE blocking) {
-  // dbg.h 
+  // dbg.h
   check_debug(!is_closed(self), "we are closed, not trying to get event");
 
   char buf[64];
@@ -672,12 +685,12 @@ static VALUE method_zkrb_get_next_event(VALUE self, VALUE blocking) {
     check_debug(!is_closed(self), "we're closed in the middle of method_zkrb_get_next_event, bailing");
 
     zkrb_event_t *event = zkrb_dequeue(zk->queue, 1);
-    
+
     if (event == NULL) {
-      if (NIL_P(blocking) || (blocking == Qfalse)) { 
+      if (NIL_P(blocking) || (blocking == Qfalse)) {
         goto error;
-      } 
-      else { 
+      }
+      else {
         // if we're shutting down, don't enter this section, we don't want to block
         check_debug(!is_shutting_down(self), "method_zkrb_get_next_event, we're shutting down, don't enter blocking section");
 
@@ -706,7 +719,7 @@ static VALUE method_zkrb_get_next_event(VALUE self, VALUE blocking) {
     return hash;
   }
 
-  error: 
+  error:
     return Qnil;
 }
 
@@ -763,7 +776,7 @@ static VALUE method_zkrb_iterate_event_loop(VALUE self) {
   FETCH_DATA_PTR(self, zk);
 
   fd_set rfds, wfds, efds;
-  FD_ZERO(&rfds); FD_ZERO(&wfds); FD_ZERO(&efds); 
+  FD_ZERO(&rfds); FD_ZERO(&wfds); FD_ZERO(&efds);
 
   int fd=0, interest=0, events=0, rc=0, maxfd=0;
   struct timeval tv;
@@ -797,7 +810,7 @@ static VALUE method_zkrb_iterate_event_loop(VALUE self) {
   if (rc > 0) {
     if (FD_ISSET(fd, &rfds)) {
       events |= ZOOKEEPER_READ;
-    } 
+    }
     if (FD_ISSET(fd, &wfds)) {
       events |= ZOOKEEPER_WRITE;
     }
@@ -845,7 +858,7 @@ static VALUE method_close_handle(VALUE self) {
     zkrb_debug_inst(self, "CLOSING_ZK_INSTANCE");
     print_zkrb_instance_data(zk);
   }
-  
+
   // this is a value on the ruby side we can check to see if destroy_zkrb_instance
   // has been called
   rb_iv_set(self, "@_closed", Qtrue);
@@ -927,6 +940,7 @@ static void zkrb_define_methods(void) {
   rb_define_method(CZookeeper, "zkrb_set",          method_set,           5);
   rb_define_method(CZookeeper, "zkrb_set_acl",      method_set_acl,       5);
   rb_define_method(CZookeeper, "zkrb_get_acl",      method_get_acl,       3);
+  rb_define_method(CZookeeper, "zkrb_add_auth",     method_add_auth,      3);
 
   rb_define_singleton_method(CZookeeper, "zoo_set_log_level", method_zoo_set_log_level, 1);
 
@@ -939,9 +953,6 @@ static void zkrb_define_methods(void) {
   DEFINE_METHOD(sync, 2);
   DEFINE_METHOD(zkrb_iterate_event_loop, 0);
   DEFINE_METHOD(zkrb_get_next_event_st, 0);
-
-  // TODO
-  // DEFINE_METHOD(add_auth, 3);
 
   // methods for the ruby-side event manager
   DEFINE_METHOD(zkrb_get_next_event, 1);

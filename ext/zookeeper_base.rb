@@ -33,7 +33,7 @@ class ZookeeperBase
 
 
   def_delegators :czk, :get_children, :exists, :delete, :get, :set,
-    :set_acl, :get_acl, :client_id, :sync, :wait_until_connected
+    :set_acl, :get_acl, :client_id, :sync, :add_auth, :wait_until_connected
 
   def self.threadsafe_inquisitor(*syms)
     syms.each do |sym|
