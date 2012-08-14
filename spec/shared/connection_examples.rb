@@ -273,6 +273,16 @@ shared_examples_for "connection" do
     end # async
   end # set
 
+  describe :add_auth do
+    it %[should return ZOK if everything goes swimingly] do
+      result = zk.add_auth(:scheme => 'digest', :cert => 'test_user:test_password')
+
+      # Er, there's likely a better way to do this...
+      i = result[:rc].respond_to?(:intValue) ? result[:rc].intValue : i
+      i.should == Zookeeper::ZOK
+    end
+  end
+
   describe :get_children do
     before do
       @children = %w[child0 child1 child2]

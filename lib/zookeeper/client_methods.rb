@@ -13,6 +13,17 @@ module ClientMethods
     super
   end
 
+  def add_auth(options = {})
+    assert_open
+    assert_supported_keys(options, [:scheme, :cert])
+    assert_required_keys(options, [:scheme, :cert])
+
+    req_id = setup_call(:add_auth, options)
+    rc = super(req_id, options[:scheme], options[:cert])
+
+    { :req_id => req_id, :rc => rc }
+  end
+
   def get(options = {})
     assert_open
     assert_supported_keys(options, [:path, :watcher, :watcher_context, :callback, :callback_context])
