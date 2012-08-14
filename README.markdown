@@ -44,6 +44,10 @@ If you run into problems with installing this gem (specifically with linking ex.
 
 [ruby-build]: https://github.com/sstephenson/ruby-build
 
+### A note for REE users
+
+The zookeeper client is required to send a heartbeat packet every N seconds to the server. If it misses its deadline 3 times in a row, the session will be lost. The way the client is implemented in versions `>= 1.2`, a *ruby* thread acts as the event thread (this was necessary to provide a fork-safe client with a parent process that is able to preserve state). Some users have reported issues where under load in "massive codebases," they have problems where calls will time out. Given the nature of the thread scheduler in 1.8, one should be careful if upgrading from `0.4.4` to `>= 1.2`.
+
 ## Usage
 
 Connect to a server:
