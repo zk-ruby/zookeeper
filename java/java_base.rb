@@ -324,7 +324,7 @@ class JavaBase
   def add_auth(req_id, scheme, cert)
     handle_keeper_exception do
       jzk.addAuthInfo(scheme, cert.to_java_bytes)
-      Code::OK
+      Code::Ok
     end
   end
 

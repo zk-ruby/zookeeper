@@ -277,9 +277,12 @@ shared_examples_for "connection" do
     it %[should return ZOK if everything goes swimingly] do
       result = zk.add_auth(:scheme => 'digest', :cert => 'test_user:test_password')
 
-      # Er, there's likely a better way to do this...
-      i = result[:rc].respond_to?(:intValue) ? result[:rc].intValue : i
-      i.should == Zookeeper::ZOK
+      rv = result[:rc]
+
+      # gahhh, this shouldn't be like this.... :P
+      rv = rv.respond_to?(:intValue) ? rv.intValue : rv
+
+      rv.should == Zookeeper::ZOK
     end
   end
 
