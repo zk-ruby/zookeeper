@@ -61,8 +61,9 @@ module Zookeeper
       :set_acl => 3,
       :get_children => 2,
       :state => 0,
+      :add_auth => 2
     }
-    
+
     # maps the method name to the async return hash keys it should use to
     # deliver the results
     METH_TO_ASYNC_RESULT_KEYS = {
@@ -74,6 +75,7 @@ module Zookeeper
       :get_acl      => [:rc, :acl, :stat],
       :set_acl      => [:rc],
       :get_children => [:rc, :strings, :stat],
+      :add_auth     => [:rc]
     }
 
     attr_accessor :meth, :block, :rval

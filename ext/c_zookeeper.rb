@@ -34,7 +34,7 @@ class CZookeeper
   end
 
   # wrap these calls in our sync->async special sauce
-  %w[get set exists create delete get_acl set_acl get_children].each do |sym|
+  %w[get set exists create delete get_acl set_acl get_children add_auth].each do |sym|
     class_eval(<<-EOS, __FILE__, __LINE__+1)
       def #{sym}(*args)
         submit_and_block(:#{sym}, *args)
