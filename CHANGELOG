@@ -1,3 +1,11 @@
+v1.2.14 merge add_auth pull request, reduce chances for ContinuationTimeoutError
+
+  * added support for the add_auth call (h/t: @bradhe) see pull req #25
+
+  * fix a corner case where some pending Continuations may get stuck without
+    being shutdown when the event thread exits. This would lead to a 
+    ContinuationTimeoutError being raised after 30s as a failsafe. 
+
 v1.2.13 fix build under rbenv
 
   * h/t to Eric Lindvall for fixing #22 in http://git.io/PEPgnA
