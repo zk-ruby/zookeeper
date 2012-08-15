@@ -278,7 +278,8 @@ class CZookeeper
         logger.debug { "finished completions" }
       end
 
-      if @_shutting_down # in shutting down state, no more can be added to @reg
+      # in shutting down state, no more can be added to @reg
+      if @_shutting_down  # TODO: this should probably also happen in the is_unrecoverable case!
         # anything left over after all that gets the finger
         remaining = @reg.next_batch + @reg.in_flight.values
 
