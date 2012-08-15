@@ -279,7 +279,7 @@ class CZookeeper
       end
 
       # in shutting down state, no more can be added to @reg
-      if @_shutting_down  # TODO: this should probably also happen in the is_unrecoverable case!
+      # if @_shutting_down  # TODO: this should probably also happen in the is_unrecoverable case!
         # anything left over after all that gets the finger
         remaining = @reg.next_batch + @reg.in_flight.values
 
@@ -290,7 +290,7 @@ class CZookeeper
         while cb = remaining.shift
           cb.shutdown!
         end
-      end
+      # end
     rescue ShuttingDownException
       logger.error { "event thread saw @_shutting_down, bailing without entering loop" }
     ensure
