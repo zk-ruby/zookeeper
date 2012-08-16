@@ -90,10 +90,7 @@ class ZookeeperBase
   end
 
   def initialize(host, timeout = 10, watcher=nil)
-    @watcher_reqs = {}
-    @completion_reqs = {}
-
-    @current_req_id = 0
+    @req_registry = RequestRegistry.new
 
     @dispatcher = @czk = nil
 

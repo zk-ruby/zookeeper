@@ -3,8 +3,6 @@ require 'zookeeper/common/queue_with_pipe'
 
 module Zookeeper
 module Common
-  # sigh, i guess define this here?
-  ZKRB_GLOBAL_CB_REQ   = -1
 
   def event_dispatch_thread?
     @dispatcher && (@dispatcher == Thread.current)
@@ -48,7 +46,7 @@ private
   
   def get_watcher(req_id)
     @mutex.synchronize {
-      (req_id == ZKRB_GLOBAL_CB_REQ) ? @watcher_reqs[req_id] : @watcher_reqs.delete(req_id)
+      (req_id == Constants::ZKRB_GLOBAL_CB_REQ) ? @watcher_reqs[req_id] : @watcher_reqs.delete(req_id)
     }
   end
   
