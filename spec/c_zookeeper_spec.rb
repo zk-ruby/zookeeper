@@ -40,7 +40,7 @@ unless defined?(::JRUBY_VERSION)
         it %[should have a connection event after being connected] do
           event = wait_until(2) { @event_queue.pop }
           event.should be
-          event[:req_id].should == Zookeeper::Common::ZKRB_GLOBAL_CB_REQ
+          event[:req_id].should == Zookeeper::Constants::ZKRB_GLOBAL_CB_REQ
           event[:type].should   == Zookeeper::Constants::ZOO_SESSION_EVENT
           event[:state].should  == Zookeeper::Constants::ZOO_CONNECTED_STATE
         end

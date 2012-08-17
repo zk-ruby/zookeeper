@@ -20,17 +20,11 @@ class ZookeeperBase
   # @private
   class ClientShutdownException < StandardError; end
 
-  # @private
-  KILL_TOKEN = Object.new unless defined?(KILL_TOKEN)
-
-  ZKRB_GLOBAL_CB_REQ   = -1
-
   # debug levels
   ZOO_LOG_LEVEL_ERROR  = 1
   ZOO_LOG_LEVEL_WARN   = 2
   ZOO_LOG_LEVEL_INFO   = 3
   ZOO_LOG_LEVEL_DEBUG  = 4
-
 
   def_delegators :czk, :get_children, :exists, :delete, :get, :set,
     :set_acl, :get_acl, :client_id, :sync, :add_auth, :wait_until_connected
@@ -66,11 +60,8 @@ class ZookeeperBase
   end
   private :reopen_after_fork!
 
-
   def reopen(timeout = 10, watcher=nil)
-    if watcher and (watcher != @default_watcher)
-      raise "You cannot set the watcher to a different value this way anymore!"
-    end
+    raise "You cannot set the watcher to a different value this way anymore!" if watcher
 
     reopen_after_fork! if forked?
 
@@ -79,8 +70,7 @@ class ZookeeperBase
       @czk = CZookeeper.new(@host, @event_queue)
 
       # flushes all outstanding watcher reqs.
-      @watcher_reqs.clear
-      set_default_global_watcher
+      @req_registry.clear_watchers!
       
       @czk.wait_until_connected(timeout)
     end
@@ -90,24 +80,21 @@ class ZookeeperBase
   end
 
   def initialize(host, timeout = 10, watcher=nil)
-    @watcher_reqs = {}
-    @completion_reqs = {}
-
-    @current_req_id = 0
-
-    @dispatcher = @czk = nil
-
-    update_pid!
-    reopen_after_fork!
-    
     # approximate the java behavior of raising java.lang.IllegalArgumentException if the host
     # argument ends with '/'
     raise ArgumentError, "Host argument #{host.inspect} may not end with /" if host.end_with?('/')
 
     @host = host.dup
 
-    @default_watcher = (watcher or get_default_global_watcher)
+    watcher ||= get_default_global_watcher
 
+    @req_registry = RequestRegistry.new(watcher, :chroot_path => chroot_path)
+
+    @dispatcher = @czk = nil
+
+    update_pid!
+    reopen_after_fork!
+    
     yield self if block_given?
 
     reopen(timeout)
@@ -166,7 +153,7 @@ class ZookeeperBase
   def create(*args)
     # since we don't care about the inputs, just glob args
     rc, new_path = czk.create(*args)
-    [rc, strip_chroot_from(new_path)]
+    [rc, @req_registry.strip_chroot_from(new_path)]
   end
 
   def set_debug_level(int)
@@ -176,12 +163,7 @@ class ZookeeperBase
 
   # set the watcher object/proc that will receive all global events (such as session/state events)
   def set_default_global_watcher
-    warn "DEPRECATION WARNING: #{self.class}#set_default_global_watcher ignores block" if block_given?
-
-    @mutex.synchronize do
-#       @default_watcher = block # save this here for reopen() to use
-      @watcher_reqs[ZKRB_GLOBAL_CB_REQ] = { :watcher => @default_watcher, :watcher_context => nil }
-    end
+    raise "NO! YOU CANNOT HAZ set_default_global_watcher"
   end
 
   def state
@@ -233,34 +215,9 @@ class ZookeeperBase
   end
 
 protected
-  # this is a hack: to provide consistency between the C and Java drivers when
-  # using a chrooted connection, we wrap the callback in a block that will
-  # strip the chroot path from the returned path (important in an async create
-  # sequential call). This is the only place where we can hook *just* the C
-  # version. The non-async manipulation is handled in ZookeeperBase#create.
-  # 
-  # TODO: need to move the continuation setup into here, so that it can get 
-  #       added to the callback hash
-  # 
-  def setup_completion(req_id, meth_name, call_opts)
-    if (meth_name == :create) and cb = call_opts[:callback]
-      call_opts[:callback] = lambda do |hash|
-        # in this case the string will be the absolute zookeeper path (i.e.
-        # with the chroot still prepended to the path). Here's where we strip it off
-        hash[:string] = strip_chroot_from(hash[:string])
-
-        # call the original callback
-        cb.call(hash)
-      end
-    end
-
-    # pass this along to the Zookeeper::Common implementation
-    super(req_id, meth_name, call_opts)
-  end
-
   def czk
     rval = @mutex.synchronize { @czk }
-    raise Exceptions::NotConnected unless rval
+    raise Exceptions::NotConnected, "underlying connection was nil" unless rval
     rval
   end
 

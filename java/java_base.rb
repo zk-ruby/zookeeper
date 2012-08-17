@@ -186,9 +186,7 @@ class JavaBase
 #     watcher ||= @default_watcher
 
     @mutex.synchronize do
-      # flushes all outstanding watcher reqs.
-      @watcher_reqs.clear
-      set_default_global_watcher
+      @req_registry.clear_watchers!
 
       replace_jzk!
       wait_until_connected
@@ -205,19 +203,19 @@ class JavaBase
   def initialize(host, timeout=10, watcher=nil, options={})
     @host = host
     @event_queue = QueueWithPipe.new
-    @current_req_id = 0
+
+    watcher ||= get_default_global_watcher()
+
+    @req_registry = RequestRegistry.new(watcher)
 
     @mutex = Monitor.new
     @dispatch_shutdown_cond = @mutex.new_cond
     @connected_latch = Latch.new
 
-    @watcher_reqs = {}
-    @completion_reqs = {}
     @_running = nil
     @_closed  = false
     @options = {}
 
-    @default_watcher = (watcher || get_default_global_watcher)
 
     # allows connected-state handlers to be registered before 
     yield self if block_given?
@@ -413,19 +411,6 @@ class JavaBase
   def assert_open
     # XXX don't know how to check for valid session state!
     raise NotConnected unless connected?
-  end
-
-  # set the watcher object/proc that will receive all global events (such as session/state events)
-  #---
-  # XXX: this code needs to be duplicated from ext/zookeeper_base.rb because
-  # it's called from the initializer, and because of the C impl. we can't have
-  # the two decend from a common base, and a module wouldn't work
-  #
-  # XXX: this is probably a relic?
-  def set_default_global_watcher
-    @mutex.synchronize do
-      @watcher_reqs[ZKRB_GLOBAL_CB_REQ] = { :watcher => @default_watcher, :watcher_context => nil }
-    end
   end
 
   def session_id

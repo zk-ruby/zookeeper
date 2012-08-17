@@ -40,6 +40,7 @@ Zookeeper.require_lib(
   'zookeeper/exceptions',
   'zookeeper/continuation',
   'zookeeper/common',
+  'zookeeper/request_registry',
   'zookeeper/callbacks',
   'zookeeper/stat',
   'zookeeper/client_methods'

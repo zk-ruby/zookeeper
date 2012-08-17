@@ -1,3 +1,10 @@
+v1.3.0 much needed refactor of event and async result delivery
+
+  * event and async blocks were previously mixed in with a bunch of other
+    common code, and shared a Monitor with other unrelated functionality. This
+    code has been gently refactored into its own self-contained class (with its
+    own task-specific lock), which should help with maintenance.
+
 v1.2.14 merge add_auth pull request, reduce chances for ContinuationTimeoutError
 
   * added support for the add_auth call (h/t: @bradhe) see pull req #25
