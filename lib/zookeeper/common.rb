@@ -3,11 +3,6 @@ require 'zookeeper/common/queue_with_pipe'
 
 module Zookeeper
 module Common
-  extend Forwardable
-
-  # XXX: this is assigned in the various base classes, should probably move this elsewhere
-  def_delegators :@req_registry, :setup_call
-
   def event_dispatch_thread?
     @dispatcher && (@dispatcher == Thread.current)
   end
@@ -91,20 +86,6 @@ private
       logger.warn { "Duplicate event received (no handler for req_id #{hash[:req_id]}, event: #{hash.inspect}" }
     end
     true
-  end
-
-  def assert_supported_keys(args, supported)
-    unless (args.keys - supported).empty?
-      raise Zookeeper::Exceptions::BadArguments,
-            "Supported arguments are: #{supported.inspect}, but arguments #{args.keys.inspect} were supplied instead"
-    end
-  end
-
-  def assert_required_keys(args, required)
-    unless (required - args.keys).empty?
-      raise Zookeeper::Exceptions::BadArguments,
-            "Required arguments are: #{required.inspect}, but only the arguments #{args.keys.inspect} were supplied."
-    end
   end
 
   def dispatch_thread_body

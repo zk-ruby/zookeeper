@@ -139,7 +139,7 @@ module Zookeeper
       end
       
       def chrooted?
-        !@chroot_path.empty?
+        @chroot_path && !@chroot_path.empty?
       end
 
       def default_watcher_proc
