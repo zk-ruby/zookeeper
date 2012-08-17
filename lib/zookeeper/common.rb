@@ -3,57 +3,16 @@ require 'zookeeper/common/queue_with_pipe'
 
 module Zookeeper
 module Common
+  extend Forwardable
+
+  # XXX: this is assigned in the various base classes, should probably move this elsewhere
+  def_delegators :@req_registry, :setup_call
 
   def event_dispatch_thread?
     @dispatcher && (@dispatcher == Thread.current)
   end
 
 private
-  def setup_call(meth_name, opts)
-    req_id = nil
-    @mutex.synchronize {
-      req_id = @current_req_id
-      @current_req_id += 1
-      setup_completion(req_id, meth_name, opts) if opts[:callback]
-      setup_watcher(req_id, opts) if opts[:watcher]
-    }
-    req_id
-  end
-
-  def setup_watcher(req_id, call_opts)
-    @mutex.synchronize do
-      @watcher_reqs[req_id] = { 
-        :watcher => call_opts[:watcher],
-        :context => call_opts[:watcher_context] 
-      }
-    end
-  end
-
-  # as a hack, to provide consistency between the java implementation and the C
-  # implementation when dealing w/ chrooted connections, we override this in
-  # ext/zookeeper_base.rb to wrap the callback in a chroot-path-stripping block.
-  #
-  # we don't use meth_name here, but we need it in the C implementation
-  #
-  def setup_completion(req_id, meth_name, call_opts)
-    @mutex.synchronize do
-      @completion_reqs[req_id] = { 
-        :callback => call_opts[:callback],
-        :context => call_opts[:callback_context]
-      }
-    end
-  end
-  
-  def get_watcher(req_id)
-    @mutex.synchronize {
-      (req_id == Constants::ZKRB_GLOBAL_CB_REQ) ? @watcher_reqs[req_id] : @watcher_reqs.delete(req_id)
-    }
-  end
-  
-  def get_completion(req_id)
-    @mutex.synchronize { @completion_reqs.delete(req_id) }
-  end
-
   def setup_dispatch_thread!
     @mutex.synchronize do
       if @dispatcher
@@ -116,31 +75,7 @@ private
     hash[:stat] = Zookeeper::Stat.new(hash[:stat]) if hash.has_key?(:stat)
     hash[:acl] = hash[:acl].map { |acl| Zookeeper::ACLs::ACL.new(acl) } if hash[:acl]
     
-    callback_context = nil
-
-    @mutex.synchronize do
-      callback_context = is_completion ? get_completion(hash[:req_id]) : get_watcher(hash[:req_id])
-
-      # When connectivity to the server has been lost (as indicated by SESSION_EVENT)
-      # we want to rerun the callback at a later time when we eventually do have
-      # a valid response.
-      #
-      # XXX: this code needs to be refactored, get_completion shouldn't remove the context
-      #      in the case of a session event. this would involve changing the
-      #      platform implementations as well, as the C version does some funky
-      #      stuff to maintain compatibilty w/ java in chrooted envs.
-      #
-      #      The point is that this lock ^^ is unnecessary if the functions above lock internally
-      #      and don't do the wrong thing, requiring us to do the below.
-      #
-      if hash[:type] == Zookeeper::Constants::ZOO_SESSION_EVENT
-        if is_completion 
-          setup_completion(hash[:req_id], callback_context) 
-        else
-          setup_watcher(hash[:req_id], callback_context)
-        end
-      end
-    end
+    callback_context = @req_registry.get_context_for(hash)
 
     if callback_context
       callback = is_completion ? callback_context[:callback] : callback_context[:watcher]

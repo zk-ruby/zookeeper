@@ -1,8 +1,13 @@
 module Zookeeper
 module ClientMethods
+  extend Forwardable
   include Constants
   include ACLs
   include Logger
+
+  # @req_registry is set up in the platform-specific base classes
+  def_delegators :@req_registry, :setup_call
+  private :setup_call
 
   def reopen(timeout=10, watcher=nil)
     warn "WARN: ZookeeperBase#reopen watcher argument is now ignored" if watcher
