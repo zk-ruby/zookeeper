@@ -20,8 +20,9 @@ module ClientMethods
 
   def add_auth(options = {})
     assert_open
-    assert_supported_keys(options, [:scheme, :cert])
-    assert_required_keys(options, [:scheme, :cert])
+    assert_keys(options, 
+                :supported => [:scheme, :cert],
+                :required  => [:scheme, :cert])
 
     req_id = setup_call(:add_auth, options)
     rc = super(req_id, options[:scheme], options[:cert])
@@ -31,8 +32,9 @@ module ClientMethods
 
   def get(options = {})
     assert_open
-    assert_supported_keys(options, [:path, :watcher, :watcher_context, :callback, :callback_context])
-    assert_required_keys(options, [:path])
+    assert_keys(options,
+                :supported  => [:path, :watcher, :watcher_context, :callback, :callback_context],
+                :required   => [:path])
 
     req_id = setup_call(:get, options)
     rc, value, stat = super(req_id, options[:path], options[:callback], options[:watcher])
@@ -43,8 +45,10 @@ module ClientMethods
 
   def set(options = {})
     assert_open
-    assert_supported_keys(options, [:path, :data, :version, :callback, :callback_context])
-    assert_required_keys(options, [:path])
+    assert_keys(options,
+                :supported  => [:path, :data, :version, :callback, :callback_context],
+                :required   => [:path])
+
     assert_valid_data_size!(options[:data])
     options[:version] ||= -1
 
@@ -57,8 +61,9 @@ module ClientMethods
 
   def get_children(options = {})
     assert_open
-    assert_supported_keys(options, [:path, :callback, :callback_context, :watcher, :watcher_context])
-    assert_required_keys(options, [:path])
+    assert_keys(options,
+                :supported => [:path, :callback, :callback_context, :watcher, :watcher_context],
+                :required  => [:path])
 
     req_id = setup_call(:get_children, options)
     rc, children, stat = super(req_id, options[:path], options[:callback], options[:watcher])
@@ -69,8 +74,9 @@ module ClientMethods
 
   def stat(options = {})
     assert_open
-    assert_supported_keys(options, [:path, :callback, :callback_context, :watcher, :watcher_context])
-    assert_required_keys(options, [:path])
+    assert_keys(options,
+                :supported  => [:path, :callback, :callback_context, :watcher, :watcher_context],
+                :required   => [:path])
 
     req_id = setup_call(:stat, options)
     rc, stat = exists(req_id, options[:path], options[:callback], options[:watcher])
@@ -81,8 +87,10 @@ module ClientMethods
 
   def create(options = {})
     assert_open
-    assert_supported_keys(options, [:path, :data, :acl, :ephemeral, :sequence, :callback, :callback_context])
-    assert_required_keys(options, [:path])
+    assert_keys(options,
+                :supported  => [:path, :data, :acl, :ephemeral, :sequence, :callback, :callback_context],
+                :required   => [:path])
+
     assert_valid_data_size!(options[:data])
 
     flags = 0
@@ -100,8 +108,10 @@ module ClientMethods
 
   def delete(options = {})
     assert_open
-    assert_supported_keys(options, [:path, :version, :callback, :callback_context])
-    assert_required_keys(options, [:path])
+    assert_keys(options,
+                :supported  => [:path, :version, :callback, :callback_context],
+                :required   => [:path])
+
     options[:version] ||= -1
 
     req_id = setup_call(:delete, options)
@@ -118,8 +128,9 @@ module ClientMethods
   #
   def sync(options = {})
     assert_open
-    assert_supported_keys(options, [:path, :callback, :callback_context])
-    assert_required_keys(options, [:path, :callback])
+    assert_keys(options,
+                :supported  => [:path, :callback, :callback_context],
+                :required   => [:path, :callback])
 
     req_id = setup_call(:sync, options)
 
@@ -130,8 +141,9 @@ module ClientMethods
 
   def set_acl(options = {})
     assert_open
-    assert_supported_keys(options, [:path, :acl, :version, :callback, :callback_context])
-    assert_required_keys(options, [:path, :acl])
+    assert_keys(options,
+                :supported  => [:path, :acl, :version, :callback, :callback_context],
+                :required   => [:path, :acl])
     options[:version] ||= -1
 
     req_id = setup_call(:set_acl, options)
@@ -142,8 +154,9 @@ module ClientMethods
 
   def get_acl(options = {})
     assert_open
-    assert_supported_keys(options, [:path, :callback, :callback_context])
-    assert_required_keys(options, [:path])
+    assert_keys(options,
+                :supported  => [:path, :callback, :callback_context],
+                :required   => [:path])
 
     req_id = setup_call(:get_acl, options)
     rc, acls, stat = super(req_id, options[:path], options[:callback])
@@ -246,14 +259,19 @@ protected
   end
 
 private
-  # TODO: Sanitize user mistakes by unregistering watchers from ops that
-  # don't return ZOK (except wexists)?  Make users clean up after themselves for now.
-  #
-  # XXX: is this dead code?
-  def unregister_watcher(req_id)
-    @mutex.synchronize {
-      @watcher_reqs.delete(req_id)
-    }
+  def assert_keys(args, opts={})
+    supported = opts[:supported] || []
+    required  = opts[:required]  || []
+
+    unless (args.keys - supported).empty?
+      raise Zookeeper::Exceptions::BadArguments,
+            "Supported arguments are: #{supported.inspect}, but arguments #{args.keys.inspect} were supplied instead"
+    end
+
+    unless (required - args.keys).empty?
+      raise Zookeeper::Exceptions::BadArguments,
+            "Required arguments are: #{required.inspect}, but only the arguments #{args.keys.inspect} were supplied."
+    end
   end
   
   # must be supplied by parent class impl.
