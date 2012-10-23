@@ -165,7 +165,7 @@ module ClientMethods
     options[:callback] ? rv : rv.merge(:acl => acls, :stat => Stat.new(stat))
   end
 
-  # close this client and any underyling connections
+  # close this client and any underlying connections
   def close
     super
   end
