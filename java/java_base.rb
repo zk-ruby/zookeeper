@@ -440,16 +440,25 @@ class JavaBase
       @mutex.synchronize { @jzk }
     end
 
-    def handle_keeper_exception
-      yield
-    rescue JZK::KeeperException => e
-      if e.respond_to?(:cause) and e.cause and e.cause.respond_to?(:code) and e.cause.code and e.cause.code.respond_to?(:intValue)
-        e.cause.code.intValue
-      else
-        raise e # dunno what happened, just raise it
+    # java exceptions are not wrapped anymore in JRuby 1.7+
+    if JRUBY_VERSION >= '1.7.0'
+      def handle_keeper_exception
+        yield
+      rescue JZK::KeeperException => e
+        # code is an enum and always set -> we don't need any additional checks here
+        e.code.intValue
+      end
+    else
+      def handle_keeper_exception
+        yield
+      rescue JZK::KeeperException => e
+        if e.respond_to?(:cause) and e.cause and e.cause.respond_to?(:code) and e.cause.code and e.cause.code.respond_to?(:intValue)
+          e.cause.code.intValue
+        else
+          raise e # dunno what happened, just raise it
+        end
       end
     end
-
 
     def call_type(callback, watcher)
       if callback
