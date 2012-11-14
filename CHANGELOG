@@ -1,3 +1,11 @@
+v1.4.0 Removed the 'logging' gem
+
+  * At the request of a user, use of the logging gem has been discontinued as
+    it appears to cause a fair amount of RSS memory bloating (8MB was
+    reported).  It's been replaced by a fairly simple ad-hoc implementation
+    using the stdlib 'logger' class. No user impact is expected unless you were
+    adjusting the Loggers on components of zookeeper.
+
 v1.3.0 much needed refactor of event and async result delivery
 
   * event and async blocks were previously mixed in with a bunch of other
