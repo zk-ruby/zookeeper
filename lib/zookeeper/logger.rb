@@ -21,7 +21,7 @@ module Zookeeper
       end
 
       def logger
-        @logger ||= (::Zookeeper.logger || ::Logger.new(STDOUT)
+        @logger ||= (::Zookeeper.logger || ::Logger.new(STDOUT))
       end
   end
 end
