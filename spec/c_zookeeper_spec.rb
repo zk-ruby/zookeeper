@@ -13,7 +13,7 @@ unless defined?(::JRUBY_VERSION)
       end
     end
 
-    def wait_until_connected(timeout=2)
+    def wait_until_connected(timeout=10)
       wait_until(timeout) { @czk.state == Zookeeper::Constants::ZOO_CONNECTED_STATE }
     end
 
@@ -38,7 +38,7 @@ unless defined?(::JRUBY_VERSION)
         end
 
         it %[should have a connection event after being connected] do
-          event = wait_until(2) { @event_queue.pop }
+          event = wait_until(10) { @event_queue.pop }
           event.should be
           event[:req_id].should == Zookeeper::Constants::ZKRB_GLOBAL_CB_REQ
           event[:type].should   == Zookeeper::Constants::ZOO_SESSION_EVENT
