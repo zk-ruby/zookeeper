@@ -1,15 +1,27 @@
-require 'logger'
-
 module Zookeeper
   module Logger
-    def self.included(mod)
-      return false if mod < self    # avoid infinite recursion
-      mod.class_eval do 
-        def self.logger
-          ::Zookeeper.logger || ::Logger.new(STDOUT)
-        end
+    def self.wrapped_logger
+      if defined?(@@wrapped_logger)
+        @@wrapped_logger 
+      else
+        @@wrapped_logger = ::Logger.new(STDERR).tap { |l| l.level = ::Logger::FATAL }
       end
-      mod.extend(self)
+    end
+
+    def self.wrapped_logger=(log)
+      @@wrapped_logger = log
+    end
+
+    # @private
+    module ClassMethods
+      def logger
+        ::Zookeeper.logger || ForwardingLogger.for(::Zookeeper::Logger.wrapped_logger, _zk_logger_name)
+      end
+    end
+
+    def self.included(base)
+      # return false if base < self    # avoid infinite recursion
+      base.extend(ClassMethods)
     end
 
     private
@@ -21,8 +33,7 @@ module Zookeeper
       end
 
       def logger
-        @logger ||= (::Zookeeper.logger || ::Logger.new(STDOUT))
+        @logger ||= (::Zookeeper.logger || self.class.logger)
       end
-  end
-end
-
+  end # Logger
+end # Zookeeper

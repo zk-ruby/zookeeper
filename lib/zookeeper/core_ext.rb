@@ -27,4 +27,32 @@ class ::Exception
   end
 end
 
+# this is borrowed from the excellent Logging gem: https://github.com/TwP/logging
+# @private
+class ::Module
+  # @private
+  # Returns a predictable logger name for the current module or class. If
+  # used within an anonymous class, the first non-anonymous class name will
+  # be used as the logger name. If used within a meta-class, the name of the
+  # actual class will be used as the logger name. If used within an
+  # anonymous module, the string 'anonymous' will be returned.
+  def _zk_logger_name
+    return name unless name.nil? or name.empty?
+
+    # check if this is a metaclass (or eigenclass)
+    if ancestors.include? Class
+      inspect =~ %r/#<Class:([^#>]+)>/
+      return $1
+    end
+
+    # see if we have a superclass
+    if respond_to? :superclass
+      return superclass.logger_name
+    end
+
+    # we are an anonymous module
+    return 'anonymous'
+  end
+end
+
 

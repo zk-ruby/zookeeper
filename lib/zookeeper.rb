@@ -32,6 +32,7 @@ Zookeeper.require_lib(
   'zookeeper/core_ext',
   'zookeeper/monitor',
   'zookeeper/logger',
+  'zookeeper/logger/forwarding_logger',
   'zookeeper/forked',
   'zookeeper/latch',
   'zookeeper/acls',

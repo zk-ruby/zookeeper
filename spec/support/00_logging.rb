@@ -1,33 +1,34 @@
 module Zookeeper
   TEST_LOG_PATH = File.expand_path('../../../test.log', __FILE__)
-end
 
-layout = Logging.layouts.pattern(
-  :pattern => '%.1l, [%d #%p] %25.25c{2}:  %m\n',
-  :date_pattern => '%Y-%m-%d %H:%M:%S.%6N' 
-)
+  def self.setup_test_logger
+    log =
+      if (ENV['ZOOKEEPER_DEBUG'] || ENV['ZKRB_DEBUG'])
+        ::Logger.new(STDERR)
+      else
+        ::Logger.new(TEST_LOG_PATH)
+      end
 
-appender = (ENV['ZOOKEEPER_DEBUG'] || ENV['ZKRB_DEBUG']) ? Logging.appenders.stderr : Logging.appenders.file(Zookeeper::TEST_LOG_PATH)
-appender.layout = layout
-appender.auto_flushing = 25
-appender.flush_period = 5
+    log.level = ::Logger::DEBUG
 
-%w[spec Zookeeper].each do |name|
-  ::Logging.logger[name].tap do |log|
-    log.appenders = [appender]
-    log.level = :debug
+    Zookeeper::Logger.wrapped_logger = log
   end
 end
 
+Zookeeper.setup_test_logger
+
 module SpecGlobalLogger
+  extend self
+
   def logger
-    @spec_global_logger ||= ::Logging.logger['spec']
+    @spec_global_logger ||= Zookeeper::Logger::ForwardingLogger.for(Zookeeper::Logger.wrapped_logger, 'spec')
   end
 
   # sets the log level to FATAL for the duration of the block
   def mute_logger
-    zk_log = Logging.logger['Zookeeper']
-    orig_level, zk_log.level = zk_log.level, :off
+    zk_log = Zookeeper::Logger.wrapped_logger
+
+    orig_level, zk_log.level = zk_log.level, ::Logger::FATAL
     orig_zk_level, Zookeeper.debug_level = Zookeeper.debug_level, Zookeeper::Constants::ZOO_LOG_LEVEL_ERROR
     yield
   ensure

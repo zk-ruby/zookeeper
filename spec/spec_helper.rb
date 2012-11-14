@@ -21,7 +21,7 @@ if ENV['ZKRB_DEBUG']
 end
 
 if ENV['ZKRB_NOLOG']
-  ::Logging.logger['Zookeeper'].level = :off
+  SpecGlobalLogger.logger.level = ::Logger::FATAL
   Zookeeper.set_debug_level(0)
 end
 
@@ -36,7 +36,7 @@ RSpec.configure do |config|
     require 'zk-server'
 
     config.before(:suite) do 
-      ::Logging.logger['spec'].debug { "Starting zookeeper service" }
+      SpecGlobalLogger.logger.debug { "Starting zookeeper service" }
       ZK::Server.run do |c|
         c.base_dir    = File.expand_path('../../.zkserver', __FILE__)
         c.client_port = Zookeeper.test_port
@@ -46,7 +46,7 @@ RSpec.configure do |config|
     end
 
     config.after(:suite) do
-      ::Logging.logger['spec'].debug { "stopping zookeeper service" }
+      SpecGlobalLogger.logger.debug  { "stopping zookeeper service" }
       ZK::Server.shutdown
     end
   end
