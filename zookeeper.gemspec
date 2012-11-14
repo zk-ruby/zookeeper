@@ -20,7 +20,7 @@ This library uses version #{Zookeeper::DRIVER_VERSION} of zookeeper bindings.
 
   s.homepage    = 'https://github.com/slyphon/zookeeper'
 
-  s.add_runtime_dependency 'logging',   '~> 1.7.2'
+  s.add_development_dependency 'logging',   '~> 1.7.2'
 
   s.files         = `git ls-files`.split("\n")
   s.require_paths = ["lib"]

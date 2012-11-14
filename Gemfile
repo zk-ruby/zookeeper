@@ -9,7 +9,7 @@ group :test do
   gem 'eventmachine', '1.0.0.beta.4'
   gem 'evented-spec', '~> 0.9.0'
 
-  gem 'zk-server', '~> 1.0.0'
+  gem 'zk-server', '~> 1.0'
 end
 
 # ffs, :platform appears to be COMLETELY BROKEN so we just DO THAT HERE

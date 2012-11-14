@@ -5,7 +5,6 @@ require 'monitor'
 require 'forwardable'
 require 'logger'
 require 'benchmark'
-require 'logging'
 
 module Zookeeper
   ZOOKEEPER_ROOT = File.expand_path('../..', __FILE__)
