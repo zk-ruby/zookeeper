@@ -3,7 +3,6 @@ $LOAD_PATH.unshift(File.expand_path('../../ext', __FILE__))
 $LOAD_PATH.uniq!
 
 require 'rubygems'
-require 'logging'
 
 release_ops_path = File.expand_path('../../releaseops/lib', __FILE__)
 
