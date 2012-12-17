@@ -1,3 +1,8 @@
+v1.4.1 merge pull request 29 - fix exception handling in jruby 1.7.x
+
+  * h/t to @dynamix for the patch
+
+
 v1.4.0 Removed the 'logging' gem
 
   * At the request of a user, use of the logging gem has been discontinued as
