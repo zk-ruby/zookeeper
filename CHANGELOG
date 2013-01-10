@@ -1,3 +1,5 @@
+v1.4.2 fix a bug in the forwarding logger format string
+
 v1.4.1 merge pull request 29 - fix exception handling in jruby 1.7.x
 
   * h/t to @dynamix for the patch
