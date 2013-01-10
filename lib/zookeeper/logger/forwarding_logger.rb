@@ -11,7 +11,7 @@ module Zookeeper
       def self.for(logger, name)
         @@mutex.synchronize do
           @@loggers.fetch(name) do |k|
-            @@loggers[k] = new(logger, :formatter => lambda { |m| "%25.25s: #{m}" % name })
+            @@loggers[k] = new(logger, :formatter => lambda { |m| "%25.25s: %s" % [k, m] })
           end
         end
       end
