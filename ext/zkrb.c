@@ -758,7 +758,7 @@ inline static int get_self_pipe_read_fd(VALUE self) {
   rb_io_t *fptr;
   VALUE pipe_read = rb_iv_get(self, "@pipe_read");
 
-  if NIL_P(pipe_read)
+  if (NIL_P(pipe_read))
       rb_raise(rb_eRuntimeError, "@pipe_read was nil!");
 
   GetOpenFile(pipe_read, fptr);
