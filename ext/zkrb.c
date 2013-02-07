@@ -145,7 +145,7 @@ inline static void assert_valid_params(VALUE reqid, VALUE path) {
 }
 
 inline static zkrb_call_type get_call_type(VALUE async, VALUE watch) {
-  if RTEST(async) {
+  if (RTEST(async)) {
     return RTEST(watch) ? ASYNC_WATCH : ASYNC;
   } else {
     return RTEST(watch) ? SYNC_WATCH : SYNC;
