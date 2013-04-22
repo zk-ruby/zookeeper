@@ -4,6 +4,7 @@ require 'fileutils'
 
 HERE = File.expand_path(File.dirname(__FILE__))
 BUNDLE = Dir.glob("zkc-*.tar.gz").first
+ZKPATCH = "patch-zookeeper"
 
 BUNDLE_PATH = File.join(HERE, 'c')
 
@@ -57,7 +58,7 @@ Dir.chdir(HERE) do
     puts "Building zkc."
 
     unless File.exists?('c')
-      puts(cmd = "tar xzf #{BUNDLE} 2>&1")
+      puts(cmd = "tar xzf #{BUNDLE} 2>&1 && patch -p0 < #{ZKPATCH} 2>&1")
       raise "'#{cmd}' failed" unless system(cmd)
     end
 
