@@ -1,3 +1,7 @@
+v1.4.4 fix build under FreeBSD (h/t: stass)
+
+  * https://github.com/slyphon/zookeeper/pull/40 
+
 v1.4.3 fix build for ruby 2.0.0-rc2
 
   * https://github.com/slyphon/zookeeper/pull/34
