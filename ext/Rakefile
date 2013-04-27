@@ -36,6 +36,7 @@ GENERATE_GVL_CODE_RB = 'generate_gvl_code.rb'
 
 file 'c' => TARBALL do
   sh "tar -zxf #{TARBALL}"
+  sh "patch -p0 < patch-zookeeper"
 end
 
 file GENERATE_GVL_CODE_RB => 'c'
