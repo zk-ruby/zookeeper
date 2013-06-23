@@ -280,6 +280,14 @@ static VALUE method_zkrb_init(int argc, VALUE* argv, VALUE self) {
   zkrb_instance_data_t *zk_local_ctx;
   data = Data_Make_Struct(CZookeeper, zkrb_instance_data_t, 0, free_zkrb_instance_data, zk_local_ctx);
 
+  // Look up :session_id and :session_passwd
+  VALUE session_id = rb_hash_aref(options, ID2SYM(rb_intern("session_id")));
+  VALUE password   = rb_hash_aref(options, ID2SYM(rb_intern("session_passwd")));
+  if (!NIL_P(session_id) && !NIL_P(password)) {
+      zk_local_ctx->myid.client_id = NUM2LL(session_id);
+      strncpy(zk_local_ctx->myid.passwd, StringValueCStr(password), 16);
+  }
+
   zk_local_ctx->queue = zkrb_queue_alloc();
 
   if (zk_local_ctx->queue == NULL)

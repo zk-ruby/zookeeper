@@ -9,12 +9,12 @@ module ClientMethods
   def_delegators :@req_registry, :setup_call
   private :setup_call
 
-  def reopen(timeout=10, watcher=nil)
+  def reopen(timeout=10, watcher=nil, opts = {})
     warn "WARN: ZookeeperBase#reopen watcher argument is now ignored" if watcher
     super
   end
 
-  def initialize(host, timeout=10, watcher=nil)
+  def initialize(host, timeout=10, watcher=nil, opts = {})
     super
   end
 
