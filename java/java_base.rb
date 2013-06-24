@@ -182,13 +182,13 @@ class JavaBase
 
   attr_reader :event_queue
 
-  def reopen(timeout=10, watcher=nil)
+  def reopen(timeout=10, watcher=nil, opts = {})
 #     watcher ||= @default_watcher
 
     @mutex.synchronize do
       @req_registry.clear_watchers!
 
-      replace_jzk!
+      replace_jzk!(opts)
       wait_until_connected
     end
 
@@ -220,7 +220,7 @@ class JavaBase
     # allows connected-state handlers to be registered before 
     yield self if block_given?
 
-    reopen(timeout)
+    reopen(timeout, nil, options)
     return nil unless connected?
     @_running = true
     setup_dispatch_thread!
@@ -487,9 +487,13 @@ class JavaBase
       }
     end
 
-    def replace_jzk!
+    def replace_jzk!(opts = {})
       orig_jzk = @jzk
-      @jzk = JZK::ZooKeeper.new(@host, DEFAULT_SESSION_TIMEOUT, JavaCB::WatcherCallback.new(event_queue, :client => self))
+      if opts.has_key?(:session_id) && opts.has_key(:session_passwd)
+        @jzk = JZK::ZooKeeper.new(@host, DEFAULT_SESSION_TIMEOUT, JavaCB::WatcherCallback.new(event_queue, :client => self), opts.fetch(:session_id), opts.fetch(:session_passwd).to_java_bytes)
+      else
+        @jzk = JZK::ZooKeeper.new(@host, DEFAULT_SESSION_TIMEOUT, JavaCB::WatcherCallback.new(event_queue, :client => self))
+      end
     ensure
       orig_jzk.close if orig_jzk
     end
