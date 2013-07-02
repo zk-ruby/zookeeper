@@ -284,8 +284,11 @@ static VALUE method_zkrb_init(int argc, VALUE* argv, VALUE self) {
   VALUE session_id = rb_hash_aref(options, ID2SYM(rb_intern("session_id")));
   VALUE password   = rb_hash_aref(options, ID2SYM(rb_intern("session_passwd")));
   if (!NIL_P(session_id) && !NIL_P(password)) {
+      Check_Type(session_id, T_BIGNUM);
+      Check_Type(password, T_STRING);
+
       zk_local_ctx->myid.client_id = NUM2LL(session_id);
-      strncpy(zk_local_ctx->myid.passwd, rb_string_value_ptr(password), 16);
+      strncpy(zk_local_ctx->myid.passwd, RSTRING_PTR(password), 16);
   }
 
   zk_local_ctx->queue = zkrb_queue_alloc();
