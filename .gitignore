@@ -15,3 +15,5 @@ coverage
 *.swp
 *.swo
 
+.ruby-gemset
+.ruby-version

@@ -1,10 +1,10 @@
 # zookeeper #
 
-[![Build Status](https://secure.travis-ci.org/slyphon/zookeeper.png?branch=master)](http://travis-ci.org/slyphon/zookeeper)
+[![Build Status](https://secure.travis-ci.org/zk-ruby/zookeeper.png?branch=master)](http://travis-ci.org/zk-ruby/zookeeper)
 
 An interface to the Zookeeper cluster coordination server.
 
-For a higher-level interface with a more convenient API and features such as locks, have a look at [ZK](https://github.com/slyphon/zk).
+For a higher-level interface with a more convenient API and features such as locks, have a look at [ZK](https://github.com/zk-ruby/zk).
 
 ## Fork Safety! ##
 
