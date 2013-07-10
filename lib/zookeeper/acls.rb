@@ -26,11 +26,11 @@ module ACLs
   end
   
   module Constants
-    ZOO_PERM_READ   = 0
-    ZOO_PERM_WRITE  = 1
-    ZOO_PERM_CREATE = 2
-    ZOO_PERM_DELETE = 4
-    ZOO_PERM_ADMIN  = 8
+    ZOO_PERM_READ   = 1 << 0
+    ZOO_PERM_WRITE  = 1 << 1
+    ZOO_PERM_CREATE = 1 << 2
+    ZOO_PERM_DELETE = 1 << 3
+    ZOO_PERM_ADMIN  = 1 << 4
     ZOO_PERM_ALL    = ZOO_PERM_READ | ZOO_PERM_WRITE | ZOO_PERM_CREATE | ZOO_PERM_DELETE | ZOO_PERM_ADMIN
     
     ZOO_ANYONE_ID_UNSAFE = Id.new(:scheme => "world", :id => "anyone")
