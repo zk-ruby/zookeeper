@@ -89,7 +89,7 @@ class CZookeeper
 
     logger.info { "initiating connection to #{@host}" }
 
-    zkrb_init(@host)#, :zkc_log_level => log_level)
+    zkrb_init(@host, opts)#, :zkc_log_level => log_level)
 
     start_event_thread
 
