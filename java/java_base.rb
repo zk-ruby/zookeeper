@@ -283,8 +283,9 @@ class JavaBase
         [Code::Ok, nil, nil]    # the 'nil, nil' isn't strictly necessary here
       else # sync
         stat = JZKD::Stat.new
-        data = String.from_java_bytes(jzk.getData(path, watch_cb, stat))
 
+        value = jzk.getData(path, watch_cb, stat)
+        data = String.from_java_bytes(value) unless value.nil?
         [Code::Ok, data, stat.to_hash]
       end
     end
