@@ -441,6 +441,35 @@ shared_examples_for "connection" do
     end
   end
 
+  describe :child_watcher_behavior do
+    describe :async_watch, :async => true do
+      it_should_behave_like "all success return values"
+
+      before do
+        @watcher = Zookeeper::Callbacks::WatcherCallback.new
+        @cb = Zookeeper::Callbacks::StringsCallback.new
+
+        @rv = zk.get_children(:path => path, :watcher => @watcher, :watcher_context => path, :callback => @cb, :callback_context => path)
+        wait_until { @cb.completed? }
+        @cb.should be_completed
+      end
+
+      it %[should fire the watcher when the node has been deleted] do
+        @watcher.should_not be_completed
+
+        zk.delete(:path => path)[:rc].should == Zookeeper::ZOK
+
+        wait_until { @watcher.completed? }
+        @watcher.should be_completed
+
+        @watcher.path.should == path
+        @watcher.context.should == path
+        @watcher.type.should == Zookeeper::ZOO_DELETED_EVENT
+      end
+    end
+  end
+
+
   # NOTE: the jruby version of stat on non-existent node will have a
   # return_code of 0, but the C version will have a return_code of -101
   describe :stat do

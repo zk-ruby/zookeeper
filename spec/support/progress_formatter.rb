@@ -5,7 +5,7 @@ module RSpec
     module Formatters
       class ProgressFormatter
         def example_started(example)
-          SpecGlobalLogger.logger << yellow("\n=====<([ #{example.full_description} ])>=====\n")
+          SpecGlobalLogger.logger << pending_color("\n=====<([ #{example.full_description} ])>=====\n")
           super(example)
         end
       end
