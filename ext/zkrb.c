@@ -268,13 +268,13 @@ static VALUE method_zkrb_init(int argc, VALUE* argv, VALUE self) {
   Check_Type(hostPort, T_STRING);
 
   // Look up :zkc_log_level
-  VALUE log_level = rb_hash_aref(options, ID2SYM(rb_intern("zkc_log_level")));
-  if (NIL_P(log_level)) {
-    zoo_set_debug_level(0); // no log messages
-  } else {
-    Check_Type(log_level, T_FIXNUM);
-    zoo_set_debug_level(FIX2INT(log_level));
-  }
+  // VALUE log_level = rb_hash_aref(options, ID2SYM(rb_intern("zkc_log_level")));
+  // if (NIL_P(log_level)) {
+  //   zoo_set_debug_level(0); // no log messages
+  // } else {
+  //   Check_Type(log_level, T_FIXNUM);
+  //   zoo_set_debug_level(FIX2INT(log_level));
+  // }
 
   volatile VALUE data;
   zkrb_instance_data_t *zk_local_ctx;
@@ -788,10 +788,10 @@ static VALUE method_zkrb_iterate_event_loop(VALUE self) {
   fd_set rfds, wfds, efds;
   FD_ZERO(&rfds); FD_ZERO(&wfds); FD_ZERO(&efds);
 
-  int fd=0, interest=0, events=0, rc=0, maxfd=0;
+  int fd=0, interest=0, events=0, rc=0, maxfd=0, irc;
   struct timeval tv;
 
-  zookeeper_interest(zk->zh, &fd, &interest, &tv);
+  irc = zookeeper_interest(zk->zh, &fd, &interest, &tv);
 
   if (fd != -1) {
     if (interest & ZOOKEEPER_READ) {
@@ -838,7 +838,8 @@ static VALUE method_zkrb_iterate_event_loop(VALUE self) {
     rc = zookeeper_process(zk->zh, events);
   }
   else if (rc == 0) {
-    zkrb_debug("timed out waiting for descriptor to be ready");
+    zkrb_debug("timed out waiting for descriptor to be ready. interest=%d fd=%d pipe_r_fd=%d maxfd=%d irc=%d timeout=%f",
+      interest, fd, pipe_r_fd, maxfd, irc, tv.tv_sec + (tv.tv_usec/ 1000.0 / 1000.0));
   }
   else {
     log_err("select returned: %d", rc);

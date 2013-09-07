@@ -40,7 +40,7 @@ class ZookeeperBase
     end
   end
 
-  threadsafe_inquisitor :connected?, :connecting?, :associating?, :running?
+  threadsafe_inquisitor :connected?, :connecting?, :associating?, :running?, :shutting_down?
 
   attr_reader :event_queue
   
