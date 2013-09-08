@@ -266,7 +266,7 @@ class CZookeeper
 
       # this is the main loop
       while healthy?
-        if @reg.anything_to_do?
+        if @reg.anything_to_do? && connected?
           submit_pending_calls
         end
 
