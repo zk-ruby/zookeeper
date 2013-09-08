@@ -1036,7 +1036,9 @@ static VALUE zkrb_client_id_method_initialize(VALUE self) {
 
 
 void Init_zookeeper_c() {
+  // Don't debug by default
   ZKRBDebugging = 0;
+  zoo_set_debug_level(0);
 
   mZookeeper = rb_define_module("Zookeeper");
   mZookeeperExceptions = rb_define_module_under(mZookeeper, "Exceptions");
