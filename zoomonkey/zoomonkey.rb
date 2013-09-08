@@ -80,7 +80,7 @@ class Reader < Worker
         end
       end
 
-      msg = "host=#{client.connected_host} session_id=#{client.session_id} state=#{client.state_by_value(client.state)} time=#{"%0.4f" % t}"
+      msg = "host=#{client.connected_host || 'nil'} session_id=#{client.session_id} state=#{client.state_by_value(client.state)} time=#{"%0.4f" % t}"
       if error
         msg << " error=#{error.class} error_message=#{error.to_s.inspect}"
         msg << " closed=#{client.closed?} running=#{client.running?} shutting_down=#{client.shutting_down?}"
@@ -117,7 +117,7 @@ class Writer < Worker
         end
       end
 
-      msg = "host=#{client.connected_host} session_id=#{client.session_id} state=#{client.state_by_value(client.state)} time=#{"%0.4f" % t}"
+      msg = "host=#{client.connected_host || 'nil'} session_id=#{client.session_id} state=#{client.state_by_value(client.state)} time=#{"%0.4f" % t}"
       msg << " error=#{error.class} error_message=#{error.to_s.inspect}" if error
       log msg
 
@@ -163,12 +163,13 @@ end
 begin
   cluster.run
 
-  zookeeper_hosts = cluster.processes.map { |p| "127.0.0.1:#{p.client_port}" }.join(',')
+  zookeeper_hosts = cluster.processes.map { |p| "127.0.0.1:#{p.client_port}" }
+  zookeeper_spec  = (zookeeper_hosts * 2).join(',')
 
-  reader = Reader.new(zookeeper_hosts)
+  reader = Reader.new(zookeeper_spec)
   reader.start
 
-  # writer = Writer.new(zookeeper_hosts)
+  # writer = Writer.new(zookeeper_spec)
   # writer.start
 
   monkey = ZooMonkey.new(cluster)

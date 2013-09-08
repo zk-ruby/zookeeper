@@ -120,6 +120,14 @@ class CZookeeper
     state == ZOO_ASSOCIATING_STATE
   end
 
+  def unhealthy?
+    @mutex.synchronize { @_closed || @_shutting_down || is_unrecoverable }
+  end
+
+  def healthy?
+    !unhealthy?
+  end
+
   def close
     return if closed?
 
@@ -183,11 +191,11 @@ class CZookeeper
       while true 
         if timeout
           now = Time.now
-          break if (@state == ZOO_CONNECTED_STATE) || @_shutting_down || @_closed || (now > time_to_stop)
+          break if (@state == ZOO_CONNECTED_STATE) || unhealthy? || (now > time_to_stop)
           delay = time_to_stop.to_f - now.to_f
           @state_cond.wait(delay)
         else
-          break if (@state == ZOO_CONNECTED_STATE) || @_shutting_down || @_closed
+          break if (@state == ZOO_CONNECTED_STATE) || unhealthy?
           @state_cond.wait
         end
       end
@@ -201,7 +209,7 @@ class CZookeeper
     # blocks the caller until result has returned
     def submit_and_block(meth, *args)
       @mutex.synchronize do
-        raise Exceptions::NotConnected if @_shutting_down
+        raise Exceptions::NotConnected if unhealthy?
       end
 
       cnt = Continuation.new(meth, *args)
@@ -257,7 +265,7 @@ class CZookeeper
       event_thread_await_running
 
       # this is the main loop
-      until (@_shutting_down or @_closed or is_unrecoverable)
+      while healthy?
         if @reg.anything_to_do?
           submit_pending_calls
         end
