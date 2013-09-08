@@ -27,7 +27,8 @@ class ZookeeperBase
   ZOO_LOG_LEVEL_DEBUG  = 4
 
   def_delegators :czk, :get_children, :exists, :delete, :get, :set,
-    :set_acl, :get_acl, :client_id, :sync, :add_auth, :wait_until_connected
+    :set_acl, :get_acl, :client_id, :sync, :add_auth, :wait_until_connected,
+    :connected_host
 
   def self.threadsafe_inquisitor(*syms)
     syms.each do |sym|
@@ -40,7 +41,8 @@ class ZookeeperBase
     end
   end
 
-  threadsafe_inquisitor :connected?, :connecting?, :associating?, :running?, :shutting_down?
+  threadsafe_inquisitor :connected?, :connecting?, :associating?, :running?,
+    :shutting_down?
 
   attr_reader :event_queue
   

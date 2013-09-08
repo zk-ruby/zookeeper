@@ -82,6 +82,7 @@
 #include <pthread.h>
 #include <inttypes.h>
 #include <time.h>
+#include <arpa/inet.h>
 
 #include "common.h"
 #include "event_lib.h"
@@ -935,6 +936,38 @@ static VALUE method_zerror(VALUE self, VALUE errc) {
   return rb_str_new2(zerror(FIX2INT(errc)));
 }
 
+static VALUE method_connected_host(VALUE self) {
+  FETCH_DATA_PTR(self, zk);
+
+  struct sockaddr addr;
+  socklen_t addr_len = sizeof(addr);
+
+  if (zookeeper_get_connected_host(zk->zh, &addr, &addr_len) != NULL) {
+    char buf[255];
+    char addrstr[128];
+    void *inaddr;
+    int port;
+
+#if defined(AF_INET6)
+    if(addr.sa_family==AF_INET6){
+        inaddr = &((struct sockaddr_in6 *) &addr)->sin6_addr;
+        port = ((struct sockaddr_in6 *) &addr)->sin6_port;
+    } else {
+#endif
+      inaddr = &((struct sockaddr_in *) &addr)->sin_addr;
+      port = ((struct sockaddr_in *) &addr)->sin_port;
+#if defined(AF_INET6)
+    }
+#endif
+
+    inet_ntop(addr.sa_family, inaddr, addrstr, sizeof(addrstr)-1);
+    snprintf(buf, sizeof(buf), "%s:%d", addrstr, ntohs(port));
+    return rb_str_new2(buf);
+  }
+
+  return Qnil;
+}
+
 static void zkrb_define_methods(void) {
 #define DEFINE_METHOD(M, ARGS) { \
     rb_define_method(CZookeeper, #M, method_ ## M, ARGS); }
@@ -970,6 +1003,7 @@ static void zkrb_define_methods(void) {
   DEFINE_METHOD(sync, 2);
   DEFINE_METHOD(zkrb_iterate_event_loop, 0);
   DEFINE_METHOD(zkrb_get_next_event_st, 0);
+  DEFINE_METHOD(connected_host, 0);
 
   // methods for the ruby-side event manager
   DEFINE_METHOD(zkrb_get_next_event, 1);

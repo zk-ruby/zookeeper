@@ -68,6 +68,8 @@ class Reader < Worker
     client = Zookeeper.new(@zookeeper_hosts)
     client.wait_until_connected
 
+    client.create(:path => "/test", :data => '') rescue client.set(:path => "/test", :data => '')
+
     while true
       error = nil
       t = Benchmark.realtime do
@@ -78,7 +80,7 @@ class Reader < Worker
         end
       end
 
-      msg = "session_id=#{client.session_id} state=#{client.state_by_value(client.state)} time=#{"%0.4f" % t}"
+      msg = "host=#{client.connected_host} session_id=#{client.session_id} state=#{client.state_by_value(client.state)} time=#{"%0.4f" % t}"
       if error
         msg << " error=#{error.class} error_message=#{error.to_s.inspect}"
         msg << " closed=#{client.closed?} running=#{client.running?} shutting_down=#{client.shutting_down?}"
@@ -115,7 +117,7 @@ class Writer < Worker
         end
       end
 
-      msg = "session_id=#{client.session_id} state=#{client.state_by_value(client.state)} time=#{"%0.4f" % t}"
+      msg = "host=#{client.connected_host} session_id=#{client.session_id} state=#{client.state_by_value(client.state)} time=#{"%0.4f" % t}"
       msg << " error=#{error.class} error_message=#{error.to_s.inspect}" if error
       log msg
 
@@ -141,11 +143,12 @@ class ZooMonkey < Worker
       sleep SLEEP_TIME
 
       cluster.processes.each do |server|
-        log "pid=#{server.pid} client_port=#{server.client_port} action=pausing"
+        host = "127.0.0.1:#{server.client_port}"
+        log "host=#{host} pid=#{server.pid} action=pausing"
         server.kill "STOP"
         sleep SLEEP_TIME
 
-        log "pid=#{server.pid} client_port=#{server.client_port} action=resuming"
+        log "host=#{host} pid=#{server.pid} action=resuming"
         server.kill "CONT"
         sleep SLEEP_TIME
       end
@@ -160,7 +163,7 @@ end
 begin
   cluster.run
 
-  zookeeper_hosts = cluster.processes.map { |p| "localhost:#{p.client_port}" }.join(',')
+  zookeeper_hosts = cluster.processes.map { |p| "127.0.0.1:#{p.client_port}" }.join(',')
 
   reader = Reader.new(zookeeper_hosts)
   reader.start
