@@ -99,7 +99,7 @@ class Reader < Worker
   def watcher(event)
     if event[:state] == Zookeeper::ZOO_EXPIRED_SESSION_STATE
       if client
-        log "action=reconnecting event_state=#{client.state_by_value(event[:state])} host=#{client.connected_host || 'nil'} session_id=#{client.session_id} connection_state=#{client.state_by_value(client.state)}"
+        log "action=reconnecting state=#{client.state_by_value(event[:state])} session_id=#{client.session_id}"
         client.reopen
       end
     end
