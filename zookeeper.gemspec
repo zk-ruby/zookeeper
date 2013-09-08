@@ -26,7 +26,7 @@ This library uses version #{Zookeeper::DRIVER_VERSION} of zookeeper bindings.
   if ENV['JAVA_GEM'] or defined?(::JRUBY_VERSION)
     s.platform = 'java'
     s.add_runtime_dependency('slyphon-log4j',         '= 1.2.15')
-    s.add_runtime_dependency('slyphon-zookeeper_jar', '= 3.3.5')
+    s.add_runtime_dependency('zk-ruby-zookeeper_jar', '= 3.4.5')
     s.require_paths += %w[java]
   else
     s.require_paths += %w[ext]
