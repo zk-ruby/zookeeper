@@ -243,7 +243,7 @@ static void print_zkrb_instance_data(zkrb_instance_data_t* ptr) {
   fprintf(stderr, "}\n");
 }
 
-#define session_timeout_msec(self) rb_iv_get(self, "@_session_timeout_msec")
+#define receive_timeout_msec(self) rb_iv_get(self, "@_receive_timeout_msec")
 
 inline static void zkrb_debug_clientid_t(const clientid_t *cid) {
   int pass_len = sizeof(cid->passwd);
@@ -307,7 +307,7 @@ static VALUE method_zkrb_init(int argc, VALUE* argv, VALUE self) {
       zookeeper_init(
           RSTRING_PTR(hostPort),        // const char *host
           zkrb_state_callback,          // watcher_fn
-          session_timeout_msec(self),   // recv_timeout
+          receive_timeout_msec(self),   // recv_timeout
           &zk_local_ctx->myid,          // cilentid_t
           ctx,                          // void *context
           0);                           // flags

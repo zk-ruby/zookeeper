@@ -17,7 +17,7 @@ class CZookeeper
   include Exceptions
   include Logger
 
-  DEFAULT_SESSION_TIMEOUT_MSEC = 10000
+  DEFAULT_RECEIVE_TIMEOUT_MSEC = 10000
 
   class GotNilEventException < StandardError; end
 
@@ -65,7 +65,7 @@ class CZookeeper
     # the actual C data is stashed in this ivar. never *ever* touch this
     @_data = nil
 
-    @_session_timeout_msec = DEFAULT_SESSION_TIMEOUT_MSEC
+    @_receive_timeout_msec = opts[:receive_timeout_msec] || DEFAULT_RECEIVE_TIMEOUT_MSEC
 
     @mutex = Monitor.new
     
