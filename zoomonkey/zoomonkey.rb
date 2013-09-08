@@ -16,7 +16,7 @@ if ENV['DEBUG']
   end
 
   Zookeeper.logger = zookeeper_logger('zookeeper')
-  # Zookeeper.set_debug_level(Zookeeper::ZOO_LOG_LEVEL_DEBUG)
+  Zookeeper.set_debug_level(Zookeeper::ZOO_LOG_LEVEL_DEBUG)
 end
 
 class Worker
