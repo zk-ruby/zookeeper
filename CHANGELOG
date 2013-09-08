@@ -1,3 +1,10 @@
+v1.4.5
+
+  * Allow passing :session_id and :session_password options #42 (thanks to avalanche123)
+  * Fix permissions constants #46, #47, #48 (thanks to jaeho-kim)
+  * Allow JRuby to read nil values #44 (thanks to reidmorrison)
+
+
 v1.4.4 fix build under FreeBSD (h/t: stass)
 
   * https://github.com/slyphon/zookeeper/pull/40 
