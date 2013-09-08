@@ -333,7 +333,7 @@ static VALUE method_get_children(VALUE self, VALUE reqid, VALUE path, VALUE asyn
   struct String_vector strings;
   struct Stat stat;
 
-  int rc;
+  int rc = 0;
   switch (call_type) {
 
 #ifdef THREADED
@@ -378,7 +378,7 @@ static VALUE method_exists(VALUE self, VALUE reqid, VALUE path, VALUE async, VAL
   VALUE output = Qnil;
   struct Stat stat;
 
-  int rc;
+  int rc = 0;
   switch (call_type) {
 
 #ifdef THREADED
@@ -454,7 +454,7 @@ static VALUE method_create(VALUE self, VALUE reqid, VALUE path, VALUE data, VALU
 
   int invalid_call_type=0;
 
-  int rc;
+  int rc = 0;
   switch (call_type) {
 
 #ifdef THREADED
@@ -526,7 +526,7 @@ static VALUE method_get(VALUE self, VALUE reqid, VALUE path, VALUE async, VALUE 
   char * data = NULL;
   if (IS_SYNC(call_type)) {
     data = malloc(MAX_ZNODE_SIZE); /* ugh */
-    memset(data, 0, sizeof(data));
+    memset(data, 0, MAX_ZNODE_SIZE);
   }
 
   int rc, invalid_call_type=0;
@@ -814,12 +814,6 @@ static VALUE method_zkrb_iterate_event_loop(VALUE self) {
   FD_SET(pipe_r_fd, &rfds);
 
   maxfd = (pipe_r_fd > fd) ? pipe_r_fd : fd;
-
-  // If we were told to wait for no time at all, wait for 1 second to prevent
-  // spinning thousands of times per second
-  if (tv.tv_sec == 0 && tv.tv_usec == 0) {
-    tv.tv_sec = 1;
-  }
 
   rc = rb_thread_select(maxfd+1, &rfds, &wfds, &efds, &tv);
 

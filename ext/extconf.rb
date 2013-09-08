@@ -59,11 +59,9 @@ Dir.chdir(HERE) do
     puts "Building zkc."
 
     unless File.exists?('c')
-      puts(cmd = "tar xzf #{BUNDLE} 2>&1")
-      raise "'#{cmd}' failed" unless system(cmd)
+      safe_sh "tar xzf #{BUNDLE} 2>&1"
       PATCHES.each do |patch|
-        puts(cmd = "patch -p0 < #{patch} 2>&1")
-        raise "'#{cmd}' failed" unless system(cmd)
+        safe_sh "patch -p0 < #{patch} 2>&1"
       end
     end
 
