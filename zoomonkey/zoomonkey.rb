@@ -16,9 +16,7 @@ if ENV['DEBUG']
   end
 
   Zookeeper.logger = zookeeper_logger('zookeeper')
-  Zookeeper.set_debug_level(Zookeeper::ZOO_LOG_LEVEL_DEBUG)
-  Zookeeper::CZookeeper.set_zkrb_debug_level(Zookeeper::ZOO_LOG_LEVEL_DEBUG)
-  Zookeeper::CZookeeper.zoo_set_log_level(Zookeeper::ZOO_LOG_LEVEL_DEBUG)
+  # Zookeeper.set_debug_level(Zookeeper::ZOO_LOG_LEVEL_DEBUG)
 end
 
 class Worker
@@ -59,13 +57,15 @@ num_cluster = 3
 cluster = ZK::Server::Cluster.new(num_cluster, :base_dir => base_dir)
 
 class Reader < Worker
+  attr_reader :client
+
   def initialize(zookeeper_hosts)
     @zookeeper_hosts = zookeeper_hosts
     @log_from = :reader
   end
 
   def call
-    client = Zookeeper.new(@zookeeper_hosts)
+    @client = Zookeeper.new(@zookeeper_hosts, 10, method(:watcher))
     client.wait_until_connected
 
     client.create(:path => "/test", :data => '') rescue client.set(:path => "/test", :data => '')
@@ -94,6 +94,16 @@ class Reader < Worker
 
   def log(message)
     puts "t=#{Time.now.to_i} from=#{@log_from} #{message}\n"
+  end
+
+  def watcher(event)
+    if event[:state] == Zookeeper::ZOO_EXPIRED_SESSION_STATE
+      if client
+        log "action=reconnecting event_state=#{client.state_by_value(event[:state])} host=#{client.connected_host || 'nil'} session_id=#{client.session_id} connection_state=#{client.state_by_value(client.state)}"
+        client.reopen
+      end
+    end
+
   end
 end
 
