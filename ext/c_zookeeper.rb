@@ -258,7 +258,10 @@ class CZookeeper
 
       # this is the main loop
       until (@_shutting_down or @_closed or is_unrecoverable)
-        submit_pending_calls    if @reg.anything_to_do?
+        if @reg.anything_to_do?
+          submit_pending_calls
+        end
+
         zkrb_iterate_event_loop 
         iterate_event_delivery
       end

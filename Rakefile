@@ -94,6 +94,7 @@ end
 
 task :build do
   cd 'ext' do
+    ENV['ZK_DEV'] = 'true'
     sh "rake"
   end
 end

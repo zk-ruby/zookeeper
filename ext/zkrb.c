@@ -73,7 +73,7 @@
 #include "ruby/io.h"
 #endif
 
-#include "c-client-src/zookeeper.h"
+#include "zookeeper/zookeeper.h"
 #include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -788,7 +788,7 @@ static VALUE method_zkrb_iterate_event_loop(VALUE self) {
   fd_set rfds, wfds, efds;
   FD_ZERO(&rfds); FD_ZERO(&wfds); FD_ZERO(&efds);
 
-  int fd=0, interest=0, events=0, rc=0, maxfd=0, irc;
+  int fd = 0, interest = 0, events = 0, rc = 0, maxfd = 0, irc = 0, prc = 0;
   struct timeval tv;
 
   irc = zookeeper_interest(zk->zh, &fd, &interest, &tv);
@@ -815,6 +815,12 @@ static VALUE method_zkrb_iterate_event_loop(VALUE self) {
 
   maxfd = (pipe_r_fd > fd) ? pipe_r_fd : fd;
 
+  // If we were told to wait for no time at all, wait for 1 second to prevent
+  // spinning thousands of times per second
+  if (tv.tv_sec == 0 && tv.tv_usec == 0) {
+    tv.tv_sec = 1;
+  }
+
   rc = rb_thread_select(maxfd+1, &rfds, &wfds, &efds, &tv);
 
   if (rc > 0) {
@@ -834,18 +840,24 @@ static VALUE method_zkrb_iterate_event_loop(VALUE self) {
         rb_raise(rb_eRuntimeError, "read from pipe failed: %s", clean_errno());
       }
     }
-
-    rc = zookeeper_process(zk->zh, events);
   }
   else if (rc == 0) {
-    zkrb_debug("timed out waiting for descriptor to be ready. interest=%d fd=%d pipe_r_fd=%d maxfd=%d irc=%d timeout=%f",
-      interest, fd, pipe_r_fd, maxfd, irc, tv.tv_sec + (tv.tv_usec/ 1000.0 / 1000.0));
+    // zkrb_debug("timed out waiting for descriptor to be ready. interest=%d fd=%d pipe_r_fd=%d maxfd=%d irc=%d timeout=%f",
+    //   interest, fd, pipe_r_fd, maxfd, irc, tv.tv_sec + (tv.tv_usec/ 1000.0 / 1000.0));
   }
   else {
-    log_err("select returned: %d", rc);
+    log_err("select returned an error: rc=%d interest=%d fd=%d pipe_r_fd=%d maxfd=%d irc=%d timeout=%f",
+      rc, interest, fd, pipe_r_fd, maxfd, irc, tv.tv_sec + (tv.tv_usec/ 1000.0 / 1000.0));
   }
 
-  return INT2FIX(rc);
+  prc = zookeeper_process(zk->zh, events);
+
+  if (rc == 0) {
+    zkrb_debug("timed out waiting for descriptor to be ready. prc=%d interest=%d fd=%d pipe_r_fd=%d maxfd=%d irc=%d timeout=%f",
+      prc, interest, fd, pipe_r_fd, maxfd, irc, tv.tv_sec + (tv.tv_usec/ 1000.0 / 1000.0));
+  }
+
+  return INT2FIX(prc);
 }
 
 static VALUE method_has_events(VALUE self) {

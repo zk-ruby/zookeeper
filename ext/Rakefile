@@ -1,11 +1,5 @@
 require 'rbconfig'
 
-LIB_ZK_SO = 'lib/libzookeeper_mt_gem.la'
-
-TARBALL = FileList['zkc-*.tar.gz'].first
-
-raise "Where is the zkc tarball!?" unless TARBALL
-
 namespace :zkrb do
   task :clean do
     if File.exists?('Makefile')
@@ -25,21 +19,6 @@ task :clean   => 'zkrb:clean'
 task :clobber => 'zkrb:clobber'
 
 GENERATE_GVL_CODE_RB = 'generate_gvl_code.rb'
-
-# file 'c' do
-#   if tarball = Dir['zkc-*.tar.gz'].first
-#     sh "tar -zxf #{tarball}"
-#   else
-#     raise "couldn't find the tarball! wtf?!"
-#   end
-# end
-
-file 'c' => TARBALL do
-  sh "tar -zxf #{TARBALL}"
-  sh "patch -p0 < patch-zookeeper"
-end
-
-file GENERATE_GVL_CODE_RB => 'c'
 
 file 'zkrb_wrapper.c' => GENERATE_GVL_CODE_RB do
   sh "ruby generate_gvl_code.rb code"

@@ -2,7 +2,7 @@
 #define ZKRB_EVENT_LIB_H
 
 #include "ruby.h"
-#include "c-client-src/zookeeper.h"
+#include "zookeeper/zookeeper.h"
 #include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>

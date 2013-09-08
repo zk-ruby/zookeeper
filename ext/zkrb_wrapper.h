@@ -7,7 +7,7 @@
 #endif
 
 #include "ruby.h"
-#include "c-client-src/zookeeper.h"
+#include "zookeeper/zookeeper.h"
 #include "zkrb_wrapper_compat.h"
 #include "dbg.h"
 
