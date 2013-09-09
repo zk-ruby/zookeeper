@@ -202,11 +202,9 @@ class GeneratedCode < Struct.new(:structs, :wrapper_fns, :calling_fns)
 
         typed_args = argstr.split(',').map(&:strip)
 
-        # gah, fix up zoo_aset_acl which has a void_completion_t with no name assigned
-        if zoo_fn_name == 'zoo_aset_acl'
-          if idx = typed_args.index('void_completion_t')
-            typed_args[idx] = 'void_completion_t completion'
-          end
+        # gah, fix up functions which have a void_completion_t with no name assigned
+        if idx = typed_args.index('void_completion_t')
+          typed_args[idx] = 'void_completion_t completion'
         end
 
         struct = CallStruct.new(zoo_fn_name, typed_args)
