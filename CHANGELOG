@@ -11,7 +11,7 @@ v1.4.6
     session has expired which will solve most cases involving the
     Zookeeper::Exceptions::ContinuationTimeoutError exception
   * Upgrade the Apache ZooKeeper C library to 3.4.5 (client is backward
-    compatible with 3.3 servers)
+    compatible with 3.3 servers). The Java library has not been updated.
   * Cleanup complaints from compiler for uninitialized variable access
 
 v1.4.5
