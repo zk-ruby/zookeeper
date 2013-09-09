@@ -73,7 +73,7 @@
 #include "ruby/io.h"
 #endif
 
-#include "c-client-src/zookeeper.h"
+#include "zookeeper/zookeeper.h"
 #include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -82,6 +82,7 @@
 #include <pthread.h>
 #include <inttypes.h>
 #include <time.h>
+#include <arpa/inet.h>
 
 #include "common.h"
 #include "event_lib.h"
@@ -242,7 +243,7 @@ static void print_zkrb_instance_data(zkrb_instance_data_t* ptr) {
   fprintf(stderr, "}\n");
 }
 
-#define session_timeout_msec(self) rb_iv_get(self, "@_session_timeout_msec")
+#define receive_timeout_msec(self) rb_iv_get(self, "@_receive_timeout_msec")
 
 inline static void zkrb_debug_clientid_t(const clientid_t *cid) {
   int pass_len = sizeof(cid->passwd);
@@ -268,13 +269,13 @@ static VALUE method_zkrb_init(int argc, VALUE* argv, VALUE self) {
   Check_Type(hostPort, T_STRING);
 
   // Look up :zkc_log_level
-  VALUE log_level = rb_hash_aref(options, ID2SYM(rb_intern("zkc_log_level")));
-  if (NIL_P(log_level)) {
-    zoo_set_debug_level(0); // no log messages
-  } else {
-    Check_Type(log_level, T_FIXNUM);
-    zoo_set_debug_level(FIX2INT(log_level));
-  }
+  // VALUE log_level = rb_hash_aref(options, ID2SYM(rb_intern("zkc_log_level")));
+  // if (NIL_P(log_level)) {
+  //   zoo_set_debug_level(0); // no log messages
+  // } else {
+  //   Check_Type(log_level, T_FIXNUM);
+  //   zoo_set_debug_level(FIX2INT(log_level));
+  // }
 
   volatile VALUE data;
   zkrb_instance_data_t *zk_local_ctx;
@@ -306,7 +307,7 @@ static VALUE method_zkrb_init(int argc, VALUE* argv, VALUE self) {
       zookeeper_init(
           RSTRING_PTR(hostPort),        // const char *host
           zkrb_state_callback,          // watcher_fn
-          session_timeout_msec(self),   // recv_timeout
+          receive_timeout_msec(self),   // recv_timeout
           &zk_local_ctx->myid,          // cilentid_t
           ctx,                          // void *context
           0);                           // flags
@@ -333,7 +334,7 @@ static VALUE method_get_children(VALUE self, VALUE reqid, VALUE path, VALUE asyn
   struct String_vector strings;
   struct Stat stat;
 
-  int rc;
+  int rc = 0;
   switch (call_type) {
 
 #ifdef THREADED
@@ -378,7 +379,7 @@ static VALUE method_exists(VALUE self, VALUE reqid, VALUE path, VALUE async, VAL
   VALUE output = Qnil;
   struct Stat stat;
 
-  int rc;
+  int rc = 0;
   switch (call_type) {
 
 #ifdef THREADED
@@ -454,7 +455,7 @@ static VALUE method_create(VALUE self, VALUE reqid, VALUE path, VALUE data, VALU
 
   int invalid_call_type=0;
 
-  int rc;
+  int rc = 0;
   switch (call_type) {
 
 #ifdef THREADED
@@ -526,7 +527,7 @@ static VALUE method_get(VALUE self, VALUE reqid, VALUE path, VALUE async, VALUE 
   char * data = NULL;
   if (IS_SYNC(call_type)) {
     data = malloc(MAX_ZNODE_SIZE); /* ugh */
-    memset(data, 0, sizeof(data));
+    memset(data, 0, MAX_ZNODE_SIZE);
   }
 
   int rc, invalid_call_type=0;
@@ -788,10 +789,10 @@ static VALUE method_zkrb_iterate_event_loop(VALUE self) {
   fd_set rfds, wfds, efds;
   FD_ZERO(&rfds); FD_ZERO(&wfds); FD_ZERO(&efds);
 
-  int fd=0, interest=0, events=0, rc=0, maxfd=0;
+  int fd = 0, interest = 0, events = 0, rc = 0, maxfd = 0, irc = 0, prc = 0;
   struct timeval tv;
 
-  zookeeper_interest(zk->zh, &fd, &interest, &tv);
+  irc = zookeeper_interest(zk->zh, &fd, &interest, &tv);
 
   if (fd != -1) {
     if (interest & ZOOKEEPER_READ) {
@@ -834,17 +835,24 @@ static VALUE method_zkrb_iterate_event_loop(VALUE self) {
         rb_raise(rb_eRuntimeError, "read from pipe failed: %s", clean_errno());
       }
     }
-
-    rc = zookeeper_process(zk->zh, events);
   }
   else if (rc == 0) {
-    zkrb_debug("timed out waiting for descriptor to be ready");
+    // zkrb_debug("timed out waiting for descriptor to be ready. interest=%d fd=%d pipe_r_fd=%d maxfd=%d irc=%d timeout=%f",
+    //   interest, fd, pipe_r_fd, maxfd, irc, tv.tv_sec + (tv.tv_usec/ 1000.0 / 1000.0));
   }
   else {
-    log_err("select returned: %d", rc);
+    log_err("select returned an error: rc=%d interest=%d fd=%d pipe_r_fd=%d maxfd=%d irc=%d timeout=%f",
+      rc, interest, fd, pipe_r_fd, maxfd, irc, tv.tv_sec + (tv.tv_usec/ 1000.0 / 1000.0));
   }
 
-  return INT2FIX(rc);
+  prc = zookeeper_process(zk->zh, events);
+
+  if (rc == 0) {
+    zkrb_debug("timed out waiting for descriptor to be ready. prc=%d interest=%d fd=%d pipe_r_fd=%d maxfd=%d irc=%d timeout=%f",
+      prc, interest, fd, pipe_r_fd, maxfd, irc, tv.tv_sec + (tv.tv_usec/ 1000.0 / 1000.0));
+  }
+
+  return INT2FIX(prc);
 }
 
 static VALUE method_has_events(VALUE self) {
@@ -928,6 +936,38 @@ static VALUE method_zerror(VALUE self, VALUE errc) {
   return rb_str_new2(zerror(FIX2INT(errc)));
 }
 
+static VALUE method_connected_host(VALUE self) {
+  FETCH_DATA_PTR(self, zk);
+
+  struct sockaddr addr;
+  socklen_t addr_len = sizeof(addr);
+
+  if (zookeeper_get_connected_host(zk->zh, &addr, &addr_len) != NULL) {
+    char buf[255];
+    char addrstr[128];
+    void *inaddr;
+    int port;
+
+#if defined(AF_INET6)
+    if(addr.sa_family==AF_INET6){
+        inaddr = &((struct sockaddr_in6 *) &addr)->sin6_addr;
+        port = ((struct sockaddr_in6 *) &addr)->sin6_port;
+    } else {
+#endif
+      inaddr = &((struct sockaddr_in *) &addr)->sin_addr;
+      port = ((struct sockaddr_in *) &addr)->sin_port;
+#if defined(AF_INET6)
+    }
+#endif
+
+    inet_ntop(addr.sa_family, inaddr, addrstr, sizeof(addrstr)-1);
+    snprintf(buf, sizeof(buf), "%s:%d", addrstr, ntohs(port));
+    return rb_str_new2(buf);
+  }
+
+  return Qnil;
+}
+
 static void zkrb_define_methods(void) {
 #define DEFINE_METHOD(M, ARGS) { \
     rb_define_method(CZookeeper, #M, method_ ## M, ARGS); }
@@ -963,6 +1003,7 @@ static void zkrb_define_methods(void) {
   DEFINE_METHOD(sync, 2);
   DEFINE_METHOD(zkrb_iterate_event_loop, 0);
   DEFINE_METHOD(zkrb_get_next_event_st, 0);
+  DEFINE_METHOD(connected_host, 0);
 
   // methods for the ruby-side event manager
   DEFINE_METHOD(zkrb_get_next_event, 1);
@@ -995,7 +1036,9 @@ static VALUE zkrb_client_id_method_initialize(VALUE self) {
 
 
 void Init_zookeeper_c() {
+  // Don't debug by default
   ZKRBDebugging = 0;
+  zoo_set_debug_level(0);
 
   mZookeeper = rb_define_module("Zookeeper");
   mZookeeperExceptions = rb_define_module_under(mZookeeper, "Exceptions");

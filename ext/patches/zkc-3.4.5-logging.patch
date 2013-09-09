@@ -1,0 +1,41 @@
+diff -ur zkc-3.4.5-orig/c/src/zookeeper.c zkc-3.4.5/c/src/zookeeper.c
+--- zkc-3.4.5-orig/c/src/zookeeper.c	2012-09-30 10:53:32.000000000 -0700
++++ zkc-3.4.5/c/src/zookeeper.c	2013-09-07 21:25:24.000000000 -0700
+@@ -1650,14 +1650,16 @@
+         // a PING
+         if (zh->state==ZOO_CONNECTED_STATE) {
+             send_to = zh->recv_timeout/3 - idle_send;
+-            if (send_to <= 0 && zh->sent_requests.head==0) {
+-//                LOG_DEBUG(("Sending PING to %s (exceeded idle by %dms)",
+-//                                format_current_endpoint_info(zh),-send_to));
+-                int rc=send_ping(zh);
+-                if (rc < 0){
+-                    LOG_ERROR(("failed to send PING request (zk retcode=%d)",rc));
+-                    return api_epilog(zh,rc);
+-                }
++            if (send_to <= 0) {
++                if (zh->sent_requests.head==0) {
++                    LOG_DEBUG(("Sending PING to %s (exceeded idle by %dms)",
++                                   format_current_endpoint_info(zh),-send_to));
++                    int rc=send_ping(zh);
++                    if (rc < 0){
++                        LOG_ERROR(("failed to send PING request (zk retcode=%d)",rc));
++                        return api_epilog(zh,rc);
++                    }
++                }
+                 send_to = zh->recv_timeout/3;
+             }
+         }
+@@ -1669,6 +1671,12 @@
+             zh->next_deadline.tv_sec += zh->next_deadline.tv_usec / 1000000;
+             zh->next_deadline.tv_usec = zh->next_deadline.tv_usec % 1000000;
+         }
++        
++        if (tv->tv_sec == 0 && tv->tv_usec == 0) {
++          LOG_DEBUG(("Returning a 0.0 timeval: state=%d idle_recv=%d idle_send=%d recv_to=%d send_to=%d  send_requests=%s",
++            zh->state, idle_recv, idle_send, recv_to, send_to, zh->sent_requests.head==0 ? "false" : "true"));
++        }
++        
+         *interest = ZOOKEEPER_READ;
+         /* we are interested in a write if we are connected and have something
+          * to send, or we are waiting for a connect to finish. */

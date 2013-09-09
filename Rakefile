@@ -90,6 +90,14 @@ namespace :build do
 
     Rake::Task['build'].invoke
   end
+
+  task :clobber do
+    cd 'ext' do
+      sh 'rake clobber'
+    end
+
+    Rake::Task['build'].invoke
+  end
 end
 
 task :build do

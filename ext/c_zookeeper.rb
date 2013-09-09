@@ -17,7 +17,7 @@ class CZookeeper
   include Exceptions
   include Logger
 
-  DEFAULT_SESSION_TIMEOUT_MSEC = 10000
+  DEFAULT_RECEIVE_TIMEOUT_MSEC = 10000
 
   class GotNilEventException < StandardError; end
 
@@ -65,7 +65,7 @@ class CZookeeper
     # the actual C data is stashed in this ivar. never *ever* touch this
     @_data = nil
 
-    @_session_timeout_msec = DEFAULT_SESSION_TIMEOUT_MSEC
+    @_receive_timeout_msec = opts[:receive_timeout_msec] || DEFAULT_RECEIVE_TIMEOUT_MSEC
 
     @mutex = Monitor.new
     
@@ -118,6 +118,14 @@ class CZookeeper
 
   def associating?
     state == ZOO_ASSOCIATING_STATE
+  end
+
+  def unhealthy?
+    @_closed || @_shutting_down || is_unrecoverable
+  end
+
+  def healthy?
+    !unhealthy?
   end
 
   def close
@@ -183,11 +191,11 @@ class CZookeeper
       while true 
         if timeout
           now = Time.now
-          break if (@state == ZOO_CONNECTED_STATE) || @_shutting_down || @_closed || (now > time_to_stop)
+          break if (@state == ZOO_CONNECTED_STATE) || unhealthy? || (now > time_to_stop)
           delay = time_to_stop.to_f - now.to_f
           @state_cond.wait(delay)
         else
-          break if (@state == ZOO_CONNECTED_STATE) || @_shutting_down || @_closed
+          break if (@state == ZOO_CONNECTED_STATE) || unhealthy?
           @state_cond.wait
         end
       end
@@ -201,7 +209,7 @@ class CZookeeper
     # blocks the caller until result has returned
     def submit_and_block(meth, *args)
       @mutex.synchronize do
-        raise Exceptions::NotConnected if @_shutting_down
+        raise Exceptions::NotConnected if unhealthy?
       end
 
       cnt = Continuation.new(meth, *args)
@@ -257,8 +265,11 @@ class CZookeeper
       event_thread_await_running
 
       # this is the main loop
-      until (@_shutting_down or @_closed or is_unrecoverable)
-        submit_pending_calls    if @reg.anything_to_do?
+      while healthy?
+        if @reg.anything_to_do? && connected?
+          submit_pending_calls
+        end
+
         zkrb_iterate_event_loop 
         iterate_event_delivery
       end
@@ -269,7 +280,7 @@ class CZookeeper
       if @_shutting_down and not (@_closed or is_unrecoverable)
         logger.debug { "we're in shutting down state, there are #{@reg.in_flight.length} in_flight completions" }
 
-        until @reg.in_flight.empty? or is_unrecoverable or @_closed
+        until @reg.in_flight.empty? or @_closed or is_unrecoverable
           zkrb_iterate_event_loop
           iterate_event_delivery
           logger.debug { "there are #{@reg.in_flight} in_flight completions left" }
