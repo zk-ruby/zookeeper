@@ -1,0 +1,3 @@
+#!/bin/sh
+
+awk '{ if (prev == $0) count++; else { if (count > 0) { print " --- Line repeated " count " times --- " } print; prev = $0; count = 0 } }' $*

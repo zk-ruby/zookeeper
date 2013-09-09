@@ -381,6 +381,30 @@ int zkrb_call_zoo_aset_acl(zhandle_t *zh, const char *path, int version, struct 
 }
 
 
+static VALUE zkrb_gvl_zoo_amulti(void *data) {
+  zkrb_zoo_amulti_args_t *a = (zkrb_zoo_amulti_args_t *)data;
+  a->rc = zoo_amulti(a->zh, a->count, a->ops, a->results, a->completion, a->data);
+  return Qnil;
+}
+
+// wrapper that calls zoo_amulti via zkrb_gvl_zoo_amulti inside rb_thread_blocking_region
+int zkrb_call_zoo_amulti(zhandle_t *zh, int count, const zoo_op_t *ops, zoo_op_result_t *results, void_completion_t completion, const void *data) {
+  zkrb_zoo_amulti_args_t args = {
+    .rc = ZKRB_FAIL,
+    .zh = zh,
+    .count = count,
+    .ops = ops,
+    .results = results,
+    .completion = completion,
+    .data = data
+  };
+
+  zkrb_thread_blocking_region(zkrb_gvl_zoo_amulti, (void *)&args);
+
+  return args.rc;
+}
+
+
 static VALUE zkrb_gvl_zoo_add_auth(void *data) {
   zkrb_zoo_add_auth_args_t *a = (zkrb_zoo_add_auth_args_t *)data;
   a->rc = zoo_add_auth(a->zh, a->scheme, a->cert, a->certLen, a->completion, a->data);
@@ -729,3 +753,23 @@ int zkrb_call_zoo_set_acl(zhandle_t *zh, const char *path, int version, const st
 }
 
 
+static VALUE zkrb_gvl_zoo_multi(void *data) {
+  zkrb_zoo_multi_args_t *a = (zkrb_zoo_multi_args_t *)data;
+  a->rc = zoo_multi(a->zh, a->count, a->ops, a->results);
+  return Qnil;
+}
+
+// wrapper that calls zoo_multi via zkrb_gvl_zoo_multi inside rb_thread_blocking_region
+int zkrb_call_zoo_multi(zhandle_t *zh, int count, const zoo_op_t *ops, zoo_op_result_t *results) {
+  zkrb_zoo_multi_args_t args = {
+    .rc = ZKRB_FAIL,
+    .zh = zh,
+    .count = count,
+    .ops = ops,
+    .results = results
+  };
+
+  zkrb_thread_blocking_region(zkrb_gvl_zoo_multi, (void *)&args);
+
+  return args.rc;
+}

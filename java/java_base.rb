@@ -1,9 +1,9 @@
 require 'java'
 require 'thread'
-require 'rubygems'
 
-gem 'slyphon-log4j', '= 1.2.15'
-gem 'slyphon-zookeeper_jar', '= 3.3.5'
+# require 'rubygems'
+# gem 'slyphon-log4j', '= 1.2.15'
+# gem 'zk-ruby-zookeeper_jar', "= #{Zookeeper::DRIVER_VERSION}"
 
 require 'log4j'
 require 'zookeeper_jar'

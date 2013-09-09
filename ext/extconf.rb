@@ -3,10 +3,11 @@ require 'rbconfig'
 require 'fileutils'
 
 HERE = File.expand_path(File.dirname(__FILE__))
-BUNDLE = Dir.glob("zkc-*.tar.gz").first
-ZKPATCH = "patch-zookeeper"
+BUNDLE = Dir.glob("zkc-*.tar.gz").sort.last
+ZKC_VERSION = BUNDLE[/(zkc-.*?)\.tar.gz$/, 1]
+PATCHES = Dir.glob("patches/#{ZKC_VERSION}*.patch")
 
-BUNDLE_PATH = File.join(HERE, 'c')
+BUNDLE_PATH = File.join(HERE, ZKC_VERSION, 'c')
 
 $EXTRA_CONF = ''
 
@@ -58,8 +59,10 @@ Dir.chdir(HERE) do
     puts "Building zkc."
 
     unless File.exists?('c')
-      puts(cmd = "tar xzf #{BUNDLE} 2>&1 && patch -p0 < #{ZKPATCH} 2>&1")
-      raise "'#{cmd}' failed" unless system(cmd)
+      safe_sh "tar xzf #{BUNDLE} 2>&1"
+      PATCHES.each do |patch|
+        safe_sh "patch -p0 < #{patch} 2>&1"
+      end
     end
 
     # clean up stupid apple rsrc fork bullshit
