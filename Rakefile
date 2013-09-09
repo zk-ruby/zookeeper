@@ -42,8 +42,8 @@ if File.exists?(release_ops_path)
             sh "git co #{tag} && git reset --hard && git clean -fdx"
 
             ENV['JAVA_GEM'] = nil
-            sh "rvm 1.8.7 do gem build zookeeper.gemspec"
-            sh "rvm 1.8.7 do env JAVA_GEM=1 gem build zookeeper.gemspec"
+            sh "gem build zookeeper.gemspec"
+            sh "env JAVA_GEM=1 gem build zookeeper.gemspec"
 
             mv FileList['*.gem'], orig_dir
           end
