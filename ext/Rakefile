@@ -36,7 +36,7 @@ file 'Makefile' do
   sh "ruby extconf.rb"
 end
 
-task :build => [ZKRB_WRAPPER, 'Makefile'].flatten do
+task :build => [Makefile, ZKRB_WRAPPER].flatten do
   sh 'make'
 end
 
