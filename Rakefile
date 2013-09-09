@@ -25,6 +25,7 @@ if File.exists?(release_ops_path)
 
   namespace :zk do
     namespace :gems do
+      desc "Build gems to prepare for a release. Requires TAG="
       task :build do
         require 'tmpdir'
 
@@ -49,6 +50,7 @@ if File.exists?(release_ops_path)
         end
       end
 
+      desc "Release gems that have been built"
       task :push do
         gems = FileList['*.gem']
         raise "No gemfiles to push!" if gems.empty?
@@ -100,6 +102,7 @@ namespace :build do
   end
 end
 
+desc "Build C component"
 task :build do
   cd 'ext' do
     sh "rake"
