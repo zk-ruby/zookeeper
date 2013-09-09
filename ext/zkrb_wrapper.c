@@ -383,19 +383,19 @@ int zkrb_call_zoo_aset_acl(zhandle_t *zh, const char *path, int version, struct 
 
 static VALUE zkrb_gvl_zoo_amulti(void *data) {
   zkrb_zoo_amulti_args_t *a = (zkrb_zoo_amulti_args_t *)data;
-  a->rc = zoo_amulti(a->zh, a->count, a->ops, a->results, a->void_completion_t, a->data);
+  a->rc = zoo_amulti(a->zh, a->count, a->ops, a->results, a->completion, a->data);
   return Qnil;
 }
 
 // wrapper that calls zoo_amulti via zkrb_gvl_zoo_amulti inside rb_thread_blocking_region
-int zkrb_call_zoo_amulti(zhandle_t *zh, int count, const zoo_op_t *ops, zoo_op_result_t *results, void_completion_t, const void *data) {
+int zkrb_call_zoo_amulti(zhandle_t *zh, int count, const zoo_op_t *ops, zoo_op_result_t *results, void_completion_t completion, const void *data) {
   zkrb_zoo_amulti_args_t args = {
     .rc = ZKRB_FAIL,
     .zh = zh,
     .count = count,
     .ops = ops,
     .results = results,
-    .void_completion_t = void_completion_t,
+    .completion = completion,
     .data = data
   };
 

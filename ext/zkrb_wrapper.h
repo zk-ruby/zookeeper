@@ -162,7 +162,7 @@ typedef struct {
   int count;
   const zoo_op_t *ops;
   zoo_op_result_t *results;
-  void_completion_t;
+  void_completion_t completion;
   const void *data;
   int rc;
 } zkrb_zoo_amulti_args_t;
@@ -329,7 +329,7 @@ int zkrb_call_zoo_awget_children2(zhandle_t *zh, const char *path, watcher_fn wa
 int zkrb_call_zoo_async(zhandle_t *zh, const char *path, string_completion_t completion, const void *data);
 int zkrb_call_zoo_aget_acl(zhandle_t *zh, const char *path, acl_completion_t completion, const void *data);
 int zkrb_call_zoo_aset_acl(zhandle_t *zh, const char *path, int version, struct ACL_vector *acl, void_completion_t completion, const void *data);
-int zkrb_call_zoo_amulti(zhandle_t *zh, int count, const zoo_op_t *ops, zoo_op_result_t *results, void_completion_t, const void *data);
+int zkrb_call_zoo_amulti(zhandle_t *zh, int count, const zoo_op_t *ops, zoo_op_result_t *results, void_completion_t completion, const void *data);
 int zkrb_call_zoo_add_auth(zhandle_t *zh, const char* scheme, const char* cert, int certLen, void_completion_t completion, const void *data);
 int zkrb_call_zoo_create(zhandle_t *zh, const char *path, const char *value, int valuelen, const struct ACL_vector *acl, int flags, char *path_buffer, int path_buffer_len);
 int zkrb_call_zoo_delete(zhandle_t *zh, const char *path, int version);
