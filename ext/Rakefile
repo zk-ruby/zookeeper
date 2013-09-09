@@ -1,5 +1,7 @@
 require 'rbconfig'
 
+ZKRB_WRAPPER = %w[zkrb_wrapper.c zkrb_wrapper.h]
+
 namespace :zkrb do
   task :clean do
     if File.exists?('Makefile')
@@ -11,34 +13,29 @@ namespace :zkrb do
   end
 
   task :clobber => :clean do
-    rm_rf %w[Makefile c lib bin include ._c]
+    rm_rf %w[Makefile c lib bin include ._c] + ZKRB_WRAPPER
   end
 end
 
-task :clean   => 'zkrb:clean'
-task :clobber => 'zkrb:clobber'
+task :clean    => 'zkrb:clean'
+task :clobber  => 'zkrb:clobber'
+task :wrappers => ZKRB_WRAPPER
+task :default  => :build
 
-GENERATE_GVL_CODE_RB = 'generate_gvl_code.rb'
-
-file 'zkrb_wrapper.c' => GENERATE_GVL_CODE_RB do
+file 'zkrb_wrapper.c' => 'generate_gvl_code.rb' do
   sh "ruby generate_gvl_code.rb code"
 end
 
-file 'zkrb_wrapper.h' => GENERATE_GVL_CODE_RB do
+file 'zkrb_wrapper.h' => 'generate_gvl_code.rb' do
   sh "ruby generate_gvl_code.rb headers"
 end
-
-ZKRB_WRAPPER = %w[zkrb_wrapper.c zkrb_wrapper.h]
-
-task :wrappers => ZKRB_WRAPPER
 
 file 'Makefile' do
   sh "ruby extconf.rb"
 end
 
-task :build => ['Makefile', ZKRB_WRAPPER].flatten do
+task :build => [ 'Makefile', :wrappers ] do
   sh 'make'
 end
 
-task :default => :build
 
