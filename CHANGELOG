@@ -1,3 +1,19 @@
+
+v1.4.6
+
+  * Fix two issues with dealing with unresponsive zookeeper servers
+    that would prevent the client from properly recovering the session
+    (including one in the Apache ZooKeeper C library — see ZOOKEEPER-1756
+    for more details)
+  * Reduce the chances of seeing Zookeeper::Exceptions::NotConnected
+    exceptions by only submitting new commands if we are connected
+  * Prevent commands from being queued to be sent to the server if the
+    session has expired which will solve most cases involving the
+    Zookeeper::Exceptions::ContinuationTimeoutError exception
+  * Upgrade the Apache ZooKeeper C library to 3.4.5 (client is backward
+    compatible with 3.3 servers)
+  * Cleanup complaints from compiler for uninitialized variable access
+
 v1.4.5
 
   * Allow passing :session_id and :session_password options #42 (thanks to avalanche123)
