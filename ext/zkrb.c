@@ -83,6 +83,7 @@
 #include <inttypes.h>
 #include <time.h>
 #include <arpa/inet.h>
+#include <netinet/in.h>
 
 #include "common.h"
 #include "event_lib.h"
