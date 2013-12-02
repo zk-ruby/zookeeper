@@ -122,7 +122,7 @@ class CZookeeper
   end
 
   def unhealthy?
-    closed? || shutting_down? || is_unrecoverable
+    @_closed || @_shutting_down || is_unrecoverable
   end
 
   def healthy?
