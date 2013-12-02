@@ -1,3 +1,6 @@
+v1.4.7 
+
+  * Fixing dependent library compilation on FreeBSD 10 #53 (h/t: gogreen53)
 
 v1.4.6
 
