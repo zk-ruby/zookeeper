@@ -121,14 +121,6 @@ class CZookeeper
     state == ZOO_ASSOCIATING_STATE
   end
 
-  def unhealthy?
-    @_closed || @_shutting_down || is_unrecoverable
-  end
-
-  def healthy?
-    !unhealthy?
-  end
-
   def close
     return if closed?
 
@@ -206,6 +198,20 @@ class CZookeeper
   end
 
   private
+    # This method is NOT SYNCHRONIZED!
+    #
+    # you must hold the @mutex lock while calling this method
+    def unhealthy?
+      @_closed || @_shutting_down || is_unrecoverable
+    end
+
+    # This method is NOT SYNCHRONIZED!
+    #
+    # you must hold the @mutex lock while calling this method
+    def healthy?
+      !unhealthy?
+    end
+
     # submits a job for processing 
     # blocks the caller until result has returned
     def submit_and_block(meth, *args)
@@ -227,6 +233,8 @@ class CZookeeper
     
     # this method is part of the reopen/close code, and is responsible for
     # shutting down the dispatch thread. 
+    #
+    # this method must be EXTERNALLY SYNCHRONIZED!
     #
     # @event_thread will be nil when this method exits
     #
