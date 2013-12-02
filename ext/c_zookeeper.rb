@@ -73,7 +73,8 @@ class CZookeeper
     @running_cond = @mutex.new_cond
 
     # used to signal we've received the connected event
-    @state_cond = @mutex.new_cond
+    @state_mutex = Monitor.new
+    @state_cond = @state_mutex.new_cond
 
     # the current state of the connection
     @state = ZOO_CLOSED_STATE
@@ -121,7 +122,7 @@ class CZookeeper
   end
 
   def unhealthy?
-    @_closed || @_shutting_down || is_unrecoverable
+    closed? || shutting_down? || is_unrecoverable
   end
 
   def healthy?
@@ -172,7 +173,7 @@ class CZookeeper
 
   def state
     return ZOO_CLOSED_STATE if closed?
-    @mutex.synchronize { @state }
+    @state_mutex.synchronize { @state }
   end
 
   # this implementation is gross, but i don't really see another way of doing it
@@ -187,7 +188,7 @@ class CZookeeper
 
     return false unless wait_until_running(timeout)
 
-    @mutex.synchronize do
+    @state_mutex.synchronize do
       while true 
         if timeout
           now = Time.now
@@ -329,8 +330,8 @@ class CZookeeper
         if (hash[:req_id] == ZKRB_GLOBAL_CB_REQ) && (hash[:type] == -1)
           ev_state = hash[:state]
 
-          if @state != ev_state
-            @mutex.synchronize do
+          @state_mutex.synchronize do
+            if @state != ev_state
               @state = ev_state
               @state_cond.broadcast
             end
@@ -368,8 +369,11 @@ class CZookeeper
       @mutex.synchronize do 
         @_shutting_down = true
         # ollie ollie oxen all home free!
-        @state_cond.broadcast
         @running_cond.broadcast
+      end
+
+      @state_mutex.synchronize do
+        @state_cond.broadcast
       end
     end
 
