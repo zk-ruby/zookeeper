@@ -1,4 +1,8 @@
-v1.4.7 
+v1.4.8
+
+  * Fix deadlock related to state checks that can happen during reconnecting
+
+v1.4.7
 
   * Fixing dependent library compilation on FreeBSD 10 #53 (h/t: gogreen53)
 
@@ -26,7 +30,7 @@ v1.4.5
 
 v1.4.4 fix build under FreeBSD (h/t: stass)
 
-  * https://github.com/slyphon/zookeeper/pull/40 
+  * https://github.com/slyphon/zookeeper/pull/40
 
 v1.4.3 fix build for ruby 2.0.0-rc2
 
@@ -59,8 +63,8 @@ v1.2.14 merge add_auth pull request, reduce chances for ContinuationTimeoutError
   * added support for the add_auth call (h/t: @bradhe) see pull req #25
 
   * fix a corner case where some pending Continuations may get stuck without
-    being shutdown when the event thread exits. This would lead to a 
-    ContinuationTimeoutError being raised after 30s as a failsafe. 
+    being shutdown when the event thread exits. This would lead to a
+    ContinuationTimeoutError being raised after 30s as a failsafe.
 
 v1.2.13 fix build under rbenv
 
@@ -80,7 +84,7 @@ v1.2.11 remove dependency on backports gem
     We apologise for the inconvenience.
 
 v1.2.10 minor bug fix in java code
-  
+
   * Don't obscure a legitimate exception because of an unexpected nil
 
 v1.2.7 further lock adjustments, deadlock risk reduction
@@ -94,7 +98,7 @@ v1.2.7 further lock adjustments, deadlock risk reduction
     the case of an unforseen condition.
 
   * Improve the CZookeeper#wait_until_connected to use a deadline approach
-    to waiting for both running and connected states. Also, handle the 
+    to waiting for both running and connected states. Also, handle the
     'nil' (wait forever) timeout properly.
 
   * Wake all waiting threads on all ConditionVariables when CZookeeper#shut_down!
@@ -109,26 +113,26 @@ v1.2.5 cleanup locking in ZookeeperBase
     exposed us to deadlocks in situations where an async event would be
     delivered (probably a SESSION_EXPIRED event), but the callback block could
     not be called because the dispatch thread would block on the mutex being
-    held by the caller of create. 
+    held by the caller of create.
 
     This version cleans up that usage, and ensures that the only time we hold
     the mutex is during startup/shutdown (when the value of @czk may be changing),
     and in all other cases we grab the mutex, dereference, and unlock then perform
-    whatever action on the reference. 
+    whatever action on the reference.
 
   * Add a safety net to Continuation (which will soon be called 'Promise' or
     'Future' at the request of @eric). If any operation takes more than 30s
     an exception will be raised in the calling thread. The session timeout
     setting makes it so that no operation should take more than 20s, so we know
     if we haven't received a reply in *longer* than that, something has gone
-    awry. 
+    awry.
 
 v1.2.4 fix buffer overflow in CZookeeper client_id code
-  
+
   * the 'passwd' part of the struct is a char[16], but isn't null terminated.
     use rb_str_new with an explicit length, rather than rb_str_new2 which
     uses strlen().
-    
+
 v1.2.3 ensure that all threads are woken up on shutdown
 
   * There was an edge case where a call would be queued up and its thread
@@ -154,7 +158,7 @@ v1.2.1 simplify assert_open
     action. This was meant as a fail-early lightweight check of the connection
     state and it worked well when we were running against the mt code. Now this
     requires us to use a Continuation and make our way through the event loop.
-    There is a possible deadlock this release should solve that was caused by 
+    There is a possible deadlock this release should solve that was caused by
     the assert_open code holding a lock while making an async call through
     the event loop. This is no longer the case. The assert_open call only checks
     that the current handle hasn't been closed, the connection-state checking
@@ -168,7 +172,7 @@ v1.2.0 Stop the World, I Wanna fork()
     and resume_after_fork_in_parent to match their ZK counterparts
 
   * replaced the Queue in QueueWithPipe (really have to change that name)
-    with an Array and Mutex/ConditionVariable pair. This allows us to 
+    with an Array and Mutex/ConditionVariable pair. This allows us to
     have better control over the shutdown signaling, and lets us resume
     operations after a pause.
 
@@ -194,7 +198,7 @@ v1.1.0 Rewrite C backend to use zookeeper_st, the async library
     be held by a thread when fork() was called, which opened up the possibility
     for corruption and other badness.
 
-    This version contains a Continuation class, which allows us to present a 
+    This version contains a Continuation class, which allows us to present a
     synchronous front-end to the asynchronous backend. All features are still
     supported, no special action is necessary to prepare for a fork, and the
     post-fork procedure is the same as before: call reopen() in the child,
@@ -240,14 +244,14 @@ v1.0.0 Single Zookeeper namespace
 
   * Java and C now use different names for the base class, to avoid the
     possibility of error. Java is now JavaBase, C remains ZookeeperBase.
-    
+
   * All client methods are defined in the ClientMethods module and mixed
     into the constructed Client class.
 
   * Fix all requires, no longer monkey with $LOAD_PATH, use require_relative
 
-  * Bugfix for C client. 
-  
+  * Bugfix for C client.
+
     Because we release the GIL, there's the possibilty that in the middle of a
     synchronous C call, ruby will have switched thread contexts and one of
     those threads will call close. It seems that during normal operation, this
@@ -277,20 +281,20 @@ v0.9.0 RELEASE THE KRAK..er, GIL!!
 
   * In >= 1.9.2 the ruby interpreter allows you to release the GIL when
     calling into native code, sounds like a good idea.
-    
+
     This release makes use of that code by parsing the zookeeper.h header file
     and extracting the method signatures of all relevant zoo_* functions, then
     generating boilerplate that allows us to call those functions via the
     rb_thread_blocking_region function.
 
     1.8.7 compatibility is maintained by stubbing out that functionality if built
-    under 1.8.7. 
+    under 1.8.7.
 
   * 1.8.7 is deprecated! I will continue to support 1.8.7 for the near future
     but sometime soon, you're gonna have to upgrade.
 
 v0.8.4 fix NameError, require 'forwardable'
-  
+
   * Really not sure why this didn't come up in tests
 
   * issue here https://github.com/slyphon/zk/issues/22
@@ -310,7 +314,7 @@ v0.8.3 fix NonLocalJump exception in event delivery thread shutdown code
 
 v0.8.2 fix close after a fork()
 
-  * The dispatch thread will be dead in this situation, so we need to 
+  * The dispatch thread will be dead in this situation, so we need to
     check to see if it's already dead before waiting on it to exit.
 
 v0.8.1 Java client fix, silence warnings
@@ -318,20 +322,20 @@ v0.8.1 Java client fix, silence warnings
 v0.8.0 Refactor C implementaion, EventMachine client
 
   * separated CZookeeper and ZookeeperBase implementation
-  
+
     This solves issues with reopen not working properly, makes for a much
     cleaner event delivery implementation. ZookeeperBase controls the lifecycle
     of the event dispatch thread now, rather than it being tied to CZookeeper.
-  
+
   * added support for the 'sync' API call
-  
+
   * Refactored zookeeper_c.c and zookeeper_lib.c
-  
+
     More error checking in zookeeper_lib.c and restructure some things to make
     logic easier to follow
-  
+
     Fix bug in method_get_next_event that made the shutdown case so complicated
-  
+
   * Massively simplified EMClient implementation
 
     Rather than trying to hook the IO used by zookeeper_lib to notify zookeeper_c
