@@ -73,6 +73,17 @@
 #include "ruby/io.h"
 #endif
 
+#ifndef HAVE_RB_THREAD_FD_SELECT
+#define rb_fdset_t fd_set
+#define rb_fd_isset(n, f) FD_ISSET(n, f)
+#define rb_fd_init(f) FD_ZERO(f)
+#define rb_fd_zero(f)  FD_ZERO(f)
+#define rb_fd_set(n, f)  FD_SET(n, f)
+#define rb_fd_clr(n, f) FD_CLR(n, f)
+#define rb_fd_term(f)
+#define rb_thread_fd_select rb_thread_select
+#endif
+
 #include "zookeeper/zookeeper.h"
 #include <errno.h>
 #include <stdio.h>
@@ -787,8 +798,8 @@ inline static int get_self_pipe_read_fd(VALUE self) {
 static VALUE method_zkrb_iterate_event_loop(VALUE self) {
   FETCH_DATA_PTR(self, zk);
 
-  fd_set rfds, wfds, efds;
-  FD_ZERO(&rfds); FD_ZERO(&wfds); FD_ZERO(&efds);
+  rb_fdset_t rfds, wfds, efds;
+  rb_fd_init(&rfds); rb_fd_init(&wfds); rb_fd_init(&efds);
 
   int fd = 0, interest = 0, events = 0, rc = 0, maxfd = 0, irc = 0, prc = 0;
   struct timeval tv;
@@ -797,14 +808,14 @@ static VALUE method_zkrb_iterate_event_loop(VALUE self) {
 
   if (fd != -1) {
     if (interest & ZOOKEEPER_READ) {
-      FD_SET(fd, &rfds);
+      rb_fd_set(fd, &rfds);
     } else {
-      FD_CLR(fd, &rfds);
+      rb_fd_clr(fd, &rfds);
     }
     if (interest & ZOOKEEPER_WRITE) {
-      FD_SET(fd, &wfds);
+      rb_fd_set(fd, &wfds);
     } else {
-      FD_CLR(fd, &wfds);
+      rb_fd_clr(fd, &wfds);
     }
   } else {
     fd = 0;
@@ -813,22 +824,22 @@ static VALUE method_zkrb_iterate_event_loop(VALUE self) {
   // add our self-pipe to the read set, allow us to wake up in case our attention is needed
   int pipe_r_fd = get_self_pipe_read_fd(self);
 
-  FD_SET(pipe_r_fd, &rfds);
+  rb_fd_set(pipe_r_fd, &rfds);
 
   maxfd = (pipe_r_fd > fd) ? pipe_r_fd : fd;
 
-  rc = rb_thread_select(maxfd+1, &rfds, &wfds, &efds, &tv);
+  rc = rb_thread_fd_select(maxfd+1, &rfds, &wfds, &efds, &tv);
 
   if (rc > 0) {
-    if (FD_ISSET(fd, &rfds)) {
+    if (rb_fd_isset(fd, &rfds)) {
       events |= ZOOKEEPER_READ;
     }
-    if (FD_ISSET(fd, &wfds)) {
+    if (rb_fd_isset(fd, &wfds)) {
       events |= ZOOKEEPER_WRITE;
     }
 
     // we got woken up by the self-pipe
-    if (FD_ISSET(pipe_r_fd, &rfds)) {
+    if (rb_fd_isset(pipe_r_fd, &rfds)) {
       // one event has awoken us, so we clear one event from the pipe
       char b[1];
 
@@ -853,6 +864,9 @@ static VALUE method_zkrb_iterate_event_loop(VALUE self) {
       prc, interest, fd, pipe_r_fd, maxfd, irc, tv.tv_sec + (tv.tv_usec/ 1000.0 / 1000.0));
   }
 
+  rb_fd_term(&rfds);
+  rb_fd_term(&wfds);
+  rb_fd_term(&efds);
   return INT2FIX(prc);
 }
 

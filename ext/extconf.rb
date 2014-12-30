@@ -68,7 +68,7 @@ Dir.chdir(HERE) do
     # clean up stupid apple rsrc fork bullshit
     FileUtils.rm_f(Dir['**/._*'].select{|p| test(?f, p)})
 
-    Dir.chdir(BUNDLE_PATH) do        
+    Dir.chdir(BUNDLE_PATH) do
       configure = "./configure --prefix=#{HERE} --with-pic --without-cppunit --disable-dependency-tracking #{$EXTRA_CONF} 2>&1"
       configure = "env CFLAGS='#{DEBUG_CFLAGS}' #{configure}" if ZK_DEBUG
 
@@ -85,13 +85,14 @@ end
 Dir.chdir("#{HERE}/lib") do
   %w[st mt].each do |stmt|
     %w[a la].each do |ext|
-      system("cp -f libzookeeper_#{stmt}.#{ext} libzookeeper_#{stmt}_gem.#{ext}") 
+      system("cp -f libzookeeper_#{stmt}.#{ext} libzookeeper_#{stmt}_gem.#{ext}")
     end
   end
 end
 $LIBS << " -lzookeeper_st_gem"
 
 have_func('rb_thread_blocking_region')
+have_func('rb_thread_fd_select')
 
 $CFLAGS << ' -Wall' if ZK_DEV
 create_makefile 'zookeeper_c'
