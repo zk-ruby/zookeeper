@@ -855,6 +855,7 @@ static VALUE method_zkrb_iterate_event_loop(VALUE self) {
   else {
     log_err("select returned an error: rc=%d interest=%d fd=%d pipe_r_fd=%d maxfd=%d irc=%d timeout=%f",
       rc, interest, fd, pipe_r_fd, maxfd, irc, tv.tv_sec + (tv.tv_usec/ 1000.0 / 1000.0));
+    rb_raise(rb_eRuntimeError, "select returned an error: %s", clean_errno());
   }
 
   prc = zookeeper_process(zk->zh, events);
