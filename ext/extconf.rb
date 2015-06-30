@@ -89,7 +89,9 @@ Dir.chdir("#{HERE}/lib") do
     end
   end
 end
-$LIBS << " -lzookeeper_st_gem"
+
+# -lm must come after lzookeeper_st_gem to ensure proper link
+$LIBS << " -lzookeeper_st_gem -lm"
 
 have_func('rb_thread_blocking_region')
 have_func('rb_thread_fd_select')
