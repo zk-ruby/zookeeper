@@ -1,3 +1,6 @@
+v1.4.11
+  * backported fix for ZOOKEEPER-2253 by @chchen - #76
+
 v1.4.10
 
   * fix for ruby 2.2.0 build - #74 (h/t: fbernier)
