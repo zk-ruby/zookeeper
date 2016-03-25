@@ -44,6 +44,10 @@ $LDFLAGS = "#{$libraries} #{$LDFLAGS}"
 $LIBPATH = ["#{HERE}/lib"]
 $DEFLIBPATH = []
 
+if RbConfig::CONFIG['arch'] =~ /solaris/
+  $EXTRA_CONF = "CFLAGS='-D_POSIX_PTHREAD_SEMANTICS' LDFLAGS='-lsocket -lnsl'"
+end
+
 def safe_sh(cmd)
   puts cmd
   system(cmd)
