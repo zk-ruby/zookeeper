@@ -490,7 +490,7 @@ class JavaBase
 
     def replace_jzk!(opts = {})
       orig_jzk = @jzk
-      if opts.has_key?(:session_id) && opts.has_key(:session_passwd)
+      if opts.has_key?(:session_id) && opts.has_key?(:session_passwd)
         @jzk = JZK::ZooKeeper.new(@host, DEFAULT_SESSION_TIMEOUT, JavaCB::WatcherCallback.new(event_queue, :client => self), opts.fetch(:session_id), opts.fetch(:session_passwd).to_java_bytes)
       else
         @jzk = JZK::ZooKeeper.new(@host, DEFAULT_SESSION_TIMEOUT, JavaCB::WatcherCallback.new(event_queue, :client => self))
