@@ -38,10 +38,10 @@ if ZK_DEBUG
 end
 
 $includes = " -I#{HERE}/include"
-$libraries = " -L#{HERE}/lib -L#{RbConfig::CONFIG['libdir']}"
+$libraries = " -L#{HERE}/lib64 -L#{RbConfig::CONFIG['libdir']}"
 $CFLAGS = "#{$includes} #{$libraries} #{$CFLAGS}"
 $LDFLAGS = "#{$libraries} #{$LDFLAGS}"
-$LIBPATH = ["#{HERE}/lib"]
+$LIBPATH = ["#{HERE}/lib64"]
 $DEFLIBPATH = []
 
 def safe_sh(cmd)
@@ -53,7 +53,7 @@ def safe_sh(cmd)
 end
 
 Dir.chdir(HERE) do
-  if File.exist?("lib")
+  if File.exist?("lib64")
     puts "Zkc already built; run 'rake clobber' in ext/ first if you need to rebuild."
   else
     puts "Building zkc."
@@ -82,7 +82,7 @@ Dir.chdir(HERE) do
 end
 
 # Absolutely prevent the linker from picking up any other zookeeper_mt
-Dir.chdir("#{HERE}/lib") do
+Dir.chdir("#{HERE}/lib64") do
   %w[st mt].each do |stmt|
     %w[a la].each do |ext|
       system("cp -f libzookeeper_#{stmt}.#{ext} libzookeeper_#{stmt}_gem.#{ext}")
