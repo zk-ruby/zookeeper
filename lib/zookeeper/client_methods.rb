@@ -109,10 +109,22 @@ module ClientMethods
   def delete(options = {})
     assert_open
     assert_keys(options,
-                :supported  => [:path, :version, :callback, :callback_context],
+                :supported  => [:path, :version, :callback, :callback_context, :recursive],
                 :required   => [:path])
 
     options[:version] ||= -1
+
+    if options[:recursive]
+      children = self.get_children(:path=>options[:path])[:children]
+      unless children.nil? || children.empty?
+        children.each do |child|
+          leaf = "#{options[:path]}/#{child}"
+          opts = options.clone
+          opts[:path]=leaf
+          delete(opts)
+        end
+      end
+    end
 
     req_id = setup_call(:delete, options)
     rc = super(req_id, options[:path], options[:version], options[:callback])
