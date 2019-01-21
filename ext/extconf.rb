@@ -84,8 +84,10 @@ end
 # Absolutely prevent the linker from picking up any other zookeeper_mt
 Dir.chdir("#{HERE}/lib") do
   %w[st mt].each do |stmt|
-    %w[a la].each do |ext|
-      system("cp -f libzookeeper_#{stmt}.#{ext} libzookeeper_#{stmt}_gem.#{ext}")
+    %w[a la dylib].each do |ext|
+      origin_lib_name = "libzookeeper_#{stmt}.#{ext}"
+      dest_lib_name = "libzookeeper_#{stmt}_gem.#{ext}"
+      system("cp -f #{origin_lib_name} #{dest_lib_name}") if File.exists?(origin_lib_name)
     end
   end
 end
