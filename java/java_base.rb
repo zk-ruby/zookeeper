@@ -189,7 +189,7 @@ class JavaBase
       @req_registry.clear_watchers!
 
       replace_jzk!(opts)
-      wait_until_connected
+      wait_until_connected(timeout)
     end
 
     state
