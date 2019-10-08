@@ -14,19 +14,19 @@ env:
 language: ruby
 
 rvm:
-  - 1.9.3
-  - 1.9.2
-  - 1.8.7
   - ree
   - jruby-18mode
   - jruby-19mode
   - rbx-18mode
   - rbx-19mode
+  - 1.9.3
   - 2.0.0
-  - 2.1.0
-  - 2.2.0
-  - 2.3.0
-  - 2.4.0
+  - 2.1.10
+  - 2.2.10
+  - 2.3.8
+  - 2.4.9
+  - 2.5.7
+  - 2.6.5
 matrix:
   allow_failures:
     - rvm: rbx-18mode
@@ -38,4 +38,3 @@ bundler_args: --without development docs coverage
 branches:
   except:
 #     - 'dev/zookeeper-st'
-
