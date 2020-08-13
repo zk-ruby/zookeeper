@@ -1,0 +1,11 @@
+--- zkc-3.4.5.orig/c/src/zookeeper.c	2020-08-13 03:04:49.631654715 -0400
++++ zkc-3.4.5/c/src/zookeeper.c	2020-08-13 03:03:24.983922697 -0400
+@@ -3411,7 +3411,7 @@
+ 
+ static const char* format_endpoint_info(const struct sockaddr_storage* ep)
+ {
+-    static char buf[128];
++    static char buf[128+6];
+     char addrstr[128];
+     void *inaddr;
+ #ifdef WIN32
