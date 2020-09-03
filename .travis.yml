@@ -11,6 +11,9 @@ before_install:
 env:
   - SPAWN_ZOOKEEPER='true'
 
+# Use an old ubuntu so that old rubies are available
+dist: trusty
+
 language: ruby
 
 rvm:
