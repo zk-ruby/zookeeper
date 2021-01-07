@@ -69,8 +69,12 @@ Dir.chdir(HERE) do
     FileUtils.rm_f(Dir['**/._*'].select{|p| test(?f, p)})
 
     Dir.chdir(BUNDLE_PATH) do
+      configure_cflags = ''
+      configure_cflags += DEBUG_CFLAGS if ZK_DEBUG
+      configure_cflags += ' -Wno-nullability-completeness ' if RbConfig::CONFIG['target_vendor'] == 'apple'
+
       configure = "./configure --prefix=#{HERE} --with-pic --without-cppunit --disable-dependency-tracking #{$EXTRA_CONF} 2>&1"
-      configure = "env CFLAGS='#{DEBUG_CFLAGS}' #{configure}" if ZK_DEBUG
+      configure = "env CFLAGS='#{configure_cflags}' #{configure}" unless configure_cflags.empty?
 
       safe_sh(configure)
       safe_sh("make  2>&1")
