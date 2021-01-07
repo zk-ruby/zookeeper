@@ -11,7 +11,7 @@ group :test do
   gem 'zk-server', '~> 1.0', :git => 'https://github.com/zk-ruby/zk-server.git'
 end
 
-# ffs, :platform appears to be COMLETELY BROKEN so we just DO THAT HERE
+# ffs, :platform appears to be COMPLETELY BROKEN so we just DO THAT HERE
 # ...BY HAND
 
 if RUBY_VERSION != '1.8.7' && !defined?(JRUBY_VERSION)
