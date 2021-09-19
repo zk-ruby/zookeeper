@@ -3,10 +3,6 @@ module Zookeeper
     !!ENV['SPAWN_ZOOKEEPER']
   end
 
-  def self.travis?
-    !!ENV['TRAVIS']
-  end
-
   def self.default_cnx_host
     ENV['ZK_DEFAULT_HOST'] || 'localhost'
   end

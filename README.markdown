@@ -1,6 +1,7 @@
 # zookeeper #
 
-[![Build Status](https://secure.travis-ci.org/zk-ruby/zookeeper.png?branch=master)](http://travis-ci.org/zk-ruby/zookeeper)
+![Build Status](https://github.com/zk-ruby/zookeeper/actions/workflows/build.yml/badge.svg)
+
 
 An interface to the Zookeeper cluster coordination server.
 
@@ -16,8 +17,8 @@ The 1.0 release will feature a reorganization of the heirarchy. There will be a 
 
 ## License
 
-Copyright 2008 Phillip Pearson, and 2010 Twitter, Inc. 
-Licensed under the MIT License.  See the included LICENSE file.  
+Copyright 2008 Phillip Pearson, and 2010 Twitter, Inc.
+Licensed under the MIT License.  See the included LICENSE file.
 
 Portions copyright 2008-2010 the Apache Software Foundation, licensed under the
 Apache 2 license, and used with permission.
@@ -34,7 +35,7 @@ UPDATE: this appears to have been fixed by @eric in [this patch](http://git.io/P
 
 Let me start out by saying I prefer rvm, and that I really don't know a whole lot about linking on OS X. Or Linux. Any suggestions or constructive insults would be greatly appreciated if you have insight into what i'm doing wrong here.
 
-So, it seems that [ruby-build][] doesn't use `--enable-shared` by default. I'm told this is for speed. 
+So, it seems that [ruby-build][] doesn't use `--enable-shared` by default. I'm told this is for speed.
 
 If you run into problems with installing this gem (specifically with linking ex. `Undefined symbols for architecture x86_64`) and you're using rbenv, for now you need to ensure that your ruby was built with `--enable-shared`. I'm sorry for the inconvenience. (no, really)
 
@@ -75,7 +76,7 @@ Calls take a dictionary of parameters. With the exception of set\_acl, the only 
 
 ### A Bit about this repository ###
 
-Twitter's open source office was kind enough to transfer this repository to facilitate development and administration of this repository. The `zookeeper` gem's last three releases were recorded in branches `v0.4.2`, `v0.4.3` and `v0.4.4`. Releases of the `slyphon-zookeeper` gem were cut off of the fork, and unfortunately (due to an oversight on my part) were tagged with unrelated versions. Those were tagged with names `release/0.9.2`. 
+Twitter's open source office was kind enough to transfer this repository to facilitate development and administration of this repository. The `zookeeper` gem's last three releases were recorded in branches `v0.4.2`, `v0.4.3` and `v0.4.4`. Releases of the `slyphon-zookeeper` gem were cut off of the fork, and unfortunately (due to an oversight on my part) were tagged with unrelated versions. Those were tagged with names `release/0.9.2`.
 
 The plan is to keep the `slyphon-zookeeper` tags, and to tag the `zookeeper` releases `twitter/release/0.4.x`.
 
