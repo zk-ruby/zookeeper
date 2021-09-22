@@ -48,7 +48,7 @@ class CZookeeper
 
     # keep track of the pid that created us
     update_pid!
-    
+
     # used by the C layer. CZookeeper sets this to true when the init method
     # has completed. once this is set to true, it stays true.
     #
@@ -68,7 +68,7 @@ class CZookeeper
     @_receive_timeout_msec = opts[:receive_timeout_msec] || DEFAULT_RECEIVE_TIMEOUT_MSEC
 
     @mutex = Monitor.new
-    
+
     # used to signal that we're running
     @running_cond = @mutex.new_cond
 
@@ -80,7 +80,7 @@ class CZookeeper
     @state = ZOO_CLOSED_STATE
 
     @pipe_read, @pipe_write = IO.pipe
-    
+
     @event_thread = nil
 
     # hash of in-flight Continuation instances
@@ -142,7 +142,7 @@ class CZookeeper
 
     nil
   end
-  
+
   # call this to stop the event loop, you can resume with the
   # resume method
   #
@@ -157,7 +157,7 @@ class CZookeeper
   def resume_after_fork_in_parent
     logger.debug { "##{__method__}" }
 
-    @mutex.synchronize do 
+    @mutex.synchronize do
       @_shutting_down = nil
       start_event_thread
     end
@@ -181,7 +181,7 @@ class CZookeeper
     return false unless wait_until_running(timeout)
 
     @state_mutex.synchronize do
-      while true 
+      while true
         if timeout
           now = Time.now
           break if (@state == ZOO_CONNECTED_STATE) || unhealthy? || (now > time_to_stop)
@@ -212,7 +212,7 @@ class CZookeeper
       !unhealthy?
     end
 
-    # submits a job for processing 
+    # submits a job for processing
     # blocks the caller until result has returned
     def submit_and_block(meth, *args)
       @mutex.synchronize do
@@ -230,9 +230,9 @@ class CZookeeper
       wake_event_loop!
       cnt.value
     end
-    
+
     # this method is part of the reopen/close code, and is responsible for
-    # shutting down the dispatch thread. 
+    # shutting down the dispatch thread.
     #
     # this method must be EXTERNALLY SYNCHRONIZED!
     #
@@ -243,7 +243,7 @@ class CZookeeper
         logger.debug { "##{__method__}" }
         shut_down!
         wake_event_loop!
-        @event_thread.join 
+        @event_thread.join
         @event_thread = nil
       end
     end
@@ -259,7 +259,7 @@ class CZookeeper
     # or until timeout seconds have passed.
     #
     # returns true if we're running, false if we timed out
-    def wait_until_running(timeout=5) 
+    def wait_until_running(timeout=5)
       @mutex.synchronize do
         return true if @_running
         @running_cond.wait(timeout)
@@ -279,7 +279,7 @@ class CZookeeper
           submit_pending_calls
         end
 
-        zkrb_iterate_event_loop 
+        zkrb_iterate_event_loop
         iterate_event_delivery
       end
 
@@ -328,7 +328,7 @@ class CZookeeper
     end
 
     def wake_event_loop!
-      @pipe_write && @pipe_write.write('1')
+      @pipe_write && !@pipe_write.closed? && @pipe_write.write('1')
     end
 
     def iterate_event_delivery
@@ -345,10 +345,10 @@ class CZookeeper
             end
           end
         end
-        
+
         cntn = @reg.in_flight.delete(hash[:req_id])
 
-        if cntn and not cntn.user_callback?     # this is one of "our" continuations 
+        if cntn and not cntn.user_callback?     # this is one of "our" continuations
           cntn.call(hash)                       # so we handle delivering it
           next                                  # and skip handing it to the dispatcher
         end
@@ -374,7 +374,7 @@ class CZookeeper
     def shut_down!
       logger.debug { "##{__method__}" }
 
-      @mutex.synchronize do 
+      @mutex.synchronize do
         @_shutting_down = true
         # ollie ollie oxen all home free!
         @running_cond.broadcast
