@@ -4,7 +4,7 @@ unless defined?(::JRUBY_VERSION)
   describe %[forked connection] do
     let(:path) { "/_zktest_" }
     let(:pids_root) { "#{path}/pids" }
-    let(:data) { "underpants" } 
+    let(:data) { "underpants" }
     let(:connection_string) { Zookeeper.default_cnx_str }
 
     def process_alive?(pid)
@@ -15,7 +15,7 @@ unless defined?(::JRUBY_VERSION)
     end
 
     LBORDER = ('-' * 35) << '< '
-    RBORDER = ' >' << ('-' * 35) 
+    RBORDER = ' >' << ('-' * 35)
 
     def mark(thing)
       logger << "\n#{LBORDER}#{thing}#{RBORDER}\n\n"
@@ -25,8 +25,6 @@ unless defined?(::JRUBY_VERSION)
       mark "BEFORE: START"
       if defined?(::Rubinius)
         pending("this test is currently broken in rbx")
-#       elsif ENV['TRAVIS']
-#         pending("this test is currently hanging in travis")
       else
         @zk = Zookeeper.new(connection_string)
         rm_rf(@zk, path)
@@ -105,7 +103,7 @@ unless defined?(::JRUBY_VERSION)
       @zk.resume_after_fork_in_parent
 
       event_waiter_th = Thread.new do
-        @latch.await(5) unless @event 
+        @latch.await(5) unless @event
         @event
       end
 
