@@ -24,6 +24,9 @@ jobs:
         gcc:
           - 7
           - latest
+        exclude:
+          - os: macos-latest
+            gcc: 7
 
     steps:
       - uses: actions/checkout@v2
@@ -31,6 +34,7 @@ jobs:
           submodules: recursive
 
       - name: Set up GCC
+        if: ${{ matrix.gcc != 'latest' }}
         uses: egor-tensin/setup-gcc@v1
         with:
           version: ${{ matrix.gcc }}
