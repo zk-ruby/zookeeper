@@ -1051,7 +1051,11 @@ shared_examples_for "connection" do
           zk.close
         end
 
-        zk.stat(:path => path, :callback => evil_cb)
+        begin
+          zk.stat(:path => path, :callback => evil_cb)
+        rescue IOError
+          # captures flaky IOError: stream closed in another thread
+        end
 
         wait_until { zk.closed? }
         zk.should be_closed
