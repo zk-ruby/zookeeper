@@ -22,6 +22,7 @@ jobs:
           - jruby
         gcc:
           - 7
+          - latest
 
     steps:
       - uses: actions/checkout@v2
