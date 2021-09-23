@@ -183,8 +183,6 @@ class JavaBase
   attr_reader :event_queue
 
   def reopen(timeout=10, watcher=nil, opts = {})
-#     watcher ||= @default_watcher
-
     @mutex.synchronize do
       @req_registry.clear_watchers!
 
