@@ -2,7 +2,7 @@ source 'https://rubygems.org'
 
 gemspec
 
-gem 'rake', '~> 0.9.0'
+gem 'rake'
 
 group :test do
   gem "rspec" , "~> 2.11"
@@ -16,8 +16,8 @@ end
 
 if RUBY_VERSION != '1.8.7' && !defined?(JRUBY_VERSION)
   gem 'simplecov', :group => :coverage, :require => false
-  gem 'yard', '~> 0.8.0', :group => :docs
-  gem 'redcarpet',        :group => :docs
+  gem 'yard',      :group => :docs
+  gem 'redcarpet', :group => :docs
 
   group :development do
     gem 'pry'
