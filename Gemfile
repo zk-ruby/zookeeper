@@ -5,7 +5,7 @@ gemspec
 gem 'rake'
 
 group :test do
-  gem "rspec" , "~> 2.11"
+  gem "rspec"
   gem 'eventmachine', '1.0.4'
   gem 'evented-spec', '~> 0.9.0'
   gem 'zk-server', '~> 1.0', :git => 'https://github.com/zk-ruby/zk-server.git'
