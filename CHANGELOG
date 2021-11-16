@@ -1,3 +1,6 @@
+v1.5.1
+  * Update config.guess to support newer environments (h/t: @malmckay)
+
 v1.5.0
   * (housekeeping) Moves build to Github Actions from TravisCI
   * (housekeeping) Drops build support for MRI Ruby < 2.5 and other rubies
