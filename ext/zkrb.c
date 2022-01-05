@@ -1063,7 +1063,10 @@ void Init_zookeeper_c() {
 
   /* initialize CZookeeper class */
   CZookeeper = rb_define_class_under(mZookeeper, "CZookeeper", rb_cObject);
+
   zkrb_define_methods();
+
+  rb_undef_alloc_func(CZookeeper); // https://bugs.ruby-lang.org/issues/18007
 
   ZookeeperClientId = rb_define_class_under(CZookeeper, "ClientId", rb_cObject);
   rb_define_method(ZookeeperClientId, "initialize", zkrb_client_id_method_initialize, 0);
