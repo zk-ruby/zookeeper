@@ -17,8 +17,10 @@ jobs:
           - ubuntu-latest
           - macos-latest
         ruby:
+          - '2.7'
           - '3.0'
         gcc:
+          - 7
           - latest
         exclude:
           - os: macos-latest
