@@ -39,6 +39,8 @@ jobs:
         uses: ruby/setup-ruby@v1
         with:
           ruby-version: ${{ matrix.ruby }}
+          bundler-cache: true
+          cache-version: 1_${{ matrix.ruby }}_${{ matrix.os }}
 
       - name: Run Tests
         env:
