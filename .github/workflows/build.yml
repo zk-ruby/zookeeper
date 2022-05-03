@@ -17,9 +17,10 @@ jobs:
           - ubuntu-latest
           - macos-latest
         ruby:
-          - 2.5
-          - 2.6
-          - 2.7
+          - '2.5'
+          - '2.6'
+          - '2.7'
+          - '3.0'
           - jruby
         gcc:
           - 7

@@ -38,7 +38,7 @@ if File.exists?(release_ops_path)
 
           orig_dir = Dir.getwd
 
-          cd tmpdir do
+          Dir.chdir tmpdir do
             sh "git co #{tag} && git reset --hard && git clean -fdx"
 
             ENV['JAVA_GEM'] = nil
@@ -77,7 +77,7 @@ end
 VALGRIND_BASIC_OPTS = '--num-callers=50 --error-limit=no --partial-loads-ok=yes --undef-value-errors=no --trace-children=yes'
 
 task 'valgrind' do
-  cd 'ext' do
+  Dir.chdir 'ext' do
     sh "rake clean build"
   end
 
@@ -86,7 +86,7 @@ end
 
 namespace :build do
   task :clean do
-    cd 'ext' do
+    Dir.chdir 'ext' do
       sh 'rake clean'
     end
 
@@ -94,7 +94,7 @@ namespace :build do
   end
 
   task :clobber do
-    cd 'ext' do
+    Dir.chdir 'ext' do
       sh 'rake clobber'
     end
 
@@ -104,7 +104,7 @@ end
 
 desc "Build C component"
 task :build do
-  cd 'ext' do
+  Dir.chdir 'ext' do
     sh "rake"
   end
 end

@@ -1,3 +1,16 @@
+v1.5.1
+  * Update config.guess to support newer environments (h/t: @malmckay)
+
+v1.5.0
+  * (housekeeping) Moves build to Github Actions from TravisCI
+  * (housekeeping) Drops build support for MRI Ruby < 2.5 and other rubies
+  * Build on Ruby 3 (#99) (h/t: @malmckay)
+  * Build on MacOS (#98) (h/t: @malmckay)
+  * Work around compiler errors on newer versions of gcc (#97) (h/t: @nickmarden)
+  * Fix a typo on a has_key (#83) (h/t: @lexspoon)
+  * Adds support macOS dylib (#86) (h/t: @pftg)
+  * Fix compilation on ARM (#82) (h/t: @cdonati)
+
 v1.4.11
   * backported fix for ZOOKEEPER-2253 by @chchen - #76
 
