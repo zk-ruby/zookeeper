@@ -14,16 +14,10 @@ jobs:
       fail-fast: false
       matrix:
         os:
-          - ubuntu-latest
           - macos-latest
         ruby:
-          - '2.5'
-          - '2.6'
-          - '2.7'
           - '3.0'
-          - jruby
         gcc:
-          - 7
           - latest
         exclude:
           - os: macos-latest
@@ -45,7 +39,6 @@ jobs:
         uses: ruby/setup-ruby@v1
         with:
           ruby-version: ${{ matrix.ruby }}
-          bundler-cache: true
 
       - name: Run Tests
         env:
