@@ -17,11 +17,12 @@ jobs:
           - ubuntu-latest
           - macos-latest
         ruby:
-          - 2.5
-          - 2.6
-          - 2.7
+          - '2.5'
+          - '2.6'
+          - '2.7'
           - '3.0'
-          - jruby
+          - '3.1'
+          - 'jruby'
         gcc:
           - 7
           - latest
@@ -46,6 +47,7 @@ jobs:
         with:
           ruby-version: ${{ matrix.ruby }}
           bundler-cache: true
+          cache-version: 1_${{ matrix.ruby }}_${{ matrix.os }}
 
       - name: Run Tests
         env:

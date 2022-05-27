@@ -203,7 +203,6 @@ inline static int we_are_forked(zkrb_instance_data_t *zk) {
   return rv;
 }
 
-
 static int destroy_zkrb_instance(zkrb_instance_data_t* zk) {
   int rv = ZOK;
 
@@ -243,6 +242,11 @@ static int destroy_zkrb_instance(zkrb_instance_data_t* zk) {
 
 static void free_zkrb_instance_data(zkrb_instance_data_t* ptr) {
   destroy_zkrb_instance(ptr);
+}
+
+VALUE alloc_zkrb_instance(VALUE klass) {
+  zkrb_instance_data_t* zk = ZALLOC_N(zkrb_instance_data_t, 1);
+  return Data_Wrap_Struct(klass, NULL, free_zkrb_instance_data, zk);
 }
 
 static void print_zkrb_instance_data(zkrb_instance_data_t* ptr) {
@@ -1013,7 +1017,7 @@ static void zkrb_define_methods(void) {
   DEFINE_METHOD(close_handle, 0);
   DEFINE_METHOD(deterministic_conn_order, 1);
   DEFINE_METHOD(is_unrecoverable, 0);
-  DEFINE_METHOD(recv_timeout, 1);
+  DEFINE_METHOD(recv_timeout, 0);
   DEFINE_METHOD(zkrb_state, 0);
   DEFINE_METHOD(sync, 2);
   DEFINE_METHOD(zkrb_iterate_event_loop, 0);
@@ -1063,6 +1067,7 @@ void Init_zookeeper_c() {
 
   /* initialize CZookeeper class */
   CZookeeper = rb_define_class_under(mZookeeper, "CZookeeper", rb_cObject);
+  rb_define_alloc_func(CZookeeper, alloc_zkrb_instance);
   zkrb_define_methods();
 
   ZookeeperClientId = rb_define_class_under(CZookeeper, "ClientId", rb_cObject);
