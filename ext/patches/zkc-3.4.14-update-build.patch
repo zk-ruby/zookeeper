@@ -31842,18 +31842,6 @@ diff -urb zkc-3.4.14/c/configure remove-cli/c/configure
  # library is relocated.
  hardcode_direct_absolute=$hardcode_direct_absolute_CXX
  
-diff -urb zkc-3.4.14/c/configure.ac remove-cli/c/configure.ac
---- zkc-3.4.14/c/configure.ac	2019-03-06 11:50:47.000000000 -0500
-+++ remove-cli/c/configure.ac	2022-01-04 11:18:19.000000000 -0500
-@@ -33,8 +33,6 @@
-    CPPUNIT_PATH="No_CPPUNIT"
-    CPPUNIT_INCLUDE=
-    CPPUNIT_LIBS=
--else
--   AM_PATH_CPPUNIT(1.10.2)
- fi
- 
- if test "$CALLER" = "ANT" ; then
 diff -urb zkc-3.4.14/c/depcomp remove-cli/c/depcomp
 --- zkc-3.4.14/c/depcomp	2019-03-06 11:50:47.000000000 -0500
 +++ remove-cli/c/depcomp	2022-01-04 11:18:46.000000000 -0500
