@@ -1,3 +1,10 @@
+v1.5.3
+  * Ruby 3.1 compatibility (h/t: @casperisfine)
+
+v1.5.2
+  * Ruby 3.1 compatibility and zookeeper client updates.
+  * This release had build issues in the wild and was yanked
+
 v1.5.1
   * Update config.guess to support newer environments (h/t: @malmckay)
 
