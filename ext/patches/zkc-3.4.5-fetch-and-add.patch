@@ -1,0 +1,16 @@
+diff -ur zkc-3.4.5-orig/c/src/mt_adaptor.c zkc-3.4.5/c/src/mt_adaptor.c
+--- zkc-3.4.5-orig/c/src/mt_adaptor.c	2012-09-30 10:53:32.000000000 -0700
++++ zkc-3.4.5/c/src/mt_adaptor.c	2016-09-07 16:55:13.787553837 -0700
+@@ -484,11 +484,7 @@
+ {
+ #ifndef WIN32
+     int32_t result;
+-    asm __volatile__(
+-         "lock xaddl %0,%1\n"
+-         : "=r"(result), "=m"(*(int *)operand)
+-         : "0"(incr)
+-         : "memory");
++    result = __sync_fetch_and_add(operand, incr);
+    return result;
+ #else
+     volatile int32_t result;

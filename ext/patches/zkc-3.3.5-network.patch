@@ -1,0 +1,24 @@
+--- c/src/zookeeper.c.orig	2013-04-22 16:20:14.000000000 -0700
++++ c/src/zookeeper.c	2013-04-22 16:21:36.000000000 -0700
+@@ -413,7 +413,9 @@
+ static int getaddrinfo_errno(int rc) { 
+     switch(rc) {
+     case EAI_NONAME:
++#ifdef EAI_NODATA
+     case EAI_NODATA:
++#endif
+         return ENOENT;
+     case EAI_MEMORY:
+         return ENOMEM;
+@@ -546,7 +548,11 @@
+             //EAI_BADFLAGS or EAI_ADDRFAMILY with AF_UNSPEC and 
+             // ai_flags as AI_ADDRCONFIG
+             if ((hints.ai_flags == AI_ADDRCONFIG) && 
++#ifdef EAI_ADDRFAMILY
+                 ((rc ==EAI_BADFLAGS) || (rc == EAI_ADDRFAMILY))) {
++#else
++                (rc ==EAI_BADFLAGS)) {
++#endif
+                 //reset ai_flags to null
+                 hints.ai_flags = 0;
+                 //retry getaddrinfo
