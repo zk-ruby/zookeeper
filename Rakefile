@@ -1,5 +1,4 @@
 release_ops_path = File.expand_path('../releaseops/lib', __FILE__)
-puts release_ops_path.inspect
 
 # if the special submodule is availabe, use it
 # we use a submodule because it doesn't depend on anything else (*cough* bundler)
@@ -18,7 +17,7 @@ if File.exists?(release_ops_path)
   # Define a task to run code coverage tests
   ReleaseOps::TestTasks.define_simplecov_tasks
 
-  # set up yard:server, yard:gems, and yard:clean tasks
+  # set up yard:server, yard:gems, and yard:clean tasks 
   # for doing documentation stuff
   ReleaseOps::YardTasks.define
 
