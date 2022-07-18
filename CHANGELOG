@@ -1,7 +1,7 @@
 v1.5.3
   * Ruby 3.1 compatibility (h/t: @casperisfine)
 
-v1.5.2
+v1.5.2 (YANKED)
   * Ruby 3.1 compatibility and zookeeper client updates.
   * This release had build issues in the wild and was yanked
 
