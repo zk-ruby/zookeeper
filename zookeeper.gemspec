@@ -7,10 +7,10 @@ Gem::Specification.new do |s|
   s.version     = Zookeeper::VERSION
 
   s.authors     = [
-    "Phillip Pearson", 
-    "Eric Maland", 
-    "Evan Weaver", 
-    "Brian Wickman", 
+    "Phillip Pearson",
+    "Eric Maland",
+    "Evan Weaver",
+    "Brian Wickman",
     "Neil Conway",
     "Jonathan D. Simms",
     "Mal McKay",
@@ -20,7 +20,7 @@ Gem::Specification.new do |s|
   s.description = <<-EOS
 A low-level multi-Ruby wrapper around the ZooKeeper API bindings. For a
 friendlier interface, see http://github.com/slyphon/zk. Currently supported:
-MRI: {2.5, 2.6, 2.7, 3.0}, JRuby: ~> 9.2.x.x
+MRI: {2.5, 2.6, 2.7, 3.0, 3.1, 3.2}, JRuby: ~> 9.2.x.x
 
 This library uses version #{Zookeeper::DRIVER_VERSION} of zookeeper bindings.
 
