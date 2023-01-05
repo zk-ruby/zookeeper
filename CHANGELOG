@@ -1,3 +1,6 @@
+v1.5.4
+  * Ruby 3.2 compatibility (h/t: @cheister & @EricRoos)
+
 v1.5.3
   * Ruby 3.1 compatibility (h/t: @casperisfine)
 

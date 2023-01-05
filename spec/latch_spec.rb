@@ -16,7 +16,7 @@ describe Zookeeper::Latch do
         end
 
         other_latch.await
-        th.join(1).should == th
+        expect(th.join(1)).to eq(th)
       end
     end
   end

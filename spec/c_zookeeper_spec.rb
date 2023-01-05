@@ -29,20 +29,20 @@ unless defined?(::JRUBY_VERSION)
       end
 
       it %[should be in connected state within a reasonable amount of time] do
-        wait_until_connected.should be_true
+        expect(wait_until_connected).to be_truthy
       end
 
       describe :after_connected do
         before do
-          wait_until_connected.should be_true
+          expect(wait_until_connected).to be_truthy
         end
 
         it %[should have a connection event after being connected] do
           event = wait_until(10) { @event_queue.pop }
-          event.should be
-          event[:req_id].should == Zookeeper::Constants::ZKRB_GLOBAL_CB_REQ
-          event[:type].should   == Zookeeper::Constants::ZOO_SESSION_EVENT
-          event[:state].should  == Zookeeper::Constants::ZOO_CONNECTED_STATE
+          expect(event).to be
+          expect(event[:req_id]).to eq(Zookeeper::Constants::ZKRB_GLOBAL_CB_REQ)
+          expect(event[:type]).to   eq(Zookeeper::Constants::ZOO_SESSION_EVENT)
+          expect(event[:state]).to  eq(Zookeeper::Constants::ZOO_CONNECTED_STATE)
         end
       end
     end

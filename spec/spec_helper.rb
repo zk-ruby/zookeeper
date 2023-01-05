@@ -6,7 +6,7 @@ require 'rubygems'
 
 release_ops_path = File.expand_path('../../releaseops/lib', __FILE__)
 
-if File.exists?(release_ops_path)
+if File.exist?(release_ops_path)
   require File.join(release_ops_path, 'releaseops')
   ReleaseOps::SimpleCov.maybe_start
 end
@@ -34,7 +34,7 @@ RSpec.configure do |config|
   if Zookeeper.spawn_zookeeper?
     require 'zk-server'
 
-    config.before(:suite) do 
+    config.before(:suite) do
       SpecGlobalLogger.logger.debug { "Starting zookeeper service" }
       ZK::Server.run do |c|
         c.base_dir    = File.expand_path('../../.zkserver', __FILE__)

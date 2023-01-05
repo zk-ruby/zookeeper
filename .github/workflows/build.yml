@@ -15,6 +15,7 @@ jobs:
       matrix:
         os:
           - ubuntu-latest
+          - ubuntu-20.04
           - macos-latest
         ruby:
           - '2.5'
@@ -30,6 +31,10 @@ jobs:
         exclude:
           - os: macos-latest
             gcc: 7
+          - os: ubuntu-latest
+            gcc: 7
+          - os: ubuntu-20.04
+            gcc: latest
 
     steps:
       - uses: actions/checkout@v2

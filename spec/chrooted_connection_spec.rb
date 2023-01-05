@@ -3,7 +3,7 @@ require 'shared/connection_examples'
 
 describe 'Zookeeper chrooted' do
   let(:path) { "/_zkchroottest_" }
-  let(:data) { "underpants" } 
+  let(:data) { "underpants" }
   let(:chroot_path) { '/slyphon-zookeeper-chroot' }
 
   let(:connection_string) { "#{Zookeeper.default_cnx_str}#{chroot_path}" }
@@ -35,8 +35,8 @@ describe 'Zookeeper chrooted' do
 
         it %[should successfully create the path] do
           rv = zk.create(:path => '/', :data => '')
-          rv[:rc].should be_zero
-          rv[:path].should == ''
+          expect(rv[:rc]).to be_zero
+          expect(rv[:path]).to eq('')
         end
       end
     end
@@ -53,8 +53,8 @@ describe 'Zookeeper chrooted' do
 
         it %[should return ZNONODE] do
           rv = zk.create(:path => '/', :data => '')
-          rv[:rc].should_not be_zero
-          rv[:rc].should == Zookeeper::Exceptions::ZNONODE
+          expect(rv[:rc]).not_to be_zero
+          expect(rv[:rc]).to eq(Zookeeper::Exceptions::ZNONODE)
         end
       end
     end
@@ -62,15 +62,15 @@ describe 'Zookeeper chrooted' do
 
 
   describe do
-    before :all do
-      logger.warn "running before :all"
+    before :each do
+      logger.warn "running before :each"
 
       with_open_zk do |z|
         z.create(:path => chroot_path, :data => '')
       end
     end
 
-    after :all do
+    after :each do
       with_open_zk do |z|
         rm_rf(z, chroot_path)
       end
