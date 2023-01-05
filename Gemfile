@@ -2,7 +2,7 @@ source 'https://rubygems.org'
 
 gemspec
 
-gem 'rake', '~> 0.9.0'
+gem 'rake', '~> 13.0'
 
 group :test do
   gem "rspec" , "~> 2.11"
