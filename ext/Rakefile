@@ -6,7 +6,7 @@ namespace :zkrb do
   task :clean do
     if File.exist?('Makefile')
       sh 'make clean'
-      rm 'Makefile' # yep, regenerate this
+      FileUtils.rm('Makefile') # yep, regenerate this
     else
       $stderr.puts "nothing to clean, no Makefile"
     end
