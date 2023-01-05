@@ -14,6 +14,7 @@ jobs:
       fail-fast: false
       matrix:
         os:
+          - ubuntu-latest
           - ubuntu-20.04
           - macos-latest
         ruby:
@@ -29,6 +30,8 @@ jobs:
           - latest
         exclude:
           - os: macos-latest
+            gcc: 7
+          - os: ubuntu-latest
             gcc: 7
 
     steps:
