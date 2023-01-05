@@ -58,7 +58,7 @@ Dir.chdir(HERE) do
   else
     puts "Building zkc."
 
-    unless File.exists?('c')
+    unless File.exist?('c')
       safe_sh "tar xzf #{BUNDLE} 2>&1"
       PATCHES.each do |patch|
         safe_sh "patch -p0 < #{patch} 2>&1"
@@ -87,7 +87,7 @@ Dir.chdir("#{HERE}/lib") do
     %w[a la dylib].each do |ext|
       origin_lib_name = "libzookeeper_#{stmt}.#{ext}"
       dest_lib_name = "libzookeeper_#{stmt}_gem.#{ext}"
-      system("cp -f #{origin_lib_name} #{dest_lib_name}") if File.exists?(origin_lib_name)
+      system("cp -f #{origin_lib_name} #{dest_lib_name}") if File.exist?(origin_lib_name)
     end
   end
 end

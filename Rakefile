@@ -4,7 +4,7 @@ release_ops_path = File.expand_path('../releaseops/lib', __FILE__)
 # we use a submodule because it doesn't depend on anything else (*cough* bundler)
 # and can be shared across projects
 #
-if File.exists?(release_ops_path)
+if File.exist?(release_ops_path)
   require File.join(release_ops_path, 'releaseops')
 
   # sets up the multi-ruby zk:test_all rake tasks
@@ -17,7 +17,7 @@ if File.exists?(release_ops_path)
   # Define a task to run code coverage tests
   ReleaseOps::TestTasks.define_simplecov_tasks
 
-  # set up yard:server, yard:gems, and yard:clean tasks 
+  # set up yard:server, yard:gems, and yard:clean tasks
   # for doing documentation stuff
   ReleaseOps::YardTasks.define
 
