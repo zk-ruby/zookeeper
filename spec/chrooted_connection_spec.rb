@@ -70,7 +70,7 @@ describe 'Zookeeper chrooted' do
       end
     end
 
-    after :all do
+    after :each do
       with_open_zk do |z|
         rm_rf(z, chroot_path)
       end

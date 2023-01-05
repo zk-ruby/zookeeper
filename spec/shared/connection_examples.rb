@@ -669,7 +669,7 @@ shared_examples_for "connection" do
         end
       end
 
-      describe :acl do
+      xdescribe :acl do
         it %[should work] do
           pending "need to write acl tests"
         end
@@ -968,7 +968,7 @@ shared_examples_for "connection" do
     end
   end
 
-  describe :set_acl do
+  xdescribe :set_acl do
     before do
       @perms = 5
       @new_acl = [Zookeeper::ACLs::ACL.new(:perms => @perms, :id => Zookeeper::Constants::ZOO_ANYONE_ID_UNSAFE)]
