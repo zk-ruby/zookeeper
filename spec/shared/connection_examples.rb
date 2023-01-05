@@ -10,14 +10,6 @@ shared_examples_for "connection" do
     ensure_node(zk, path, data)
   end
 
-  after :all do
-    logger.warn "running shared examples after :all"
-
-    with_open_zk(connection_string) do |z|
-      rm_rf(z, path)
-    end
-  end
-
   # unfortunately, we can't test w/o exercising other parts of the driver, so
   # if "set" is broken, this test will fail as well (but whaddyagonnado?)
   describe :get do
@@ -45,7 +37,7 @@ shared_examples_for "connection" do
         @event = nil
         @watcher = Zookeeper::Callbacks::WatcherCallback.new
 
-        @rv = zk.get(:path => path, :watcher => @watcher, :watcher_context => path) 
+        @rv = zk.get(:path => path, :watcher => @watcher, :watcher_context => path)
       end
 
       it %[should return the data] do
@@ -184,7 +176,7 @@ shared_examples_for "connection" do
         end
 
         it %[should return a stat with !exists] do
-          @rv[:stat].exists.should be_false
+          @rv[:stat].exists.should be_falsey
         end
       end
 
@@ -258,7 +250,7 @@ shared_examples_for "connection" do
         end
 
         it %[should return a stat with !exists] do
-          @cb.stat.exists.should be_false
+          @cb.stat.exists.should be_falsey
         end
       end
 
@@ -311,7 +303,7 @@ shared_examples_for "connection" do
       it %[should have an array of names of the children] do
         @rv[:children].should be_kind_of(Array)
         @rv[:children].length.should == 3
-        @rv[:children].sort.should == @children.sort 
+        @rv[:children].sort.should == @children.sort
       end
 
       # "Three shall be the number of the counting, and the number of the counting shall be 3"
@@ -341,7 +333,7 @@ shared_examples_for "connection" do
       it %[should have an array of names of the children] do
         @rv[:children].should be_kind_of(Array)
         @rv[:children].length.should == 3
-        @rv[:children].sort.should == @children.sort 
+        @rv[:children].sort.should == @children.sort
       end
 
       it %[should have a stat object whose num_children is 3] do
@@ -382,7 +374,7 @@ shared_examples_for "connection" do
       it %[should return an array of children] do
         @cb.children.should be_kind_of(Array)
         @cb.children.length.should == 3
-        @cb.children.sort.should == @children.sort 
+        @cb.children.sort.should == @children.sort
       end
 
       it %[should have a stat object whose num_children is 3] do
@@ -417,7 +409,7 @@ shared_examples_for "connection" do
       it %[should return an array of children] do
         @cb.children.should be_kind_of(Array)
         @cb.children.length.should == 3
-        @cb.children.sort.should == @children.sort 
+        @cb.children.sort.should == @children.sort
       end
 
       it %[should have a stat object whose num_children is 3] do
@@ -829,7 +821,7 @@ shared_examples_for "connection" do
         end
 
         it %[should have deleted the node] do
-          zk.stat(:path => path)[:stat].exists.should be_false
+          zk.stat(:path => path)[:stat].exists.should be_falsey
         end
       end
 
@@ -840,13 +832,13 @@ shared_examples_for "connection" do
           zk.create(:path => path)
 
           @stat = zk.stat(:path => path)[:stat]
-          @stat.exists.should be_true
+          @stat.exists.should be_truthy
 
           @rv = zk.delete(:path => path, :version => @stat.version)
         end
 
         it %[should have deleted the node] do
-          zk.stat(:path => path)[:stat].exists.should be_false
+          zk.stat(:path => path)[:stat].exists.should be_falsey
         end
       end
 
@@ -882,7 +874,7 @@ shared_examples_for "connection" do
         end
 
         it %[should have deleted the node] do
-          zk.stat(:path => path)[:stat].exists.should be_false
+          zk.stat(:path => path)[:stat].exists.should be_falsey
         end
       end
 
@@ -901,7 +893,7 @@ shared_examples_for "connection" do
         end
 
         it %[should have deleted the node] do
-          zk.stat(:path => path)[:stat].exists.should be_false
+          zk.stat(:path => path)[:stat].exists.should be_falsey
         end
       end
 
@@ -1034,11 +1026,11 @@ shared_examples_for "connection" do
 
       @rv = zk.sync(:path => path, :callback => cb)
 
-      wait_until(2) { @result == true }.should be_true
+      wait_until(2) { @result == true }.should be_truthy
     end
 
     it %[should return false when not on the event dispatching thread] do
-      zk.event_dispatch_thread?.should_not be_true
+      zk.event_dispatch_thread?.should_not be_truthy
     end
   end
 

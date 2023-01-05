@@ -29,12 +29,12 @@ unless defined?(::JRUBY_VERSION)
       end
 
       it %[should be in connected state within a reasonable amount of time] do
-        wait_until_connected.should be_true
+        wait_until_connected.should be_truthy
       end
 
       describe :after_connected do
         before do
-          wait_until_connected.should be_true
+          wait_until_connected.should be_truthy
         end
 
         it %[should have a connection event after being connected] do

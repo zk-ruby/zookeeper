@@ -20,7 +20,7 @@ describe 'ZookeeperEM' do
     end
 
     def teardown_and_done
-      @zk.close do 
+      @zk.close do
         logger.debug { "TEST: about to call done" }
         EM.next_tick do
           done
@@ -31,7 +31,7 @@ describe 'ZookeeperEM' do
     describe 'callbacks' do
       it %[should be called on the reactor thread] do
         cb = lambda do |h|
-          EM.reactor_thread?.should be_true
+          EM.reactor_thread?.should be_truthy
           logger.debug { "called back on the reactor thread? #{EM.reactor_thread?}" }
           teardown_and_done
         end
@@ -39,7 +39,7 @@ describe 'ZookeeperEM' do
         setup_zk do
           @zk.on_attached do |*|
             logger.debug { "on_attached called" }
-            rv = @zk.get(:path => '/', :callback => cb) 
+            rv = @zk.get(:path => '/', :callback => cb)
             logger.debug { "rv from @zk.get: #{rv.inspect}" }
           end
         end

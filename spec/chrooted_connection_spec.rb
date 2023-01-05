@@ -3,7 +3,7 @@ require 'shared/connection_examples'
 
 describe 'Zookeeper chrooted' do
   let(:path) { "/_zkchroottest_" }
-  let(:data) { "underpants" } 
+  let(:data) { "underpants" }
   let(:chroot_path) { '/slyphon-zookeeper-chroot' }
 
   let(:connection_string) { "#{Zookeeper.default_cnx_str}#{chroot_path}" }
@@ -62,8 +62,8 @@ describe 'Zookeeper chrooted' do
 
 
   describe do
-    before :all do
-      logger.warn "running before :all"
+    before :each do
+      logger.warn "running before :each"
 
       with_open_zk do |z|
         z.create(:path => chroot_path, :data => '')
