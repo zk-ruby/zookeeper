@@ -11,7 +11,7 @@ unless defined?(::JRUBY_VERSION)
     end
 
     it %[should have an original_pid assigned] do
-      @zk.original_pid.should == Process.pid
+      expect(@zk.original_pid).to eq(Process.pid)
     end
   end
 end

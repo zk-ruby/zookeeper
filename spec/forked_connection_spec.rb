@@ -112,11 +112,11 @@ unless defined?(::JRUBY_VERSION)
       status = wait_for_child_safely(@pid)
       raise "Child process did not exit, likely hung"  unless status
 
-      status.should_not be_signaled
-      status.should be_success
+      expect(status).not_to be_signaled
+      expect(status).to be_success
 
-      event_waiter_th.join(5).should == event_waiter_th
-      @event.should_not be_nil
+      expect(event_waiter_th.join(5)).to eq(event_waiter_th)
+      expect(@event).not_to be_nil
     end
   end
 end

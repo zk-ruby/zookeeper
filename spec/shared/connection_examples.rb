@@ -21,12 +21,12 @@ shared_examples_for "connection" do
       end
 
       it %[should return the data] do
-        @rv[:data].should == data
+        expect(@rv[:data]).to eq(data)
       end
 
       it %[should return a stat] do
-        @rv[:stat].should_not be_nil
-        @rv[:stat].should be_kind_of(Zookeeper::Stat)
+        expect(@rv[:stat]).not_to be_nil
+        expect(@rv[:stat]).to be_kind_of(Zookeeper::Stat)
       end
     end
 
@@ -41,19 +41,19 @@ shared_examples_for "connection" do
       end
 
       it %[should return the data] do
-        @rv[:data].should == data
+        expect(@rv[:data]).to eq(data)
       end
 
       it %[should set a watcher on the node] do
         # test the watcher by changing node data
-        zk.set(:path => path, :data => 'blah')[:rc].should be_zero
+        expect(zk.set(:path => path, :data => 'blah')[:rc]).to be_zero
 
         wait_until(1.0) { @watcher.completed? }
 
-        @watcher.path.should == path
-        @watcher.context.should == path
-        @watcher.should be_completed
-        @watcher.type.should == Zookeeper::ZOO_CHANGED_EVENT
+        expect(@watcher.path).to eq(path)
+        expect(@watcher.context).to eq(path)
+        expect(@watcher).to be_completed
+        expect(@watcher.type).to eq(Zookeeper::ZOO_CHANGED_EVENT)
       end
     end
 
@@ -63,22 +63,22 @@ shared_examples_for "connection" do
 
         @rv = zk.get(:path => path, :callback => @cb, :callback_context => path)
         wait_until(1.0) { @cb.completed? }
-        @cb.should be_completed
+        expect(@cb).to be_completed
       end
 
       it_should_behave_like "all success return values"
 
       it %[should have a return code of ZOK] do
-        @cb.return_code.should == Zookeeper::ZOK
+        expect(@cb.return_code).to eq(Zookeeper::ZOK)
       end
 
       it %[should have the stat object in the callback] do
-        @cb.stat.should_not be_nil
-        @cb.stat.should be_kind_of(Zookeeper::Stat)
+        expect(@cb.stat).not_to be_nil
+        expect(@cb.stat).to be_kind_of(Zookeeper::Stat)
       end
 
       it %[should have the data] do
-        @cb.data.should == data
+        expect(@cb.data).to eq(data)
       end
     end
 
@@ -92,38 +92,38 @@ shared_examples_for "connection" do
 
         @rv = zk.get(:path => path, :callback => @cb, :callback_context => path, :watcher => @watcher, :watcher_context => path)
         wait_until(1.0) { @cb.completed? }
-        @cb.should be_completed
+        expect(@cb).to be_completed
         logger.debug { "-----------------> ASYNC GET REQUEST WITH WATCH COMPLETE <--------------------" }
       end
 
       it %[should have the stat object in the callback] do
-        @cb.stat.should_not be_nil
-        @cb.stat.should be_kind_of(Zookeeper::Stat)
+        expect(@cb.stat).not_to be_nil
+        expect(@cb.stat).to be_kind_of(Zookeeper::Stat)
       end
 
       it %[should have the data] do
-        @cb.data.should == data
+        expect(@cb.data).to eq(data)
       end
 
       it %[should have a return code of ZOK] do
-        @cb.return_code.should == Zookeeper::ZOK
+        expect(@cb.return_code).to eq(Zookeeper::ZOK)
       end
 
       it %[should set a watcher on the node] do
-        zk.set(:path => path, :data => 'blah')[:rc].should be_zero
+        expect(zk.set(:path => path, :data => 'blah')[:rc]).to be_zero
 
         wait_until(2) { @watcher.completed? }
 
-        @watcher.should be_completed
+        expect(@watcher).to be_completed
 
-        @watcher.path.should == path
-        @watcher.context.should == path
+        expect(@watcher.path).to eq(path)
+        expect(@watcher.context).to eq(path)
       end
     end
 
     describe 'bad arguments' do
       it %[should barf with a BadArguments error] do
-        lambda { zk.get(:bad_arg => 'what!?') }.should raise_error(Zookeeper::Exceptions::BadArguments)
+        expect { zk.get(:bad_arg => 'what!?') }.to raise_error(Zookeeper::Exceptions::BadArguments)
       end
     end
   end   # get
@@ -143,9 +143,9 @@ shared_examples_for "connection" do
         end
 
         it %[should return the new stat] do
-          @rv[:stat].should_not be_nil
-          @rv[:stat].should be_kind_of(Zookeeper::Stat)
-          @rv[:stat].version.should > @stat.version
+          expect(@rv[:stat]).not_to be_nil
+          expect(@rv[:stat]).to be_kind_of(Zookeeper::Stat)
+          expect(@rv[:stat].version).to be > @stat.version
         end
       end
 
@@ -157,9 +157,9 @@ shared_examples_for "connection" do
         end
 
         it %[should return the new stat] do
-          @rv[:stat].should_not be_nil
-          @rv[:stat].should be_kind_of(Zookeeper::Stat)
-          @rv[:stat].version.should > @stat.version
+          expect(@rv[:stat]).not_to be_nil
+          expect(@rv[:stat]).to be_kind_of(Zookeeper::Stat)
+          expect(@rv[:stat].version).to be > @stat.version
         end
       end
 
@@ -172,11 +172,11 @@ shared_examples_for "connection" do
         end
 
         it %[should have a return code of ZBADVERSION] do
-          @rv[:rc].should == Zookeeper::ZBADVERSION
+          expect(@rv[:rc]).to eq(Zookeeper::ZBADVERSION)
         end
 
         it %[should return a stat with !exists] do
-          @rv[:stat].exists.should be_falsey
+          expect(@rv[:stat].exists).to be_falsey
         end
       end
 
@@ -184,7 +184,7 @@ shared_examples_for "connection" do
         it %[should barf if the data size is too large], :input_size => true do
           large_data = '0' * (1024 ** 2)
 
-          lambda { zk.set(:path => path, :data => large_data) }.should raise_error(Zookeeper::Exceptions::DataTooLargeException)
+          expect { zk.set(:path => path, :data => large_data) }.to raise_error(Zookeeper::Exceptions::DataTooLargeException)
         end
       end
     end   # sync
@@ -201,16 +201,16 @@ shared_examples_for "connection" do
           @rv = zk.set(:path => path, :data => @new_data, :callback => @cb, :callback_context => path)
 
           wait_until(2) { @cb.completed? }
-          @cb.should be_completed
+          expect(@cb).to be_completed
         end
 
         it %[should have the stat in the callback] do
-          @cb.stat.should_not be_nil
-          @cb.stat.version.should > @stat.version
+          expect(@cb.stat).not_to be_nil
+          expect(@cb.stat.version).to be > @stat.version
         end
 
         it %[should have a return code of ZOK] do
-          @cb.return_code.should == Zookeeper::ZOK
+          expect(@cb.return_code).to eq(Zookeeper::ZOK)
         end
       end
 
@@ -221,16 +221,16 @@ shared_examples_for "connection" do
           @rv = zk.set(:path => path, :data => @new_data, :callback => @cb, :callback_context => path, :version => @stat.version)
 
           wait_until(2) { @cb.completed? }
-          @cb.should be_completed
+          expect(@cb).to be_completed
         end
 
         it %[should have the stat in the callback] do
-          @cb.stat.should_not be_nil
-          @cb.stat.version.should > @stat.version
+          expect(@cb.stat).not_to be_nil
+          expect(@cb.stat.version).to be > @stat.version
         end
 
         it %[should have a return code of ZOK] do
-          @cb.return_code.should == Zookeeper::ZOK
+          expect(@cb.return_code).to eq(Zookeeper::ZOK)
         end
       end
 
@@ -242,15 +242,15 @@ shared_examples_for "connection" do
           @rv = zk.set(:path => path, :data => @new_data, :callback => @cb, :callback_context => path, :version => 0)
 
           wait_until(2) { @cb.completed? }
-          @cb.should be_completed
+          expect(@cb).to be_completed
         end
 
         it %[should have a return code of ZBADVERSION] do
-          @cb.return_code.should == Zookeeper::ZBADVERSION
+          expect(@cb.return_code).to eq(Zookeeper::ZBADVERSION)
         end
 
         it %[should return a stat with !exists] do
-          @cb.stat.exists.should be_falsey
+          expect(@cb.stat.exists).to be_falsey
         end
       end
 
@@ -258,7 +258,7 @@ shared_examples_for "connection" do
         it %[should barf if the data size is too large], :input_size => true do
           large_data = '0' * (1024 ** 2)
 
-          lambda { zk.set(:path => path, :data => large_data, :callback => @cb, :callback_context => path) }.should raise_error(Zookeeper::Exceptions::DataTooLargeException)
+          expect { zk.set(:path => path, :data => large_data, :callback => @cb, :callback_context => path) }.to raise_error(Zookeeper::Exceptions::DataTooLargeException)
         end
       end
 
@@ -274,7 +274,7 @@ shared_examples_for "connection" do
       # gahhh, this shouldn't be like this.... :P
       rv = rv.respond_to?(:intValue) ? rv.intValue : rv
 
-      rv.should == Zookeeper::ZOK
+      expect(rv).to eq(Zookeeper::ZOK)
     end
   end
 
@@ -301,17 +301,17 @@ shared_examples_for "connection" do
       end
 
       it %[should have an array of names of the children] do
-        @rv[:children].should be_kind_of(Array)
-        @rv[:children].length.should == 3
-        @rv[:children].sort.should == @children.sort
+        expect(@rv[:children]).to be_kind_of(Array)
+        expect(@rv[:children].length).to eq(3)
+        expect(@rv[:children].sort).to eq(@children.sort)
       end
 
       # "Three shall be the number of the counting, and the number of the counting shall be 3"
 
       it %[should have a stat object whose num_children is 3] do
-        @rv[:stat].should_not be_nil
-        @rv[:stat].should be_kind_of(Zookeeper::Stat)
-        @rv[:stat].num_children.should == 3
+        expect(@rv[:stat]).not_to be_nil
+        expect(@rv[:stat]).to be_kind_of(Zookeeper::Stat)
+        expect(@rv[:stat].num_children).to eq(3)
       end
     end
 
@@ -331,28 +331,28 @@ shared_examples_for "connection" do
       end
 
       it %[should have an array of names of the children] do
-        @rv[:children].should be_kind_of(Array)
-        @rv[:children].length.should == 3
-        @rv[:children].sort.should == @children.sort
+        expect(@rv[:children]).to be_kind_of(Array)
+        expect(@rv[:children].length).to eq(3)
+        expect(@rv[:children].sort).to eq(@children.sort)
       end
 
       it %[should have a stat object whose num_children is 3] do
-        @rv[:stat].should_not be_nil
-        @rv[:stat].should be_kind_of(Zookeeper::Stat)
-        @rv[:stat].num_children.should == 3
+        expect(@rv[:stat]).not_to be_nil
+        expect(@rv[:stat]).to be_kind_of(Zookeeper::Stat)
+        expect(@rv[:stat].num_children).to eq(3)
       end
 
       it %[should set a watcher for children on the node] do
-        @watcher.should_not be_completed
+        expect(@watcher).not_to be_completed
 
-        zk.create(:path => "#{path}/#{@addtl_child}", :data => '')[:rc].should == Zookeeper::ZOK
+        expect(zk.create(:path => "#{path}/#{@addtl_child}", :data => '')[:rc]).to eq(Zookeeper::ZOK)
 
         wait_until { @watcher.completed? }
-        @watcher.should be_completed
+        expect(@watcher).to be_completed
 
-        @watcher.path.should == path
-        @watcher.context.should == path
-        @watcher.type.should == Zookeeper::ZOO_CHILD_EVENT
+        expect(@watcher.path).to eq(path)
+        expect(@watcher.context).to eq(path)
+        expect(@watcher.type).to eq(Zookeeper::ZOO_CHILD_EVENT)
       end
     end
 
@@ -364,23 +364,23 @@ shared_examples_for "connection" do
         @rv = zk.get_children(:path => path, :callback => @cb, :callback_context => path)
 
         wait_until { @cb.completed? }
-        @cb.should be_completed
+        expect(@cb).to be_completed
       end
 
       it %[should succeed] do
-        @cb.return_code.should == Zookeeper::ZOK
+        expect(@cb.return_code).to eq(Zookeeper::ZOK)
       end
 
       it %[should return an array of children] do
-        @cb.children.should be_kind_of(Array)
-        @cb.children.length.should == 3
-        @cb.children.sort.should == @children.sort
+        expect(@cb.children).to be_kind_of(Array)
+        expect(@cb.children.length).to eq(3)
+        expect(@cb.children.sort).to eq(@children.sort)
       end
 
       it %[should have a stat object whose num_children is 3] do
-        @cb.stat.should_not be_nil
-        @cb.stat.should be_kind_of(Zookeeper::Stat)
-        @cb.stat.num_children.should == 3
+        expect(@cb.stat).not_to be_nil
+        expect(@cb.stat).to be_kind_of(Zookeeper::Stat)
+        expect(@cb.stat.num_children).to eq(3)
       end
     end
 
@@ -395,7 +395,7 @@ shared_examples_for "connection" do
 
         @rv = zk.get_children(:path => path, :watcher => @watcher, :watcher_context => path, :callback => @cb, :callback_context => path)
         wait_until { @cb.completed? }
-        @cb.should be_completed
+        expect(@cb).to be_completed
       end
 
       after do
@@ -403,32 +403,32 @@ shared_examples_for "connection" do
       end
 
       it %[should succeed] do
-        @cb.return_code.should == Zookeeper::ZOK
+        expect(@cb.return_code).to eq(Zookeeper::ZOK)
       end
 
       it %[should return an array of children] do
-        @cb.children.should be_kind_of(Array)
-        @cb.children.length.should == 3
-        @cb.children.sort.should == @children.sort
+        expect(@cb.children).to be_kind_of(Array)
+        expect(@cb.children.length).to eq(3)
+        expect(@cb.children.sort).to eq(@children.sort)
       end
 
       it %[should have a stat object whose num_children is 3] do
-        @cb.stat.should_not be_nil
-        @cb.stat.should be_kind_of(Zookeeper::Stat)
-        @cb.stat.num_children.should == 3
+        expect(@cb.stat).not_to be_nil
+        expect(@cb.stat).to be_kind_of(Zookeeper::Stat)
+        expect(@cb.stat.num_children).to eq(3)
       end
 
       it %[should set a watcher for children on the node] do
-        @watcher.should_not be_completed
+        expect(@watcher).not_to be_completed
 
-        zk.create(:path => "#{path}/#{@addtl_child}", :data => '')[:rc].should == Zookeeper::ZOK
+        expect(zk.create(:path => "#{path}/#{@addtl_child}", :data => '')[:rc]).to eq(Zookeeper::ZOK)
 
         wait_until { @watcher.completed? }
-        @watcher.should be_completed
+        expect(@watcher).to be_completed
 
-        @watcher.path.should == path
-        @watcher.context.should == path
-        @watcher.type.should == Zookeeper::ZOO_CHILD_EVENT
+        expect(@watcher.path).to eq(path)
+        expect(@watcher.context).to eq(path)
+        expect(@watcher.type).to eq(Zookeeper::ZOO_CHILD_EVENT)
       end
     end
   end
@@ -443,20 +443,20 @@ shared_examples_for "connection" do
 
         @rv = zk.get_children(:path => path, :watcher => @watcher, :watcher_context => path, :callback => @cb, :callback_context => path)
         wait_until { @cb.completed? }
-        @cb.should be_completed
+        expect(@cb).to be_completed
       end
 
       it %[should fire the watcher when the node has been deleted] do
-        @watcher.should_not be_completed
+        expect(@watcher).not_to be_completed
 
-        zk.delete(:path => path)[:rc].should == Zookeeper::ZOK
+        expect(zk.delete(:path => path)[:rc]).to eq(Zookeeper::ZOK)
 
         wait_until { @watcher.completed? }
-        @watcher.should be_completed
+        expect(@watcher).to be_completed
 
-        @watcher.path.should == path
-        @watcher.context.should == path
-        @watcher.type.should == Zookeeper::ZOO_DELETED_EVENT
+        expect(@watcher.path).to eq(path)
+        expect(@watcher.context).to eq(path)
+        expect(@watcher.type).to eq(Zookeeper::ZOO_DELETED_EVENT)
       end
     end
   end
@@ -473,7 +473,7 @@ shared_examples_for "connection" do
       end
 
       it %[should have a stat object] do
-        @rv[:stat].should be_kind_of(Zookeeper::Stat)
+        expect(@rv[:stat]).to be_kind_of(Zookeeper::Stat)
       end
     end
 
@@ -487,20 +487,20 @@ shared_examples_for "connection" do
       end
 
       it %[should have a stat object] do
-        @rv[:stat].should be_kind_of(Zookeeper::Stat)
+        expect(@rv[:stat]).to be_kind_of(Zookeeper::Stat)
       end
 
       it %[should set a watcher for data changes on the node] do
-        @watcher.should_not be_completed
+        expect(@watcher).not_to be_completed
 
-        zk.set(:path => path, :data => 'skunk')[:rc].should == Zookeeper::ZOK
+        expect(zk.set(:path => path, :data => 'skunk')[:rc]).to eq(Zookeeper::ZOK)
 
         wait_until { @watcher.completed? }
-        @watcher.should be_completed
+        expect(@watcher).to be_completed
 
-        @watcher.path.should == path
-        @watcher.context.should == path
-        @watcher.type.should == Zookeeper::ZOO_CHANGED_EVENT
+        expect(@watcher.path).to eq(path)
+        expect(@watcher.context).to eq(path)
+        expect(@watcher.type).to eq(Zookeeper::ZOO_CHANGED_EVENT)
       end
     end
 
@@ -512,15 +512,15 @@ shared_examples_for "connection" do
         @rv = zk.stat(:path => path, :callback => @cb, :callback_context => path)
 
         wait_until { @cb.completed? }
-        @cb.should be_completed
+        expect(@cb).to be_completed
       end
 
       it %[should succeed] do
-        @cb.return_code.should == Zookeeper::ZOK
+        expect(@cb.return_code).to eq(Zookeeper::ZOK)
       end
 
       it %[should have a stat object] do
-        @cb.stat.should be_kind_of(Zookeeper::Stat)
+        expect(@cb.stat).to be_kind_of(Zookeeper::Stat)
       end
     end
 
@@ -536,7 +536,7 @@ shared_examples_for "connection" do
         @rv = zk.stat(:path => path, :callback => @cb, :callback_context => path, :watcher => @watcher, :watcher_context => path)
 
         wait_until { @cb.completed? }
-        @cb.should be_completed
+        expect(@cb).to be_completed
       end
 
       after do
@@ -544,24 +544,24 @@ shared_examples_for "connection" do
       end
 
       it %[should succeed] do
-        @cb.return_code.should == Zookeeper::ZOK
+        expect(@cb.return_code).to eq(Zookeeper::ZOK)
       end
 
       it %[should have a stat object] do
-        @cb.stat.should be_kind_of(Zookeeper::Stat)
+        expect(@cb.stat).to be_kind_of(Zookeeper::Stat)
       end
 
       it %[should set a watcher for data changes on the node] do
-        @watcher.should_not be_completed
+        expect(@watcher).not_to be_completed
 
-        zk.set(:path => path, :data => 'skunk')[:rc].should == Zookeeper::ZOK
+        expect(zk.set(:path => path, :data => 'skunk')[:rc]).to eq(Zookeeper::ZOK)
 
         wait_until { @watcher.completed? }
-        @watcher.should be_completed
+        expect(@watcher).to be_completed
 
-        @watcher.path.should == path
-        @watcher.context.should == path
-        @watcher.type.should == Zookeeper::ZOO_CHANGED_EVENT
+        expect(@watcher.path).to eq(path)
+        expect(@watcher.context).to eq(path)
+        expect(@watcher.type).to eq(Zookeeper::ZOO_CHANGED_EVENT)
       end
     end
   end   # stat
@@ -577,7 +577,7 @@ shared_examples_for "connection" do
         it %[should barf if the data size is too large], :input_size => true do
           large_data = '0' * (1024 ** 2)
 
-          lambda { zk.create(:path => path, :data => large_data) }.should raise_error(Zookeeper::Exceptions::DataTooLargeException)
+          expect { zk.create(:path => path, :data => large_data) }.to raise_error(Zookeeper::Exceptions::DataTooLargeException)
         end
       end
 
@@ -589,14 +589,14 @@ shared_examples_for "connection" do
         end
 
         it %[should return the path that was set] do
-          @rv[:path].should == path
+          expect(@rv[:path]).to eq(path)
         end
 
         it %[should have created a permanent node] do
           st = zk.stat(:path => path)
-          st[:rc].should == Zookeeper::ZOK
+          expect(st[:rc]).to eq(Zookeeper::ZOK)
 
-          st[:stat].ephemeral_owner.should == 0
+          expect(st[:stat].ephemeral_owner).to eq(0)
         end
       end
 
@@ -608,14 +608,14 @@ shared_examples_for "connection" do
         end
 
         it %[should return the path that was set] do
-          @rv[:path].should == path
+          expect(@rv[:path]).to eq(path)
         end
 
         it %[should have created a ephemeral node] do
           st = zk.stat(:path => path)
-          st[:rc].should == Zookeeper::ZOK
+          expect(st[:rc]).to eq(Zookeeper::ZOK)
 
-          st[:stat].ephemeral_owner.should_not be_zero
+          expect(st[:stat].ephemeral_owner).not_to be_zero
         end
       end
 
@@ -633,14 +633,14 @@ shared_examples_for "connection" do
         end
 
         it %[should return the path that was set] do
-          @rv[:path].should_not == @orig_path
+          expect(@rv[:path]).not_to eq(@orig_path)
         end
 
         it %[should have created a permanent node] do
           st = zk.stat(:path => @s_path)
-          st[:rc].should == Zookeeper::ZOK
+          expect(st[:rc]).to eq(Zookeeper::ZOK)
 
-          st[:stat].ephemeral_owner.should be_zero
+          expect(st[:stat].ephemeral_owner).to be_zero
         end
       end
 
@@ -658,14 +658,14 @@ shared_examples_for "connection" do
         end
 
         it %[should return the path that was set] do
-          @rv[:path].should_not == @orig_path
+          expect(@rv[:path]).not_to eq(@orig_path)
         end
 
         it %[should have created an ephemeral node] do
           st = zk.stat(:path => @s_path)
-          st[:rc].should == Zookeeper::ZOK
+          expect(st[:rc]).to eq(Zookeeper::ZOK)
 
-          st[:stat].ephemeral_owner.should_not be_zero
+          expect(st[:stat].ephemeral_owner).not_to be_zero
         end
       end
 
@@ -687,22 +687,22 @@ shared_examples_for "connection" do
         before do
           @rv = zk.create(:path => path, :callback => @cb, :callback_context => path)
           wait_until(2) { @cb.completed? }
-          @cb.should be_completed
+          expect(@cb).to be_completed
         end
 
         it %[should have a path] do
-          @cb.path.should_not be_nil
+          expect(@cb.path).not_to be_nil
         end
 
         it %[should return the path that was set] do
-          @cb.path.should == path
+          expect(@cb.path).to eq(path)
         end
 
         it %[should have created a permanent node] do
           st = zk.stat(:path => path)
-          st[:rc].should == Zookeeper::ZOK
+          expect(st[:rc]).to eq(Zookeeper::ZOK)
 
-          st[:stat].ephemeral_owner.should == 0
+          expect(st[:stat].ephemeral_owner).to eq(0)
         end
       end
 
@@ -710,9 +710,9 @@ shared_examples_for "connection" do
         it %[should barf if the data size is too large], :input_size => true do
           large_data = '0' * (1024 ** 2)
 
-          lambda do
+          expect do
             zk.create(:path => path, :data => large_data, :callback => @cb, :callback_context => path)
-          end.should raise_error(Zookeeper::Exceptions::DataTooLargeException)
+          end.to raise_error(Zookeeper::Exceptions::DataTooLargeException)
         end
       end
 
@@ -723,22 +723,22 @@ shared_examples_for "connection" do
         before do
           @rv = zk.create(:path => path, :ephemeral => true, :callback => @cb, :callback_context => path)
           wait_until(2) { @cb.completed? }
-          @cb.should be_completed
+          expect(@cb).to be_completed
         end
 
         it %[should have a path] do
-          @cb.path.should_not be_nil
+          expect(@cb.path).not_to be_nil
         end
 
         it %[should return the path that was set] do
-          @cb.path.should == path
+          expect(@cb.path).to eq(path)
         end
 
         it %[should have created a ephemeral node] do
           st = zk.stat(:path => path)
-          st[:rc].should == Zookeeper::ZOK
+          expect(st[:rc]).to eq(Zookeeper::ZOK)
 
-          st[:stat].ephemeral_owner.should_not be_zero
+          expect(st[:stat].ephemeral_owner).not_to be_zero
         end
       end
 
@@ -750,7 +750,7 @@ shared_examples_for "connection" do
           @rv         = zk.create(:path => path, :sequence => true, :callback => @cb, :callback_context => path)
 
           wait_until(2) { @cb.completed? }
-          @cb.should be_completed
+          expect(@cb).to be_completed
 
           @s_path = @cb.path
         end
@@ -760,18 +760,18 @@ shared_examples_for "connection" do
         end
 
         it %[should have a path] do
-          @cb.path.should_not be_nil
+          expect(@cb.path).not_to be_nil
         end
 
         it %[should return the path that was set] do
-          @cb.path.should_not == @orig_path
+          expect(@cb.path).not_to eq(@orig_path)
         end
 
         it %[should have created a permanent node] do
           st = zk.stat(:path => @s_path)
-          st[:rc].should == Zookeeper::ZOK
+          expect(st[:rc]).to eq(Zookeeper::ZOK)
 
-          st[:stat].ephemeral_owner.should be_zero
+          expect(st[:stat].ephemeral_owner).to be_zero
         end
       end
 
@@ -784,7 +784,7 @@ shared_examples_for "connection" do
           path       = @rv[:path]    # make sure this gets cleaned up
 
           wait_until(2) { @cb.completed? }
-          @cb.should be_completed
+          expect(@cb).to be_completed
           @s_path = @cb.path
         end
 
@@ -793,18 +793,18 @@ shared_examples_for "connection" do
         end
 
         it %[should have a path] do
-          @cb.path.should_not be_nil
+          expect(@cb.path).not_to be_nil
         end
 
         it %[should return the path that was set] do
-          @s_path.should_not == @orig_path
+          expect(@s_path).not_to eq(@orig_path)
         end
 
         it %[should have created an ephemeral node] do
           st = zk.stat(:path => @s_path)
-          st[:rc].should == Zookeeper::ZOK
+          expect(st[:rc]).to eq(Zookeeper::ZOK)
 
-          st[:stat].ephemeral_owner.should_not be_zero
+          expect(st[:stat].ephemeral_owner).not_to be_zero
         end
       end # ephemeral_sequence
     end # async
@@ -821,7 +821,7 @@ shared_examples_for "connection" do
         end
 
         it %[should have deleted the node] do
-          zk.stat(:path => path)[:stat].exists.should be_falsey
+          expect(zk.stat(:path => path)[:stat].exists).to be_falsey
         end
       end
 
@@ -832,13 +832,13 @@ shared_examples_for "connection" do
           zk.create(:path => path)
 
           @stat = zk.stat(:path => path)[:stat]
-          @stat.exists.should be_truthy
+          expect(@stat.exists).to be_truthy
 
           @rv = zk.delete(:path => path, :version => @stat.version)
         end
 
         it %[should have deleted the node] do
-          zk.stat(:path => path)[:stat].exists.should be_falsey
+          expect(zk.stat(:path => path)[:stat].exists).to be_falsey
         end
       end
 
@@ -850,7 +850,7 @@ shared_examples_for "connection" do
         end
 
         it %[should have a return code of ZBADVERSION] do
-          @rv[:rc].should == Zookeeper::ZBADVERSION
+          expect(@rv[:rc]).to eq(Zookeeper::ZBADVERSION)
         end
       end
     end # sync
@@ -866,15 +866,15 @@ shared_examples_for "connection" do
         before do
           @rv = zk.delete(:path => path, :callback => @cb, :callback_context => path)
           wait_until { @cb.completed? }
-          @cb.should be_completed
+          expect(@cb).to be_completed
         end
 
         it %[should have a success return_code] do
-          @cb.return_code.should == Zookeeper::ZOK
+          expect(@cb.return_code).to eq(Zookeeper::ZOK)
         end
 
         it %[should have deleted the node] do
-          zk.stat(:path => path)[:stat].exists.should be_falsey
+          expect(zk.stat(:path => path)[:stat].exists).to be_falsey
         end
       end
 
@@ -885,15 +885,15 @@ shared_examples_for "connection" do
           @stat = zk.stat(:path => path)[:stat]
           @rv   = zk.delete(:path => path, :version => @stat.version, :callback => @cb, :callback_context => path)
           wait_until { @cb.completed? }
-          @cb.should be_completed
+          expect(@cb).to be_completed
         end
 
         it %[should have a success return_code] do
-          @cb.return_code.should == Zookeeper::ZOK
+          expect(@cb.return_code).to eq(Zookeeper::ZOK)
         end
 
         it %[should have deleted the node] do
-          zk.stat(:path => path)[:stat].exists.should be_falsey
+          expect(zk.stat(:path => path)[:stat].exists).to be_falsey
         end
       end
 
@@ -903,11 +903,11 @@ shared_examples_for "connection" do
 
           @rv = zk.delete(:path => path, :version => 0, :callback => @cb, :callback_context => path)
           wait_until { @cb.completed? }
-          @cb.should be_completed
+          expect(@cb).to be_completed
         end
 
         it %[should have a return code of ZBADVERSION] do
-          @cb.return_code.should == Zookeeper::ZBADVERSION
+          expect(@cb.return_code).to eq(Zookeeper::ZBADVERSION)
         end
       end
     end # async
@@ -922,19 +922,19 @@ shared_examples_for "connection" do
       end
 
       it %[should return a stat for the path] do
-        @rv[:stat].should be_kind_of(Zookeeper::Stat)
+        expect(@rv[:stat]).to be_kind_of(Zookeeper::Stat)
       end
 
       it %[should return the acls] do
         acls = @rv[:acl]
-        acls.should be_kind_of(Array)
+        expect(acls).to be_kind_of(Array)
         h = acls.first
 
-        h.should be_kind_of(Hash)
+        expect(h).to be_kind_of(Hash)
 
-        h[:perms].should == Zookeeper::ZOO_PERM_ALL
-        h[:id][:scheme].should == 'world'
-        h[:id][:id].should == 'anyone'
+        expect(h[:perms]).to eq(Zookeeper::ZOO_PERM_ALL)
+        expect(h[:id][:scheme]).to eq('world')
+        expect(h[:id][:id]).to eq('anyone')
       end
     end
 
@@ -946,24 +946,24 @@ shared_examples_for "connection" do
         @rv = zk.get_acl(:path => path, :callback => @cb, :callback_context => path)
 
         wait_until(2) { @cb.completed? }
-        @cb.should be_completed
+        expect(@cb).to be_completed
       end
 
       it %[should return a stat for the path] do
-        @cb.stat.should be_kind_of(Zookeeper::Stat)
+        expect(@cb.stat).to be_kind_of(Zookeeper::Stat)
       end
 
       it %[should return the acls] do
         acls = @cb.acl
-        acls.should be_kind_of(Array)
+        expect(acls).to be_kind_of(Array)
 
         acl = acls.first
-        acl.should be_kind_of(Zookeeper::ACLs::ACL)
+        expect(acl).to be_kind_of(Zookeeper::ACLs::ACL)
 
-        acl.perms.should == Zookeeper::ZOO_PERM_ALL
+        expect(acl.perms).to eq(Zookeeper::ZOO_PERM_ALL)
 
-        acl.id.scheme.should == 'world'
-        acl.id.id.should == 'anyone'
+        expect(acl.id.scheme).to eq('world')
+        expect(acl.id.id).to eq('anyone')
       end
     end
   end
@@ -986,13 +986,13 @@ shared_examples_for "connection" do
 
   describe :session_id do
     it %[should return the session_id as a Fixnum] do
-      zk.session_id.should be_kind_of(Integer)
+      expect(zk.session_id).to be_kind_of(Integer)
     end
   end
 
   describe :session_passwd do
     it %[should return the session passwd as a String] do
-      zk.session_passwd.should be_kind_of(String)
+      expect(zk.session_passwd).to be_kind_of(String)
     end
   end
 
@@ -1005,13 +1005,13 @@ shared_examples_for "connection" do
         @rv = zk.sync(:path => path, :callback => @cb)
 
         wait_until(2) { @cb.completed }
-        @cb.should be_completed
+        expect(@cb).to be_completed
       end
     end
 
     describe :errors do
       it %[should barf with BadArguments if :callback is not given] do
-        lambda { zk.sync(:path => path) }.should raise_error(Zookeeper::Exceptions::BadArguments)
+        expect { zk.sync(:path => path) }.to raise_error(Zookeeper::Exceptions::BadArguments)
       end
     end
   end
@@ -1026,11 +1026,11 @@ shared_examples_for "connection" do
 
       @rv = zk.sync(:path => path, :callback => cb)
 
-      wait_until(2) { @result == true }.should be_truthy
+      expect(wait_until(2) { @result == true }).to be_truthy
     end
 
     it %[should return false when not on the event dispatching thread] do
-      zk.event_dispatch_thread?.should_not be_truthy
+      expect(zk.event_dispatch_thread?).not_to be_truthy
     end
   end
 
@@ -1050,7 +1050,7 @@ shared_examples_for "connection" do
         end
 
         wait_until { zk.closed? }
-        zk.should be_closed
+        expect(zk).to be_closed
       end
     end
   end
@@ -1060,11 +1060,11 @@ shared_examples_for "connection" do
       it %[should raise an InheritedConnectionError if the current Process.pid is different from the one that created the client] do
         pid = Process.pid
         begin
-          Process.stub(:pid => -1)
-          lambda { zk.stat(:path => path) }.should raise_error(Zookeeper::Exceptions::InheritedConnectionError)
+          allow(Process).to receive(:pid).and_return(-1)
+          expect { zk.stat(:path => path) }.to raise_error(Zookeeper::Exceptions::InheritedConnectionError)
         ensure
           # ensure we reset this, only want it to fail during the test
-          Process.stub(:pid => pid)
+          allow(Process).to receive(:pid).and_return(pid)
         end
       end
     end

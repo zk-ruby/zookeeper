@@ -31,7 +31,7 @@ describe 'ZookeeperEM' do
     describe 'callbacks' do
       it %[should be called on the reactor thread] do
         cb = lambda do |h|
-          EM.reactor_thread?.should be_truthy
+          expect(EM.reactor_thread?).to be_truthy
           logger.debug { "called back on the reactor thread? #{EM.reactor_thread?}" }
           teardown_and_done
         end
