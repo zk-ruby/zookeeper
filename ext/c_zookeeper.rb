@@ -2,9 +2,14 @@ Zookeeper.require_lib(
   'zookeeper/logger',
   'zookeeper/common',
   'zookeeper/constants',
-  'zookeeper/exceptions', # zookeeper_c depends on exceptions defined in here
-  'zookeeper_c',
+  'zookeeper/exceptions' # zookeeper_c depends on exceptions defined in here
 )
+
+begin
+    Zookeeper.require_root 'ext/zookeeper_c'
+rescue LoadError # Rubygems 3.4+ cleans up build artifacts in the ext/ directory.
+    Zookeeper.require_lib 'zookeeper_c'
+end
 
 module Zookeeper
 # NOTE: this class extending (opening) the class defined in zkrb.c
