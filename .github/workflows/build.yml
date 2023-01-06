@@ -61,3 +61,12 @@ jobs:
           SPAWN_ZOOKEEPER: true
         run: |
           bundle exec rake
+
+      - name: Build and verify gem
+        env:
+          RAILS_ENV: test
+          SPAWN_ZOOKEEPER: false
+        run: |
+          gem build zookeeper.gemspec
+          gem install ./zookeeper-*.gem
+          ruby -e "require zookeeper"
