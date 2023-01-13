@@ -1,0 +1,55 @@
+--- zkc-3.4.5-orig/c/src/zookeeper.c	2012-09-30 17:53:32.000000000 +0000
++++ zkc-3.4.5/c/src/zookeeper.c	2013-11-19 02:44:03.048051154 +0000
+@@ -2473,6 +2473,43 @@
+     return add_completion(zh, xid, COMPLETION_MULTI, dc, data, 0,0, clist);
+ }
+
++static int wait_for_close(zhandle_t *zh)
++{
++    /* [ZOOKEEPER-1237] wait for the response before terminating */
++    int rc = ZOK;
++#ifndef WIN32
++    struct pollfd pfd;
++    struct timeval tv;
++    int fd;
++    int interest;
++    int timeout;
++
++    zookeeper_interest(zh, &fd, &interest, &tv);
++    if (fd == -1) {
++        LOG_DEBUG(("wait_for_close() zookeeper_interest fd == -1\n"));
++        return ZOK;
++    }
++
++    pfd.fd=fd;
++    pfd.events = (interest & ZOOKEEPER_READ) ? POLLIN : 0;
++    pfd.events |= (interest & ZOOKEEPER_WRITE) ? POLLOUT : 0;
++
++    timeout=tv.tv_sec * 1000 + (tv.tv_usec/1000);
++
++    rc = poll(&pfd, 1, timeout);
++    if (rc < 1) {
++        LOG_DEBUG(("wait_for_close() poll() returned: %d\n", rc));
++        return ZOK;
++    }
++
++    interest = (pfd.revents & POLLIN) ? ZOOKEEPER_READ : 0;
++    interest |= ((pfd.revents & POLLOUT) || (pfd.revents & POLLHUP)) ? ZOOKEEPER_WRITE : 0;
++    rc = zookeeper_process(zh, interest) == ZINVALIDSTATE ? ZOK : rc;
++#endif
++    LOG_DEBUG(("wait_for_close() returning: %d\n", rc));
++    return rc;
++}
++
+ int zookeeper_close(zhandle_t *zh)
+ {
+     int rc=ZOK;
+@@ -2517,6 +2554,8 @@
+         /* make sure the close request is sent; we set timeout to an arbitrary
+          * (but reasonable) number of milliseconds since we want the call to block*/
+         rc=adaptor_send_queue(zh, 3000);
++
++        rc = wait_for_close(zh);
+     }else{
+         LOG_INFO(("Freeing zookeeper resources for sessionId=%#llx\n",
+                 zh->client_id.client_id));
